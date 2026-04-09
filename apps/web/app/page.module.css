@@ -1,0 +1,45 @@
+.page {
+  min-height: 100vh;
+  padding: 48px 24px;
+  background:
+    radial-gradient(circle at top, rgba(86, 143, 255, 0.18), transparent 30%),
+    linear-gradient(160deg, #07111f 0%, #0f1f38 55%, #08111d 100%);
+}
+
+.hero {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  gap: 32px;
+}
+
+.kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #82b1ff;
+  font-size: 0.8rem;
+}
+
+.title {
+  max-width: 840px;
+  font-size: clamp(2.6rem, 7vw, 5.2rem);
+  line-height: 0.98;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: rgba(10, 20, 35, 0.78);
+  border: 1px solid rgba(151, 178, 255, 0.16);
+  backdrop-filter: blur(10px);
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 32px 18px;
+  }
+}
