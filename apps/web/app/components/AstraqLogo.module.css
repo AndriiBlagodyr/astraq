@@ -1,0 +1,190 @@
+.logo {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.floatLayer {
+  animation: logo-float 8s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+.orbitSlow {
+  animation: orbit-spin 20s linear infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+.orbitReverse {
+  animation: orbit-spin-reverse 26s linear infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+.scanLayer {
+  animation: scan-breathe 4.6s ease-in-out infinite;
+}
+
+.sparkLayer {
+  animation: spark-drift 5.4s ease-in-out infinite;
+}
+
+.runner {
+  animation: runner-fade 6.5s linear infinite;
+}
+
+.guideRing {
+  fill: none;
+  stroke: rgba(116, 176, 255, 0.12);
+  stroke-width: 2;
+}
+
+.guideRingInner {
+  fill: none;
+  stroke: rgba(244, 201, 93, 0.08);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 12;
+}
+
+.orbitTrack {
+  fill: none;
+  stroke: rgba(124, 244, 255, 0.2);
+  stroke-width: 6;
+}
+
+.secondaryOrbit {
+  fill: none;
+  stroke: rgba(250, 214, 108, 0.18);
+  stroke-width: 4;
+  stroke-dasharray: 6 16;
+}
+
+.signalOrbit {
+  animation: signal-dash 6s linear infinite;
+}
+
+.pulseDot {
+  animation: pulse 2.8s ease-in-out infinite;
+}
+
+.pulseDotDelay {
+  animation: pulse 2.8s ease-in-out infinite 0.5s;
+}
+
+.pulseDotSlow {
+  animation: pulse 3.3s ease-in-out infinite 0.9s;
+}
+
+.whisper {
+  animation: whisper-dash 3.8s linear infinite;
+  stroke-dasharray: 12 22;
+}
+
+@keyframes logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes scan-breathe {
+  0%,
+  100% {
+    opacity: 0.92;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes spark-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -5px, 0);
+  }
+}
+
+@keyframes signal-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -96;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.28);
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+}
+
+@keyframes whisper-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -68;
+  }
+}
+
+@keyframes runner-fade {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floatLayer,
+  .orbitSlow,
+  .orbitReverse,
+  .scanLayer,
+  .sparkLayer,
+  .runner,
+  .signalOrbit,
+  .pulseDot,
+  .pulseDotDelay,
+  .pulseDotSlow,
+  .whisper {
+    animation: none;
+  }
+}
