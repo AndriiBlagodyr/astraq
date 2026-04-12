@@ -1,0 +1,42 @@
+.nav {
+  display: grid;
+  gap: 8px;
+}
+
+.label {
+  margin: 0 0 6px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.74rem;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  background: transparent;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.link:hover {
+  color: var(--color-text-primary);
+  transform: translateX(1px);
+}
+
+.linkActive {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+  background:
+    linear-gradient(90deg, var(--color-pill-bg), var(--color-tag-bg)),
+    var(--color-button-secondary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
