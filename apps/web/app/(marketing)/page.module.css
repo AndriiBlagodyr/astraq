@@ -1,0 +1,234 @@
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  gap: 36px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 470px);
+  gap: 32px;
+  align-items: center;
+}
+
+.copy {
+  position: relative;
+  z-index: 1;
+}
+
+.eyebrow,
+.sectionEyebrow {
+  margin: 0 0 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-accent-blue);
+  font-size: 0.76rem;
+}
+
+.title {
+  margin: 0;
+  max-width: 860px;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 7vw, 5.6rem);
+  line-height: 0.94;
+}
+
+.lead {
+  margin: 20px 0 0;
+  max-width: 720px;
+  color: var(--color-text-secondary);
+  font-size: 1.08rem;
+  line-height: 1.75;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.actionPrimary,
+.actionSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.actionPrimary {
+  color: var(--color-brand-contrast);
+  background: var(--gradient-brand);
+  box-shadow: var(--shadow-brand);
+}
+
+.actionSecondary {
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-button-secondary);
+}
+
+.actionPrimary:hover,
+.actionSecondary:hover {
+  transform: translateY(-1px);
+}
+
+.metricRow {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metricCard,
+.card,
+.logoPanel {
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-soft);
+}
+
+.metricCard {
+  padding: 18px;
+  border-radius: var(--radius-lg);
+}
+
+.metricLabel {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.metricValue {
+  display: block;
+  margin-top: 8px;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.logoPanel {
+  position: relative;
+  min-height: 460px;
+  padding: 22px;
+  border-radius: calc(var(--radius-xl) + 4px);
+  overflow: hidden;
+}
+
+.logoGlow {
+  position: absolute;
+  inset: 16% 12% auto;
+  height: 56%;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--color-panel-glow), transparent 70%);
+  filter: blur(34px);
+}
+
+.logo {
+  position: relative;
+  z-index: 1;
+}
+
+.logoMeta {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-overlay-surface);
+  border: 1px solid var(--color-overlay-border);
+  color: var(--color-text-secondary);
+}
+
+.section {
+  display: grid;
+  gap: 22px;
+}
+
+.sectionHeader {
+  max-width: 760px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.02;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.card {
+  padding: 22px;
+  border-radius: var(--radius-lg);
+}
+
+.card h3 {
+  margin: 14px 0 10px;
+  font-size: 1.12rem;
+}
+
+.card p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.65;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: var(--color-accent-cyan);
+  background: var(--color-pill-bg);
+  border: 1px solid var(--color-pill-border);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 1024px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .metricRow,
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .logoPanel {
+    min-height: auto;
+    padding: 18px;
+  }
+
+  .logoMeta {
+    position: static;
+    margin-top: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
