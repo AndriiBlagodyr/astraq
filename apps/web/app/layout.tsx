@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   manifest: "/manifest.webmanifest",
-  keywords: ["trading", "predictions", "portfolio", "analytics", "dashboard", "next.js"],
+  keywords: ["trading", "market data", "stocks", "visualization", "predictions", "machine learning", "next.js"],
   openGraph: {
     title: siteConfig.name,
     description: siteConfig.description,

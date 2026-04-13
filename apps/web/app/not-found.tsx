@@ -15,8 +15,8 @@ export default function NotFound() {
           <Link href="/" className={styles.primary}>
             Back to home
           </Link>
-          <Link href="/dashboard" className={styles.secondary}>
-            Open dashboard
+          <Link href="/stocks" className={styles.secondary}>
+            Open stocks
           </Link>
         </div>
       </div>

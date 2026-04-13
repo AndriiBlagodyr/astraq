@@ -1,14 +1,14 @@
 export const marketingNavigation = [
   { href: "/", label: "Home" },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/markets", label: "Markets" },
+  { href: "/market-data", label: "Market Data" },
+  { href: "/stocks", label: "Stocks" },
   { href: "/predictions", label: "Predictions" },
+  { href: "/experiments", label: "Experiments" },
 ] as const;
 
 export const appNavigation = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/markets", label: "Markets" },
+  { href: "/market-data", label: "Market Data" },
+  { href: "/stocks", label: "Stocks" },
   { href: "/predictions", label: "Predictions" },
-  { href: "/portfolio", label: "Portfolio" },
-  { href: "/settings", label: "Settings" },
+  { href: "/experiments", label: "Experiments" },
 ] as const;
