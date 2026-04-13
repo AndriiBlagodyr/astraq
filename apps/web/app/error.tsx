@@ -27,8 +27,8 @@ export default function Error({ error, reset }: ErrorProps) {
           <button type="button" onClick={() => reset()} className={styles.primary}>
             Try again
           </button>
-          <Link href="/dashboard" className={styles.secondary}>
-            Dashboard
+          <Link href="/stocks" className={styles.secondary}>
+            Stocks
           </Link>
         </div>
       </div>

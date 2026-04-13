@@ -1,3 +1,6 @@
+import type { Route } from "next";
+import Link from "next/link";
+import { featuredSymbols } from "@/lib/stocks";
 import styles from "../layout.module.css";
 
 export const metadata = {
@@ -8,52 +11,45 @@ export default function PredictionsPage() {
   return (
     <section className={styles.page}>
       <div className={styles.hero}>
-        <p className={styles.eyebrow}>Prediction engine</p>
-        <h2 className={styles.title}>Model outputs, confidence bands, and analyst review</h2>
+        <p className={styles.eyebrow}>Prediction lab</p>
+        <h2 className={styles.title}>Run prediction experiments per stock instead of mixing every idea into one page.</h2>
         <p className={styles.lead}>
-          This route is intended for forecast cards, model ensemble outputs, deployment status, and scenario
-          validation before signals hit execution surfaces.
+          This hub separates the machine learning side of the project from the visualization side while still
+          keeping everything tied back to a concrete symbol and its data pipeline.
         </p>
+        <div className={styles.buttonRow}>
+          <Link href="/experiments" className={styles.buttonSecondary}>
+            Experiment backlog
+          </Link>
+        </div>
       </div>
 
       <div className={styles.grid}>
-        <article className={styles.card}>
-          <h3>Model registry</h3>
-          <p>Track active forecasting models, version lineage, retraining cadence, and confidence thresholds.</p>
-        </article>
-        <article className={styles.card}>
-          <h3>Scenario boards</h3>
-          <p>Compare base, upside, and downside cases across instruments and time horizons.</p>
-        </article>
-      </div>
+        {featuredSymbols.map((symbol) => {
+          const href = `/predictions/${symbol}` as Route;
 
-      <div className={styles.table}>
-        <table>
-          <thead>
-            <tr>
-              <th>Model</th>
-              <th>Window</th>
-              <th>Confidence</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Momentum Ensemble</td>
-              <td>4h</td>
-              <td className={styles.positive}>91%</td>
-            </tr>
-            <tr>
-              <td>Macro Rotation</td>
-              <td>1d</td>
-              <td>74%</td>
-            </tr>
-            <tr>
-              <td>Risk Reversal Alert</td>
-              <td>30m</td>
-              <td className={styles.warning}>63%</td>
-            </tr>
-          </tbody>
-        </table>
+          return (
+            <article key={symbol} className={styles.card}>
+              <span className={styles.tag}>{symbol}</span>
+              <h3>{symbol} prediction workspace</h3>
+              <p>Placeholder route for targets, features, algorithms, and evaluation linked to one stock.</p>
+              <div className={styles.buttonRow}>
+                <Link href={href} className={styles.buttonPrimary}>
+                  Open {symbol}
+                </Link>
+              </div>
+            </article>
+          );
+        })}
+
+        <article className={styles.card}>
+          <h3>Prediction route pattern</h3>
+          <ul className={styles.list}>
+            <li>`/predictions/[symbol]` for the stock-specific ML workspace.</li>
+            <li>`/predictions/[symbol]/algorithms` for model choices and baselines.</li>
+            <li>`/predictions/[symbol]/backtests` for evaluation, walk-forward tests, and metrics.</li>
+          </ul>
+        </article>
       </div>
     </section>
   );

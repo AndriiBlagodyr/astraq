@@ -2,7 +2,7 @@ export const siteConfig = {
   name: "Astraq",
   shortName: "Astraq",
   description:
-    "Dark-mode trading analytics, prediction workflows, and portfolio operations built on a production-ready Next.js app shell.",
-  tagline: "Signal-rich trading intelligence for research, execution, and model-driven forecasting.",
+    "Astraq is a full-stack and machine learning learning lab for market data, stock visualizations, and per-symbol prediction experiments.",
+  tagline: "Build the stack, learn the stack, and test market ideas with custom charts and prediction workflows.",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
 } as const;

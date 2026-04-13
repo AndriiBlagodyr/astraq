@@ -24,11 +24,11 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
 
         <div className={styles.actions}>
           <ThemeToggle />
-          <Link href="/sign-in" className={styles.actionSecondary}>
-            Sign in
+          <Link href="/experiments" className={styles.actionSecondary}>
+            Experiments
           </Link>
-          <Link href="/sign-up" className={styles.actionPrimary}>
-            Start Free
+          <Link href="/stocks" className={styles.actionPrimary}>
+            Open Lab
           </Link>
         </div>
       </header>
@@ -36,10 +36,10 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
       {children}
 
       <footer className={styles.footer}>
-        <p className={styles.footerTitle}>Astraq production baseline</p>
+        <p className={styles.footerTitle}>Astraq learning architecture</p>
         <p className={styles.footerText}>
-          Centralized dark theme tokens, route groups, app shell structure, and metadata routes are ready for
-          real product features.
+          The router is now centered on market data, two visualization paths, and ML prediction experiments for
+          individual stocks.
         </p>
       </footer>
     </div>

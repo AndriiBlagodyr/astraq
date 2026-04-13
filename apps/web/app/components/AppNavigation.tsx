@@ -10,7 +10,7 @@ export function AppNavigation() {
 
   return (
     <nav className={styles.nav} aria-label="App">
-      <p className={styles.label}>Workspace</p>
+      <p className={styles.label}>Lab Routes</p>
       {appNavigation.map((item) => {
         const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
