@@ -1,0 +1,25 @@
+---
+description: Authentication and authorization rules
+globs: apps/api/src/auth/**/*.ts, apps/api/src/common/guards/**/*.ts
+alwaysApply: false
+---
+
+# Tokens
+- Access: JWT (RS256 or EdDSA), 10 min TTL, claims: `sub`, `sid`, `roles`, `kid`.
+- Refresh: opaque 256-bit random, stored as Argon2id hash in `refresh_tokens(userId, jti, hash, expiresAt, replacedBy)`.
+- Rotation: every `/refresh` issues new pair and sets `replacedBy`. Reuse of a retired token revokes the family.
+
+# Registration/login
+- Argon2id for password hashing.
+- Verify email via signed time-limited token (jose).
+- TOTP 2FA with recovery codes (hashed).
+- Login rate limit: 5/min/IP + 10/hour/account (Redis).
+
+# Authorization
+- RBAC roles: `user`, `pro`, `admin`. Attribute checks: resource owner or admin.
+- Guards: `JwtAuthGuard`, `RolesGuard`, `OwnershipGuard`. Compose via `@UseGuards(...)`.
+- Never trust `userId` from the request body; read from `req.user`.
+
+# API keys
+- Separate table, prefix-displayed key (`ak_live_...`), stored as Argon2id hash.
+- Scope per key (`read:market`, `trade:paper`, `admin`). Deny by default.

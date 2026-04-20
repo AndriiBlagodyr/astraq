@@ -1,0 +1,24 @@
+---
+description: Astraq monorepo context and cross-cutting conventions
+alwaysApply: true
+---
+
+# Astraq Context
+
+- Monorepo with `apps/web` (Next.js 16), `apps/api` (Node), `services/ml` (Python FastAPI).
+- Target package manager: pnpm workspaces + Turborepo.
+- Shared types live (or will live) in `packages/shared` as Zod schemas; never duplicate DTOs.
+- Web consumes API through a generated typed SDK (`packages/sdk`), not via raw `fetch` to endpoints.
+- Python talks to Node via HTTP/JSON today; gRPC is a stretch goal — do not introduce without an ADR.
+
+# When adding a feature
+1. Define/extend Zod schema in `packages/shared`.
+2. Add Prisma migration or Mongo model in `apps/api`.
+3. Implement controller + service + repo in `apps/api` with tests.
+4. Regenerate SDK; consume it in `apps/web`.
+5. Add Playwright E2E for the user-facing flow.
+
+# Do not
+- Do not import from `apps/api` into `apps/web` directly; use the SDK.
+- Do not add a new dependency without checking workspace already has an equivalent.
+- Do not edit generated files (`packages/sdk/generated/**`, `prisma/client/**`).

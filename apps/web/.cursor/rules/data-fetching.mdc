@@ -1,0 +1,15 @@
+---
+description: Data fetching with the typed SDK + React Query
+globs: apps/web/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Data access
+- Prefer a shared API client or SDK instead of duplicating request code across components.
+- Avoid scattering hand-written calls to the same internal endpoints throughout the app.
+
+# React Query
+- Use stable, descriptive query keys.
+- Keep fetch logic and query options organized instead of redefining them ad hoc in many components.
+- Invalidate or refresh cached data deliberately after mutations.
+- Set cache behavior based on the data type: market data can usually be slightly stale, portfolio or user-specific state often cannot.

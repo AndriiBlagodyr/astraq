@@ -1,0 +1,14 @@
+---
+description: Frontend testing conventions
+globs: apps/web/**/*.{test,spec}.{ts,tsx}
+alwaysApply: false
+---
+
+# Vitest / Testing Library
+- Test behavior, not implementation. Query by role/text, not test ids (test ids only for charts/canvas).
+- Mock the SDK via `msw` or a hand-written mock client; do NOT mock `fetch` directly.
+
+# Playwright
+- E2E specs live in `apps/web/e2e/`. One spec per user journey (auth, chart, paper-trade).
+- Use storage state to skip login in unrelated specs.
+- Never `waitForTimeout`; use `expect(locator).toBeVisible()` with auto-retry.

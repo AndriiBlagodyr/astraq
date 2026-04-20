@@ -1,0 +1,21 @@
+---
+description: Time-series data safety (leakage, CV, target construction)
+globs: services/ml/**/*.py
+alwaysApply: false
+---
+
+# Leakage
+- Feature at time t may only use data with timestamp < t. Add `assert` in tests.
+- Never reuse a scaler/encoder fit on the full dataset.
+
+# Cross-validation
+- Use time-aware validation such as walk-forward splits for forecasting and strategy work.
+- No `shuffle=True` on time series.
+
+# Targets
+- Define horizon explicitly: `y = close.shift(-h) / close - 1`.
+- Align features and target with `pd.concat([X, y], axis=1).dropna()` and commit a length assert.
+
+# Evaluation
+- Report out-of-sample metrics, not just in-sample results.
+- Compare strategies against a simple baseline such as buy-and-hold when it makes sense.

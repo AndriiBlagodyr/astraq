@@ -1,0 +1,23 @@
+---
+description: Next.js 16 App Router conventions
+globs: apps/web/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# RSC vs Client
+- Default to Server Components. Add `"use client"` only for: state, effects, event handlers, browser-only libs (charts, d3, Mantine portals).
+- Fetch in Server Components with the SDK; pass serializable props to client children.
+- Long-running reads go through `<Suspense>` with streaming; no global loading spinners in RSC trees.
+
+# Routing
+- Use route groups `(app)` / `(marketing)` for layout separation (already present).
+- Prefer parallel routes for dashboards with independent panes.
+- Route handlers (`app/api/**/route.ts`) are BFF only — no business logic; proxy to `apps/api` SDK.
+
+# Caching
+- Use `fetch` cache tags + `revalidateTag` after mutations instead of `router.refresh()` unless UX requires it.
+- Do not disable caching globally; opt-out per request with `cache: 'no-store'` when data is user-specific.
+
+# Do not
+- Do not import server-only code (`env.ts`, SDK server bindings) from a `"use client"` file.
+- Do not call `cookies()`/`headers()` outside Server Components or route handlers.

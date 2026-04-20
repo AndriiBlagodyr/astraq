@@ -1,0 +1,18 @@
+---
+description: Charting and data visualization standards
+globs: apps/web/**/*Chart*.tsx, apps/web/**/charts/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Library choice
+- OHLCV/candles/volumes/overlays: `lightweight-charts` (TradingView).
+- Bespoke viz (heatmap, treemap, violin, drawdown, seasonality): `d3` primitives — no d3 React wrappers.
+
+# Performance
+- Be careful with resize and rerender behavior; chart containers should respond cleanly to layout changes.
+- If datasets become large, prefer server-side aggregation or downsampling over rendering raw data blindly.
+- Avoid DOM-heavy chart rendering patterns for large series.
+
+# UX
+- Make the distinction between historical and predicted data visually obvious when forecasts are shown.
+- Charts should communicate the dataset clearly with labels, legends, or nearby supporting text.
