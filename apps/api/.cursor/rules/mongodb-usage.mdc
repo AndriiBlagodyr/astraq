@@ -1,0 +1,23 @@
+---
+description: When to use MongoDB vs Postgres in Astraq
+globs: apps/api/**/*.ts
+alwaysApply: false
+---
+
+# Use Postgres for
+Transactional, relational, money-touching data: users, portfolios, orders, trades, positions, audit log, OHLCV.
+
+# Use MongoDB for
+Flexible or schemaless documents:
+- news articles + embeddings metadata
+- earnings call transcripts
+- raw provider payloads (bronze layer)
+- user strategy definitions (JSON DSL)
+- chart layout / notebook configs
+- social-sentiment snapshots
+
+# Rules
+- Collections are typed via `zod` schemas + `@typegoose/typegoose` or hand-written models.
+- Never join across Postgres and Mongo in application code for a hot path — denormalize the key you need.
+- Use aggregation pipelines (`$facet`, `$lookup`, `$graphLookup`) instead of multi-round trips.
+- Create text indexes for any `search` endpoint; measure with `.explain("executionStats")`.

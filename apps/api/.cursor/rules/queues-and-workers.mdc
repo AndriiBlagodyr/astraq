@@ -1,0 +1,22 @@
+---
+description: BullMQ queues, schedulers, and worker patterns
+globs: apps/api/src/**/queues/**/*.ts, apps/api/src/**/workers/**/*.ts
+alwaysApply: false
+---
+
+# Job design
+- Jobs are idempotent; design around `jobId = hash(payload)` so retries are safe.
+- Every job has a Zod-validated payload and a typed result.
+- Long jobs emit progress via `job.updateProgress(n)` streamed to clients via SSE.
+
+# Reliability
+- `attempts: 5`, exponential backoff (`type: 'exponential', delay: 2_000`).
+- Use a DLQ queue (`<name>.dead`) and alert on depth > 0.
+- Prefer `Queue.add` from services, never from controllers directly (keeps controllers thin).
+
+# Schedulers
+- Define cron with `@nestjs/schedule` in a `schedulers/` folder; each scheduler calls `Queue.add` — no business logic inline.
+
+# Observability
+- Attach OpenTelemetry spans around `process` handlers.
+- Expose Prom metrics per queue: depth, processing time, failure rate.

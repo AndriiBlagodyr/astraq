@@ -1,0 +1,20 @@
+---
+description: Python style for Astraq ML service
+globs: services/ml/**/*.py
+alwaysApply: false
+---
+
+# Typing
+- All public functions fully typed. `from __future__ import annotations` in every module.
+- Prefer `Annotated[...]` with `pydantic.Field` for FastAPI schemas.
+- No `Any` without a comment explaining why.
+
+# Structure
+- `app/api/` routers, `app/core/` config+logging, `app/data/` loaders, `app/features/`, `app/models/`, `app/backtest/`.
+- Routers are thin; call service functions in `app/services/`.
+
+# Errors
+- Raise `HTTPException` only in routers. Internal code raises domain exceptions (`DataNotFoundError`, `ModelNotReadyError`) mapped by a FastAPI exception handler.
+
+# Config
+- Use `pydantic-settings`. Fail fast on missing env. No `os.environ.get` scattered in code.

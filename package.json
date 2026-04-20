@@ -2,13 +2,10 @@
   "name": "astraq",
   "private": true,
   "version": "0.1.0",
-  "workspaces": [
-    "apps/*"
-  ],
+  "packageManager": "pnpm@10.18.3",
   "scripts": {
-    "dev": "npm run dev:web",
-    "dev:web": "npm --workspace apps/web run dev",
-    "dev:api": "npm --workspace apps/api run dev"
+    "dev": "pnpm dev:web",
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter @astraq/api dev"
   }
 }
-

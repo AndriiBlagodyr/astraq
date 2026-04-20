@@ -1,0 +1,14 @@
+---
+description: Testing pyramid for Astraq
+alwaysApply: false
+---
+
+# Testing approach
+- Prefer a simple pyramid: unit tests first, then integration tests for important flows, then E2E for core user journeys.
+- Match the level of testing to the feature. Do not force every change into every test layer.
+
+# Rules
+- New business-critical endpoint should usually have at least one integration test.
+- New indicator or strategy logic in ML should include at least one behavior or invariant-focused test.
+- Avoid `skip` / `xfail` unless there is a clear reason.
+- Treat flaky tests as bugs to fix, not noise to ignore.
