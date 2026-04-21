@@ -73,8 +73,26 @@ pnpm dev
 cd services/ml
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install -e .[dev]
 uvicorn app.main:app --reload
+```
+
+## Testing
+
+Recommended libraries:
+
+- Web unit tests: Vitest + Testing Library
+- API unit tests: Vitest
+- Web E2E tests: Playwright
+- ML service tests: pytest + FastAPI TestClient
+
+Common commands:
+
+```bash
+pnpm test:unit:web
+pnpm test:unit:api
+pnpm test:e2e:web
+python3 -m pytest services/ml/tests
 ```
 
 ## Near-term priorities

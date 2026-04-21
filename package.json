@@ -6,6 +6,13 @@
   "scripts": {
     "dev": "pnpm dev:web",
     "dev:web": "pnpm --filter web dev",
-    "dev:api": "pnpm --filter @astraq/api dev"
+    "dev:api": "pnpm --filter @astraq/api dev",
+    "test": "pnpm test:unit",
+    "test:unit": "pnpm test:unit:web && pnpm test:unit:api && pnpm test:unit:ml",
+    "test:unit:web": "pnpm --filter web test:unit",
+    "test:unit:api": "pnpm --filter @astraq/api test:unit",
+    "test:unit:ml": "python3 -m pytest services/ml/tests",
+    "test:e2e": "pnpm test:e2e:web",
+    "test:e2e:web": "pnpm --filter web test:e2e"
   }
 }
