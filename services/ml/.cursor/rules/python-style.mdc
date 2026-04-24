@@ -6,15 +6,20 @@ alwaysApply: false
 
 # Typing
 - All public functions fully typed. `from __future__ import annotations` in every module.
-- Prefer `Annotated[...]` with `pydantic.Field` for FastAPI schemas.
 - No `Any` without a comment explaining why.
 
 # Structure
-- `app/api/` routers, `app/core/` config+logging, `app/data/` loaders, `app/features/`, `app/models/`, `app/backtest/`.
-- Routers are thin; call service functions in `app/services/`.
+- Keep routers thin and move business logic into services or domain modules.
+- Keep config and environment handling centralized.
 
 # Errors
-- Raise `HTTPException` only in routers. Internal code raises domain exceptions (`DataNotFoundError`, `ModelNotReadyError`) mapped by a FastAPI exception handler.
+- Raise `HTTPException` only at the HTTP layer. Internal code should raise domain errors.
+
+# Time-series safety
+- Feature at time `t` may only use data with timestamp `< t`.
+- Use time-aware validation such as walk-forward splits for forecasting and strategy work.
+- No `shuffle=True` on time series.
+- Report out-of-sample metrics and compare against a simple baseline when it makes sense.
 
 # Config
 - Use `pydantic-settings`. Fail fast on missing env. No `os.environ.get` scattered in code.

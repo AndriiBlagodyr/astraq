@@ -4,18 +4,26 @@ globs: apps/web/**/*.{ts,tsx}
 alwaysApply: false
 ---
 
-# RSC vs Client
+# Rendering
 - Default to Server Components. Add `"use client"` only for: state, effects, event handlers, browser-only libs (charts, d3, Mantine portals).
-- Fetch in Server Components with the SDK; pass serializable props to client children.
-- Long-running reads go through `<Suspense>` with streaming; no global loading spinners in RSC trees.
+- Pass serializable data into client children.
 
 # Routing
 - Use route groups `(app)` / `(marketing)` for layout separation (already present).
-- Prefer parallel routes for dashboards with independent panes.
-- Route handlers (`app/api/**/route.ts`) are BFF only — no business logic; proxy to `apps/api` SDK.
+- Route handlers (`app/api/**/route.ts`) should stay thin and avoid business logic.
+
+# Components
+- Prefer simple functional components.
+- Prefer Mantine primitives and theme tokens over one-off styling.
+- Keep reusable styles and component logic easy to find and maintain.
+- Keep local UI state local.
+
+# Charts
+- Prefer chart choices that fit financial data well and stay performant with larger series.
+- Distinguish clearly between historical and predicted data.
+- Handle resizing and rerendering carefully; chart interactions should stay smooth.
 
 # Caching
-- Use `fetch` cache tags + `revalidateTag` after mutations instead of `router.refresh()` unless UX requires it.
 - Do not disable caching globally; opt-out per request with `cache: 'no-store'` when data is user-specific.
 
 # Do not

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { AstraqLogo } from "@/app/components/AstraqLogo";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { marketingNavigation } from "@/lib/navigation";
 import styles from "./layout.module.css";
@@ -10,7 +10,9 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
     <div className={styles.shell}>
       <header className={styles.header}>
         <Link href="/" className={styles.brand}>
-          <Image src="/icon.svg" alt="" aria-hidden="true" width={32} height={32} className={styles.brandIcon} />
+          <span className={styles.brandIcon} aria-hidden="true">
+            <AstraqLogo className={styles.brandIconLogo} />
+          </span>
           <span className={styles.brandText}>Astraq</span>
         </Link>
 
@@ -24,22 +26,15 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
 
         <div className={styles.actions}>
           <ThemeToggle />
-          <Link href="/experiments" className={styles.actionSecondary}>
-            Experiments
-          </Link>
-          <Link href="/stocks" className={styles.actionPrimary}>
-            Open Lab
-          </Link>
         </div>
       </header>
 
       {children}
 
       <footer className={styles.footer}>
-        <p className={styles.footerTitle}>Astraq learning architecture</p>
+        <p className={styles.footerTitle}>Astraq</p>
         <p className={styles.footerText}>
-          The router is now centered on market data, two visualization paths, and ML prediction experiments for
-          individual stocks.
+          Market data, charting, and prediction research in one focused workspace.
         </p>
       </footer>
     </div>

@@ -4,11 +4,19 @@ alwaysApply: false
 ---
 
 # Testing approach
-- Prefer a simple pyramid: unit tests first, then integration tests for important flows, then E2E for core user journeys.
+- Prefer a simple pyramid: unit tests first, then integration tests for important backend flows, then minimal E2E for a few critical user journeys.
 - Match the level of testing to the feature. Do not force every change into every test layer.
+- Prioritize tests for helpers, calculations, formatting/parsing utilities, indicators, strategy logic, and other domain behavior.
+- Do not default to UI rendering tests unless the component contains meaningful business behavior that cannot be tested more directly.
 
 # Rules
-- New business-critical endpoint should usually have at least one integration test.
-- New indicator or strategy logic in ML should include at least one behavior or invariant-focused test.
-- Avoid `skip` / `xfail` unless there is a clear reason.
+- Move reusable calculations and decision-making logic out of UI files into helpers or services so it can be tested without rendering.
+- New helper or calculation-heavy code should usually include unit tests.
+- Important backend behavior should usually have at least one integration test.
+- ML or strategy logic should include at least one behavior or invariant-focused test.
+- E2E should be reserved for a small set of high-value flows, not broad page coverage.
 - Treat flaky tests as bugs to fix, not noise to ignore.
+
+# Pipeline
+- The quality pipeline should run lint, typecheck, and unit tests on every PR or push to protected branches.
+- Add heavier integration or E2E stages only when the corresponding product surface becomes stable enough to justify them.

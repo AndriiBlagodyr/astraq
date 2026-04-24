@@ -5,12 +5,12 @@
 
 .header {
   max-width: 1180px;
-  margin: 0 auto 28px;
+  margin: 0 auto 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 16px 20px;
+  padding: 14px 18px;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-xl);
   background: var(--color-surface-glass);
@@ -26,9 +26,16 @@
 }
 
 .brandIcon {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.brandIconLogo {
+  width: 100%;
+  height: auto;
 }
 
 .brandText {
@@ -41,11 +48,12 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 22px;
 }
 
 .navLink {
   color: var(--color-text-secondary);
+  font-size: 0.98rem;
   transition: color 160ms ease;
 }
 
@@ -59,42 +67,10 @@
   gap: 12px;
 }
 
-.actionPrimary,
-.actionSecondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0 18px;
-  border-radius: 999px;
-  transition:
-    transform 160ms ease,
-    border-color 160ms ease,
-    background 160ms ease,
-    color 160ms ease;
-}
-
-.actionPrimary {
-  color: var(--color-brand-contrast);
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-brand);
-}
-
-.actionSecondary {
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-button-secondary);
-}
-
-.actionPrimary:hover,
-.actionSecondary:hover {
-  transform: translateY(-1px);
-}
-
 .footer {
   max-width: 1180px;
-  margin: 36px auto 0;
-  padding: 24px;
+  margin: 28px auto 0;
+  padding: 20px 4px 0;
   border-top: 1px solid var(--color-border-subtle);
   color: var(--color-text-muted);
 }
@@ -134,11 +110,6 @@
   }
 
   .actions {
-    width: 100%;
-  }
-
-  .actionPrimary,
-  .actionSecondary {
-    flex: 1 1 0;
+    margin-left: auto;
   }
 }

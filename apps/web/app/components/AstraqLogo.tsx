@@ -31,9 +31,9 @@ export function AstraqLogo({ className }: AstraqLogoProps) {
 
       <defs>
         <linearGradient id={panelGradientId} x1="74" y1="64" x2="438" y2="462" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#071320" />
-          <stop offset="0.52" stopColor="#0d2138" />
-          <stop offset="1" stopColor="#06101b" />
+          <stop offset="0" stopColor="var(--logo-panel-start)" />
+          <stop offset="0.52" stopColor="var(--logo-panel-mid)" />
+          <stop offset="1" stopColor="var(--logo-panel-end)" />
         </linearGradient>
         <linearGradient id={beamGradientId} x1="140" y1="366" x2="380" y2="172" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#63f5ff" />

@@ -1,56 +1,80 @@
 .page {
   max-width: 1180px;
   margin: 0 auto;
-  display: grid;
-  gap: 36px;
+  min-height: calc(100vh - 220px);
+  --marketing-card-bg: rgba(10, 24, 43, 0.56);
+  --marketing-card-border: var(--color-border-subtle);
+  --marketing-panel-bg: linear-gradient(180deg, rgba(10, 24, 43, 0.76), rgba(7, 17, 31, 0.9));
+  --marketing-summary-bg: linear-gradient(180deg, rgba(10, 24, 43, 0.72), rgba(7, 17, 31, 0.86));
+  --chart-surface-bg:
+    radial-gradient(circle at 20% 15%, rgba(110, 208, 255, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(11, 25, 45, 0.95), rgba(7, 18, 33, 0.98));
+  --chart-grid-line: rgba(128, 166, 214, 0.08);
+  --chart-frame-border: rgba(110, 208, 255, 0.1);
+  --positive-candle-glow: rgba(90, 219, 190, 0.18);
+  --negative-candle-glow: rgba(255, 169, 120, 0.16);
+  --trend-line-shadow: rgba(112, 181, 255, 0.22);
+}
+
+:global(:root[data-mantine-color-scheme="light"]) .page {
+  --marketing-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(240, 246, 255, 0.92));
+  --marketing-card-border: rgba(92, 121, 190, 0.16);
+  --marketing-panel-bg: linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(234, 241, 250, 0.98));
+  --marketing-summary-bg: linear-gradient(180deg, rgba(247, 251, 255, 0.98), rgba(233, 241, 250, 0.98));
+  --chart-surface-bg:
+    radial-gradient(circle at 20% 15%, rgba(68, 100, 232, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(247, 250, 255, 0.98), rgba(231, 239, 249, 0.98));
+  --chart-grid-line: rgba(92, 121, 190, 0.1);
+  --chart-frame-border: rgba(92, 121, 190, 0.14);
+  --positive-candle-glow: rgba(22, 154, 95, 0.12);
+  --negative-candle-glow: rgba(200, 136, 26, 0.12);
+  --trend-line-shadow: rgba(68, 100, 232, 0.1);
 }
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 470px);
-  gap: 32px;
-  align-items: center;
+  gap: 34px;
+  width: 100%;
+  padding: 36px 0 12px;
 }
 
-.copy {
-  position: relative;
-  z-index: 1;
+.heroIntro {
+  max-width: 1000px;
 }
 
-.eyebrow,
-.sectionEyebrow {
-  margin: 0 0 14px;
+.eyebrow {
+  margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   color: var(--color-accent-blue);
   font-size: 0.76rem;
+  margin-bottom: 18px;
 }
 
 .title {
   margin: 0;
-  max-width: 860px;
   font-family: var(--font-display);
-  font-size: clamp(3rem, 7vw, 5.6rem);
-  line-height: 0.94;
+  max-width: 15ch;
+  font-size: clamp(2.6rem, 5vw, 5.4rem);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  text-wrap: pretty;
 }
 
 .lead {
-  margin: 20px 0 0;
-  max-width: 720px;
+  margin: 18px 0 0;
+  max-width: 66ch;
   color: var(--color-text-secondary);
-  font-size: 1.08rem;
-  line-height: 1.75;
+  font-size: 1.04rem;
+  line-height: 1.8;
 }
 
-.actions {
+.actionRow {
   display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 28px;
+  margin-top: 26px;
 }
 
-.actionPrimary,
-.actionSecondary {
+.actionPrimary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -68,167 +92,283 @@
   background: var(--gradient-brand);
   box-shadow: var(--shadow-brand);
 }
-
-.actionSecondary {
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-button-secondary);
-}
-
-.actionPrimary:hover,
-.actionSecondary:hover {
+.actionPrimary:hover {
   transform: translateY(-1px);
 }
 
-.metricRow {
-  margin-top: 28px;
+.heroBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.focusGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.metricCard,
-.card,
-.logoPanel {
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-surface-glass);
-  backdrop-filter: blur(18px);
-  box-shadow: var(--shadow-soft);
-}
-
-.metricCard {
-  padding: 18px;
-  border-radius: var(--radius-lg);
-}
-
-.metricLabel {
-  display: block;
-  color: var(--color-text-muted);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-}
-
-.metricValue {
-  display: block;
-  margin-top: 8px;
-  color: var(--color-text-primary);
-  font-size: 1rem;
-}
-
-.logoPanel {
-  position: relative;
-  min-height: 460px;
-  padding: 22px;
-  border-radius: calc(var(--radius-xl) + 4px);
-  overflow: hidden;
-}
-
-.logoGlow {
-  position: absolute;
-  inset: 16% 12% auto;
-  height: 56%;
-  border-radius: 999px;
-  background: radial-gradient(circle, var(--color-panel-glow), transparent 70%);
-  filter: blur(34px);
-}
-
-.logo {
-  position: relative;
-  z-index: 1;
-}
-
-.logoMeta {
-  position: absolute;
-  left: 22px;
-  right: 22px;
-  bottom: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
-  background: var(--color-overlay-surface);
-  border: 1px solid var(--color-overlay-border);
-  color: var(--color-text-secondary);
-}
-
-.section {
-  display: grid;
-  gap: 22px;
-}
-
-.sectionHeader {
-  max-width: 760px;
-}
-
-.sectionTitle {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.02;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
-.card {
-  padding: 22px;
+.focusCard {
+  padding: 20px 20px 22px;
   border-radius: var(--radius-lg);
+  border: 1px solid var(--marketing-card-border);
+  background: var(--marketing-card-bg);
+  box-shadow: var(--shadow-soft);
 }
 
-.card h3 {
-  margin: 14px 0 10px;
-  font-size: 1.12rem;
-}
-
-.card p {
+.focusCard h2 {
   margin: 0;
-  color: var(--color-text-secondary);
-  line-height: 1.65;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
 }
 
-.pill {
-  display: inline-flex;
+.focusCard p {
+  margin: 8px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.chartPanel {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border-radius: calc(var(--radius-lg) + 4px);
+  border: 1px solid var(--marketing-card-border);
+  background: var(--marketing-panel-bg);
+  box-shadow: var(--shadow-soft);
+}
+
+.chartChrome {
+  display: flex;
   align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.chartTitle,
+.chartSymbol {
+  margin: 0;
+  font-size: 0.84rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chartTitle {
+  color: var(--color-text-muted);
+}
+
+.chartSymbol {
   color: var(--color-accent-cyan);
-  background: var(--color-pill-bg);
-  border: 1px solid var(--color-pill-border);
-  font-size: 0.82rem;
+}
+
+.chartMock {
+  position: relative;
+  min-height: 250px;
+  overflow: hidden;
+  border-radius: calc(var(--radius-lg) - 2px);
+  border: 1px solid var(--chart-frame-border);
+  background: var(--chart-surface-bg);
+}
+
+.chartGrid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--chart-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--chart-grid-line) 1px, transparent 1px);
+  background-size: 100% 56px, 56px 100%;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.88), transparent 100%);
+}
+
+.candles {
+  position: absolute;
+  inset: auto 20px 30px 20px;
+  height: 170px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.candle {
+  position: relative;
+  border-radius: 999px;
+}
+
+.candle::before,
+.candle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  border-radius: 999px;
+  opacity: 0.9;
+}
+
+.positive {
+  background: linear-gradient(180deg, rgba(120, 223, 189, 0.96), rgba(76, 194, 173, 0.8));
+  box-shadow: 0 0 0 1px rgba(90, 219, 190, 0.12), 0 0 22px var(--positive-candle-glow);
+}
+
+.positive::before,
+.positive::after {
+  background: rgba(120, 223, 189, 0.82);
+}
+
+.negative {
+  background: linear-gradient(180deg, rgba(255, 184, 122, 0.96), rgba(255, 135, 104, 0.84));
+  box-shadow: 0 0 0 1px rgba(255, 184, 122, 0.12), 0 0 22px var(--negative-candle-glow);
+}
+
+.negative::before,
+.negative::after {
+  background: rgba(255, 184, 122, 0.8);
+}
+
+.candleTall {
+  height: 104px;
+}
+
+.candleTall::before {
+  top: -22px;
+  height: 22px;
+}
+
+.candleTall::after {
+  bottom: -30px;
+  height: 30px;
+}
+
+.candleMid {
+  height: 72px;
+}
+
+.candleMid::before {
+  top: -18px;
+  height: 18px;
+}
+
+.candleMid::after {
+  bottom: -20px;
+  height: 20px;
+}
+
+.candleShort {
+  height: 52px;
+}
+
+.candleShort::before {
+  top: -14px;
+  height: 14px;
+}
+
+.candleShort::after {
+  bottom: -16px;
+  height: 16px;
+}
+
+.trendLine {
+  position: absolute;
+  inset: 30px 30px auto 30px;
+  height: 160px;
+  background: linear-gradient(135deg, transparent 12%, rgba(112, 181, 255, 0.92) 18%, rgba(112, 181, 255, 0.92) 21%, transparent 22%, transparent 37%, rgba(112, 181, 255, 0.92) 43%, rgba(112, 181, 255, 0.92) 46%, transparent 47%, transparent 60%, rgba(255, 214, 134, 0.88) 67%, rgba(255, 214, 134, 0.88) 70%, transparent 71%);
+  opacity: 0.7;
+  filter: drop-shadow(0 0 14px var(--trend-line-shadow));
+  pointer-events: none;
+}
+
+.chartMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metricLabel {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metricValue {
+  margin: 0;
+  padding-top: 6px;
+  color: var(--color-text-primary);
+  font-size: 0.96rem;
+  font-weight: 600;
+}
+
+.summaryBand {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  padding: 22px 24px;
+  border-radius: calc(var(--radius-lg) + 4px);
+  border: 1px solid var(--marketing-card-border);
+  background: var(--marketing-summary-bg);
+  box-shadow: var(--shadow-soft);
+}
+
+.summaryLabel {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.summaryValue {
+  margin: 0;
+  padding-top: 8px;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.45;
 }
 
 @media (max-width: 1024px) {
-  .hero {
+  .title {
+    max-width: 14ch;
+  }
+
+  .heroBody,
+  .focusGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .heroBody {
     grid-template-columns: 1fr;
   }
 
-  .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .summaryBand {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 640px) {
-  .metricRow,
-  .grid {
+  .hero {
+    padding-top: 20px;
+  }
+
+  .title {
+    font-size: clamp(2.3rem, 11vw, 3.3rem);
+    max-width: 12ch;
+  }
+
+  .focusGrid {
     grid-template-columns: 1fr;
   }
 
-  .logoPanel {
-    min-height: auto;
-    padding: 18px;
+  .chartMetrics {
+    grid-template-columns: 1fr;
   }
 
-  .logoMeta {
-    position: static;
-    margin-top: 16px;
-    flex-direction: column;
-    align-items: flex-start;
+  .summaryBand {
+    padding: 18px;
   }
 }

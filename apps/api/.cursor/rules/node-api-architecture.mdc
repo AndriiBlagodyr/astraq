@@ -6,23 +6,19 @@ alwaysApply: false
 
 # Module layout
 - One feature = one Nest module (`auth`, `portfolios`, `market-data`, `strategies`, `backtests`).
-- Public shape: `*.controller.ts` + `*.module.ts`. Internals: `*.service.ts`, `*.repo.ts`, `*.schemas.ts`.
-- Cross-cutting: `common/` for filters, interceptors, guards, pipes. No feature imports from another feature's internals.
+- Keep controllers thin. Put business rules in services and persistence in repos.
+- No feature should import another feature's internals directly.
+
+# Persistence
+- Use stable IDs and explicit indexes for common access patterns.
+- Every user-owned table should make filtering by `userId` cheap.
+- Money should use decimal types, never floats.
+- Store timestamps in UTC.
+- Keep schema changes in tracked migrations and treat destructive changes carefully.
 
 # Errors
-- Throw domain errors (`NotFoundError`, `ConflictError`, `AuthError`) from services.
-- A global `HttpExceptionFilter` maps them to HTTP codes + problem+json bodies.
+- Throw domain errors from services and map them to HTTP responses centrally.
 
 # Async boundaries
-- Never `await` inside a loop when a `Promise.all` is possible.
-- Every outbound call has a timeout; wrap third-party SDKs with an adapter that exposes `abort`.
-
-# Example service signature
-
-```ts
-async createOrder(userId: UserId, input: CreateOrderInput): Promise<Order> {
-  return this.prisma.$transaction(async (tx) => {
-    // validate -> insert -> audit -> return
-  });
-}
-```
+- Prefer safe concurrency over accidental serial loops.
+- Every outbound call should have a timeout.
