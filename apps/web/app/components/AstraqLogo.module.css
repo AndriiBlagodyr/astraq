@@ -1,7 +1,16 @@
 .logo {
+  --logo-panel-start: #071320;
+  --logo-panel-mid: #0d2138;
+  --logo-panel-end: #06101b;
   width: 100%;
   height: auto;
   display: block;
+}
+
+:global(:root[data-mantine-color-scheme="light"]) .logo {
+  --logo-panel-start: #f7fbff;
+  --logo-panel-mid: #e8f0fb;
+  --logo-panel-end: #dbe7f5;
 }
 
 .floatLayer {

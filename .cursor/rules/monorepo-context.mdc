@@ -5,20 +5,19 @@ alwaysApply: true
 
 # Astraq Context
 
-- Monorepo with `apps/web` (Next.js 16), `apps/api` (Node), `services/ml` (Python FastAPI).
-- Target package manager: pnpm workspaces + Turborepo.
-- Shared types live (or will live) in `packages/shared` as Zod schemas; never duplicate DTOs.
-- Web consumes API through a generated typed SDK (`packages/sdk`), not via raw `fetch` to endpoints.
-- Python talks to Node via HTTP/JSON today; gRPC is a stretch goal — do not introduce without an ADR.
+- Monorepo with `apps/web` (Next.js), `apps/api` (Node API), and `services/ml` (Python FastAPI).
+- Use `pnpm` workspaces at the repo root.
+- Keep business logic inside the app or service that owns it. Do not couple `web`, `api`, and `ml` through direct internal imports.
 
 # When adding a feature
-1. Define/extend Zod schema in `packages/shared`.
-2. Add Prisma migration or Mongo model in `apps/api`.
-3. Implement controller + service + repo in `apps/api` with tests.
-4. Regenerate SDK; consume it in `apps/web`.
-5. Add Playwright E2E for the user-facing flow.
+1. Put the change in the right owner:
+   - UI and page composition in `apps/web`
+   - domain and persistence logic in `apps/api`
+   - forecasting, signals, and backtesting logic in `services/ml`
+2. Prefer the lightest useful test for the change.
+3. Keep cross-service contracts explicit and easy to find.
 
 # Do not
-- Do not import from `apps/api` into `apps/web` directly; use the SDK.
-- Do not add a new dependency without checking workspace already has an equivalent.
-- Do not edit generated files (`packages/sdk/generated/**`, `prisma/client/**`).
+- Do not import code from one app directly into another app.
+- Do not add a new dependency without checking whether the workspace already has an equivalent.
+- Do not invent new architectural layers unless the current code actually needs them.

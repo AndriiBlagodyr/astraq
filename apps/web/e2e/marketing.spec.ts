@@ -5,11 +5,11 @@ test("marketing page links into the stock workspace", async ({ page }) => {
 
   await expect(
     page.getByRole("heading", {
-      name: /Astraq is a full-stack and ML learning lab/i,
+      name: /Research markets through one calm, readable workspace/i,
     }),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: "Open Stock Routes" }).click();
+  await page.getByRole("link", { name: "Explore Stocks" }).click();
 
   await expect(
     page.getByRole("heading", {
