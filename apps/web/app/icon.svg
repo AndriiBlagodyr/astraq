@@ -1,32 +1,31 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" fill="none">
   <defs>
-    <linearGradient id="bg" x1="72" y1="60" x2="438" y2="452" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#071320"/>
-      <stop offset="0.54" stop-color="#0D2138"/>
-      <stop offset="1" stop-color="#06101B"/>
+    <linearGradient id="astraq-stroke" x1="6" y1="44" x2="42" y2="6" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6EF2FF"/>
+      <stop offset="0.55" stop-color="#7D91FF"/>
+      <stop offset="1" stop-color="#F4C96D"/>
     </linearGradient>
-    <linearGradient id="beam" x1="144" y1="360" x2="376" y2="168" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#63F5FF"/>
-      <stop offset="0.52" stop-color="#7AA2FF"/>
-      <stop offset="1" stop-color="#F5C76B"/>
+    <linearGradient id="astraq-candle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F4C96D"/>
+      <stop offset="1" stop-color="#6EF2FF"/>
     </linearGradient>
-    <linearGradient id="orbit" x1="116" y1="148" x2="410" y2="388" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#8EF7FF"/>
-      <stop offset="0.54" stop-color="#5E85FF"/>
-      <stop offset="1" stop-color="#FFD36A"/>
-    </linearGradient>
+    <radialGradient id="astraq-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6EF2FF" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#6EF2FF" stop-opacity="0"/>
+    </radialGradient>
   </defs>
 
-  <rect x="38" y="38" width="436" height="436" rx="116" fill="url(#bg)"/>
-  <circle cx="256" cy="256" r="150" stroke="rgba(116, 176, 255, 0.14)" stroke-width="2"/>
-  <circle cx="256" cy="256" r="109" stroke="rgba(244, 201, 93, 0.1)" stroke-width="1.5" stroke-dasharray="4 12"/>
+  <circle cx="24" cy="9" r="11" fill="url(#astraq-halo)"/>
 
-  <path d="M154 355L256 138L358 355" stroke="url(#beam)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M194 278H318" stroke="url(#beam)" stroke-width="18" stroke-linecap="round"/>
-  <path d="M116 292C116 194 186 124 270 124C335 124 392 165 417 224C430 255 429 291 414 320C384 379 326 416 261 416C186 416 122 372 116 292Z" stroke="url(#orbit)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="14 18"/>
-  <path d="M366 350C389 371 404 402 404 438" stroke="url(#orbit)" stroke-width="12" stroke-linecap="round"/>
+  <rect x="18.5" y="33" width="1.8" height="6" rx="0.6" fill="url(#astraq-candle)"/>
+  <rect x="23.1" y="30" width="1.8" height="9" rx="0.6" fill="url(#astraq-candle)"/>
+  <rect x="27.7" y="26" width="1.8" height="13" rx="0.6" fill="url(#astraq-candle)"/>
 
-  <circle cx="256" cy="138" r="10" fill="#F5C76B"/>
-  <circle cx="318" cy="278" r="8" fill="#8EF7FF"/>
-  <circle cx="404" cy="438" r="7" fill="#7AA2FF"/>
+  <path d="M 8 41 L 24 7 L 40 41" fill="none" stroke="url(#astraq-stroke)" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M 15.6 27 L 32.4 27" fill="none" stroke="url(#astraq-stroke)" stroke-width="2.4" stroke-linecap="round" opacity="0.9"/>
+
+  <circle cx="8" cy="41" r="1.8" fill="#C3D0EA"/>
+  <circle cx="40" cy="41" r="1.8" fill="#C3D0EA"/>
+  <circle cx="24" cy="7" r="3.6" fill="#6EF2FF" opacity="0.35"/>
+  <circle cx="24" cy="7" r="2.2" fill="#FFFFFF"/>
 </svg>

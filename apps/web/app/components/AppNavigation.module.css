@@ -1,25 +1,37 @@
 .nav {
   display: grid;
+  gap: 18px;
+}
+
+.section {
+  display: grid;
   gap: 8px;
 }
 
 .label {
-  margin: 0 0 6px;
+  margin: 0;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.links {
+  display: grid;
+  gap: 4px;
 }
 
 .link {
   display: flex;
   align-items: center;
-  min-height: 46px;
+  min-height: 40px;
   padding: 0 14px;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   background: transparent;
+  font-size: 0.95rem;
   transition:
     border-color 160ms ease,
     background 160ms ease,

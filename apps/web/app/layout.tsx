@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "@mantine/core/styles.css";
 import { ColorSchemeScript } from "@mantine/core";
+import { COLOR_SCHEME_STORAGE_KEY, DEFAULT_COLOR_SCHEME } from "@/lib/color-scheme";
 import { siteConfig } from "@/lib/site";
 import { AppProviders } from "./providers";
 import "./globals.css";
@@ -44,7 +45,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <ColorSchemeScript defaultColorScheme="dark" />
+        <ColorSchemeScript
+          defaultColorScheme={DEFAULT_COLOR_SCHEME}
+          localStorageKey={COLOR_SCHEME_STORAGE_KEY}
+        />
       </head>
       <body>
         <AppProviders>{children}</AppProviders>

@@ -3,6 +3,7 @@
 import { MantineProvider, localStorageColorSchemeManager } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { COLOR_SCHEME_STORAGE_KEY, DEFAULT_COLOR_SCHEME } from "@/lib/color-scheme";
 import { theme } from "@/theme";
 
 type AppProvidersProps = {
@@ -10,9 +11,9 @@ type AppProvidersProps = {
 };
 
 export function AppProviders({ children }: AppProvidersProps) {
-  const colorSchemeManager = localStorageColorSchemeManager({
-    key: "astraq-color-scheme",
-  });
+  const [colorSchemeManager] = useState(() =>
+    localStorageColorSchemeManager({ key: COLOR_SCHEME_STORAGE_KEY }),
+  );
 
   const [queryClient] = useState(
     () =>
@@ -34,7 +35,7 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <MantineProvider
       theme={theme}
-      defaultColorScheme="dark"
+      defaultColorScheme={DEFAULT_COLOR_SCHEME}
       colorSchemeManager={colorSchemeManager}
     >
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

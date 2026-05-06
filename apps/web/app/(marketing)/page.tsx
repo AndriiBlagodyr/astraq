@@ -5,19 +5,44 @@ export const metadata = {
   title: "Home",
 };
 
-const focusAreas = [
+const capabilities = [
   {
-    title: "Market data",
-    description: "Review coverage, intervals, and market context from one starting point.",
+    title: "Watchlists & symbols",
+    description:
+      "Search, follow, and group the symbols you actually trade. Watchlists feed every other view in the app.",
   },
   {
-    title: "Stocks",
-    description: "Move into symbol pages for charts, comparisons, and daily tracking.",
+    title: "Candles & indicators",
+    description:
+      "Lightweight charts with EMA, SMA, Bollinger bands, and crosshair sync — tuned for daily review, not noise.",
   },
   {
-    title: "Predictions",
-    description: "Keep model views close to chart analysis instead of hidden in separate flows.",
+    title: "Paper trading & PnL",
+    description:
+      "Place orders, record fills, and watch realized and unrealized PnL update across your portfolio in real time.",
   },
+  {
+    title: "Rule-based strategies",
+    description:
+      "Author strategies in a typed DSL — SMA crossover, RSI threshold, breakouts — and version them like code.",
+  },
+  {
+    title: "Backtests you trust",
+    description:
+      "Run strategies on historical data with commissions and slippage, then inspect equity curves, Sharpe, and drawdown.",
+  },
+  {
+    title: "ML forecasts & signals",
+    description:
+      "Pull forecast bands and directional signals from the Python service into the same chart you're studying.",
+  },
+] as const;
+
+const statusBand = [
+  { label: "Stage", value: "Phase 1 of 11" },
+  { label: "Live now", value: "Charts, market data, prediction views" },
+  { label: "Up next", value: "Auth, watchlists, paper trading" },
+  { label: "North star", value: "Watchlist → chart → strategy → backtest" },
 ] as const;
 
 export default function MarketingPage() {
@@ -25,38 +50,63 @@ export default function MarketingPage() {
     <main className={styles.page}>
       <section className={styles.hero}>
         <div className={styles.heroIntro}>
-          <p className={styles.eyebrow}>Market analysis platform</p>
+          <span className={styles.statusPill}>
+            <span className={styles.statusDot} aria-hidden="true" />
+            <span className={styles.statusVersion}>v0.1</span>
+            <span className={styles.statusDivider} aria-hidden="true">
+              ·
+            </span>
+            <span className={styles.statusPhase}>Phase 1 — API foundation</span>
+          </span>
 
-          <h1 className={styles.title}>Research markets through one calm, readable workspace.</h1>
+          <p className={styles.eyebrow}>Personal trading research lab</p>
+
+          <h1 className={styles.title}>
+            From candles to backtests, in one focused workspace.
+          </h1>
+
           <p className={styles.lead}>
-            Start with market data, move into stock workspaces, and review prediction views without a crowded landing page or duplicated navigation.
+            Astraq pairs clean charts with watchlists, paper trading, rule-based strategies, and ML
+            forecasts. One calm, readable surface for researching ideas, testing them on real
+            history, and tracking the markets you care about.
           </p>
 
           <div className={styles.actionRow}>
             <Link href="/stocks" className={styles.actionPrimary}>
-              Explore Stocks
+              Open the workspace
+            </Link>
+            <Link href="/market-data" className={styles.actionSecondary}>
+              Browse market data
             </Link>
           </div>
         </div>
 
         <div className={styles.heroBody}>
-          <div className={styles.focusGrid} aria-label="Platform focus areas">
-            {focusAreas.map((item) => (
-              <article key={item.title} className={styles.focusCard}>
+          <div className={styles.capabilityGrid} aria-label="Platform capabilities">
+            {capabilities.map((item) => (
+              <article key={item.title} className={styles.capabilityCard}>
                 <h2>{item.title}</h2>
                 <p>{item.description}</p>
               </article>
             ))}
           </div>
 
-          <aside className={styles.chartPanel} aria-label="Market preview">
-            <div className={styles.chartChrome}>
-              <span className={styles.chartTitle}>Market preview</span>
-              <span className={styles.chartSymbol}>SPY · 1D</span>
-            </div>
+          <aside className={styles.previewPanel} aria-label="Workspace preview">
+            <header className={styles.previewHeader}>
+              <div className={styles.previewIdentity}>
+                <span className={styles.previewSymbol}>SPY</span>
+                <span className={styles.previewMeta}>1D · EMA 20 / 50</span>
+              </div>
+              <div className={styles.previewTabs} aria-hidden="true">
+                <span className={`${styles.previewTab} ${styles.previewTabActive}`}>Chart</span>
+                <span className={styles.previewTab}>Backtest</span>
+                <span className={styles.previewTab}>Forecast</span>
+              </div>
+            </header>
 
             <div className={styles.chartMock}>
               <div className={styles.chartGrid} aria-hidden="true" />
+              <div className={styles.forecastBand} aria-hidden="true" />
               <div className={styles.candles} aria-hidden="true">
                 <span className={`${styles.candle} ${styles.candleTall} ${styles.positive}`} />
                 <span className={`${styles.candle} ${styles.candleMid} ${styles.negative}`} />
@@ -72,38 +122,35 @@ export default function MarketingPage() {
                 <span className={`${styles.candle} ${styles.candleTall} ${styles.positive}`} />
               </div>
               <div className={styles.trendLine} aria-hidden="true" />
+              <span className={styles.signalDot} aria-hidden="true" />
             </div>
 
-            <div className={styles.chartMetrics}>
+            <dl className={styles.previewMetrics}>
               <div>
-                <p className={styles.metricLabel}>Signal</p>
-                <p className={styles.metricValue}>Trend intact</p>
+                <dt className={styles.metricLabel}>Strategy</dt>
+                <dd className={styles.metricValue}>EMA 20 / 50 cross</dd>
               </div>
               <div>
-                <p className={styles.metricLabel}>Volume</p>
-                <p className={styles.metricValue}>Above average</p>
+                <dt className={styles.metricLabel}>Backtest</dt>
+                <dd className={styles.metricValue}>
+                  +18.4% · <span className={styles.metricMuted}>2y window</span>
+                </dd>
               </div>
               <div>
-                <p className={styles.metricLabel}>Bias</p>
-                <p className={styles.metricValue}>Bullish</p>
+                <dt className={styles.metricLabel}>Forecast</dt>
+                <dd className={styles.metricValue}>Bias bullish</dd>
               </div>
-            </div>
+            </dl>
           </aside>
         </div>
 
-        <div className={styles.summaryBand}>
-          <div>
-            <p className={styles.summaryLabel}>Built for</p>
-            <p className={styles.summaryValue}>Daily market review</p>
-          </div>
-          <div>
-            <p className={styles.summaryLabel}>Primary flow</p>
-            <p className={styles.summaryValue}>Data to symbols to analysis</p>
-          </div>
-          <div>
-            <p className={styles.summaryLabel}>Next layer</p>
-            <p className={styles.summaryValue}>Paper trading and strategies</p>
-          </div>
+        <div className={styles.statusBand} aria-label="Roadmap status">
+          {statusBand.map((item) => (
+            <div key={item.label}>
+              <p className={styles.statusBandLabel}>{item.label}</p>
+              <p className={styles.statusBandValue}>{item.value}</p>
+            </div>
+          ))}
         </div>
       </section>
     </main>

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { AstraqLogo } from "@/app/components/AstraqLogo";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
-import { marketingNavigation } from "@/lib/navigation";
+import { marketingAuthActions, marketingNavigation } from "@/lib/navigation";
 import styles from "./layout.module.css";
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {
@@ -11,7 +11,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
       <header className={styles.header}>
         <Link href="/" className={styles.brand}>
           <span className={styles.brandIcon} aria-hidden="true">
-            <AstraqLogo className={styles.brandIconLogo} />
+            <AstraqLogo decorative className={styles.brandIconLogo} />
           </span>
           <span className={styles.brandText}>Astraq</span>
         </Link>
@@ -26,6 +26,20 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
 
         <div className={styles.actions}>
           <ThemeToggle />
+          <div className={styles.authActions}>
+            <Link
+              href={marketingAuthActions[0].href}
+              className={styles.authLinkSecondary}
+            >
+              {marketingAuthActions[0].label}
+            </Link>
+            <Link
+              href={marketingAuthActions[1].href}
+              className={styles.authLinkPrimary}
+            >
+              {marketingAuthActions[1].label}
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -34,7 +48,8 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
       <footer className={styles.footer}>
         <p className={styles.footerTitle}>Astraq</p>
         <p className={styles.footerText}>
-          Market data, charting, and prediction research in one focused workspace.
+          Market data, charting, paper trading, strategies, and prediction research in one focused
+          workspace.
         </p>
       </footer>
     </div>

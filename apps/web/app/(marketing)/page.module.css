@@ -2,33 +2,82 @@
   max-width: 1180px;
   margin: 0 auto;
   min-height: calc(100vh - 220px);
+
   --marketing-card-bg: rgba(10, 24, 43, 0.56);
   --marketing-card-border: var(--color-border-subtle);
-  --marketing-panel-bg: linear-gradient(180deg, rgba(10, 24, 43, 0.76), rgba(7, 17, 31, 0.9));
+  --marketing-card-hover-border: rgba(149, 176, 255, 0.28);
+  --marketing-panel-bg: linear-gradient(180deg, rgba(10, 24, 43, 0.78), rgba(7, 17, 31, 0.92));
   --marketing-summary-bg: linear-gradient(180deg, rgba(10, 24, 43, 0.72), rgba(7, 17, 31, 0.86));
+
+  --status-pill-bg: rgba(110, 242, 255, 0.08);
+  --status-pill-border: rgba(110, 242, 255, 0.18);
+  --status-pill-glow: rgba(110, 242, 255, 0.65);
+
+  --secondary-button-bg: rgba(10, 20, 35, 0.55);
+  --secondary-button-border: rgba(149, 176, 255, 0.26);
+  --secondary-button-hover-border: rgba(149, 176, 255, 0.52);
+
   --chart-surface-bg:
-    radial-gradient(circle at 20% 15%, rgba(110, 208, 255, 0.12), transparent 30%),
+    radial-gradient(circle at 20% 15%, rgba(110, 208, 255, 0.14), transparent 30%),
     linear-gradient(180deg, rgba(11, 25, 45, 0.95), rgba(7, 18, 33, 0.98));
   --chart-grid-line: rgba(128, 166, 214, 0.08);
-  --chart-frame-border: rgba(110, 208, 255, 0.1);
+  --chart-frame-border: rgba(110, 208, 255, 0.12);
   --positive-candle-glow: rgba(90, 219, 190, 0.18);
   --negative-candle-glow: rgba(255, 169, 120, 0.16);
   --trend-line-shadow: rgba(112, 181, 255, 0.22);
+  --forecast-band-bg: linear-gradient(
+    180deg,
+    rgba(125, 145, 255, 0.18),
+    rgba(110, 242, 255, 0.06) 60%,
+    transparent
+  );
+  --signal-dot-bg: #f4c96d;
+  --signal-dot-glow: rgba(244, 201, 109, 0.45);
+
+  --tab-bg: rgba(11, 25, 45, 0.6);
+  --tab-active-bg: rgba(110, 242, 255, 0.12);
+  --tab-active-border: rgba(110, 242, 255, 0.26);
+  --tab-text: var(--color-text-muted);
+  --tab-active-text: var(--color-text-primary);
 }
 
 :global(:root[data-mantine-color-scheme="light"]) .page {
-  --marketing-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(240, 246, 255, 0.92));
+  --marketing-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(240, 246, 255, 0.94));
   --marketing-card-border: rgba(92, 121, 190, 0.16);
-  --marketing-panel-bg: linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(234, 241, 250, 0.98));
-  --marketing-summary-bg: linear-gradient(180deg, rgba(247, 251, 255, 0.98), rgba(233, 241, 250, 0.98));
+  --marketing-card-hover-border: rgba(68, 100, 232, 0.32);
+  --marketing-panel-bg: linear-gradient(180deg, rgba(252, 253, 255, 0.98), rgba(234, 241, 250, 0.98));
+  --marketing-summary-bg: linear-gradient(180deg, rgba(248, 251, 255, 0.98), rgba(233, 241, 250, 0.98));
+
+  --status-pill-bg: rgba(12, 169, 183, 0.1);
+  --status-pill-border: rgba(12, 169, 183, 0.2);
+  --status-pill-glow: rgba(12, 169, 183, 0.55);
+
+  --secondary-button-bg: rgba(255, 255, 255, 0.7);
+  --secondary-button-border: rgba(68, 100, 232, 0.24);
+  --secondary-button-hover-border: rgba(68, 100, 232, 0.5);
+
   --chart-surface-bg:
     radial-gradient(circle at 20% 15%, rgba(68, 100, 232, 0.08), transparent 30%),
     linear-gradient(180deg, rgba(247, 250, 255, 0.98), rgba(231, 239, 249, 0.98));
   --chart-grid-line: rgba(92, 121, 190, 0.1);
-  --chart-frame-border: rgba(92, 121, 190, 0.14);
-  --positive-candle-glow: rgba(22, 154, 95, 0.12);
-  --negative-candle-glow: rgba(200, 136, 26, 0.12);
-  --trend-line-shadow: rgba(68, 100, 232, 0.1);
+  --chart-frame-border: rgba(92, 121, 190, 0.16);
+  --positive-candle-glow: rgba(22, 154, 95, 0.14);
+  --negative-candle-glow: rgba(200, 136, 26, 0.14);
+  --trend-line-shadow: rgba(68, 100, 232, 0.12);
+  --forecast-band-bg: linear-gradient(
+    180deg,
+    rgba(68, 100, 232, 0.14),
+    rgba(12, 169, 183, 0.06) 60%,
+    transparent
+  );
+  --signal-dot-bg: #c8881a;
+  --signal-dot-glow: rgba(200, 136, 26, 0.35);
+
+  --tab-bg: rgba(255, 255, 255, 0.7);
+  --tab-active-bg: rgba(68, 100, 232, 0.1);
+  --tab-active-border: rgba(68, 100, 232, 0.28);
+  --tab-text: var(--color-text-muted);
+  --tab-active-text: var(--color-text-primary);
 }
 
 .hero {
@@ -42,96 +91,193 @@
   max-width: 1000px;
 }
 
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--status-pill-border);
+  background: var(--status-pill-bg);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  margin-bottom: 22px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-accent-cyan);
+  box-shadow: 0 0 0 4px var(--status-pill-bg), 0 0 12px var(--status-pill-glow);
+  animation: status-pulse 2.4s ease-in-out infinite;
+}
+
+.statusVersion {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--color-text-primary);
+}
+
+.statusDivider {
+  color: var(--color-text-muted);
+}
+
+.statusPhase {
+  color: var(--color-text-secondary);
+}
+
 .eyebrow {
-  margin: 0;
+  margin: 0 0 18px;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   color: var(--color-accent-blue);
-  font-size: 0.76rem;
-  margin-bottom: 18px;
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
 .title {
   margin: 0;
   font-family: var(--font-display);
-  max-width: 15ch;
-  font-size: clamp(2.6rem, 5vw, 5.4rem);
-  line-height: 0.98;
+  max-width: 18ch;
+  font-size: clamp(2.6rem, 5vw, 5.2rem);
+  line-height: 1;
   letter-spacing: -0.03em;
   text-wrap: pretty;
+  background: linear-gradient(
+    180deg,
+    var(--color-text-primary) 60%,
+    color-mix(in srgb, var(--color-text-primary) 78%, transparent)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .lead {
   margin: 18px 0 0;
-  max-width: 66ch;
+  max-width: 64ch;
   color: var(--color-text-secondary);
   font-size: 1.04rem;
-  line-height: 1.8;
+  line-height: 1.75;
 }
 
 .actionRow {
   display: flex;
-  margin-top: 26px;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
 }
 
-.actionPrimary {
+.actionPrimary,
+.actionSecondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 48px;
   padding: 0 22px;
   border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   transition:
     transform 160ms ease,
     border-color 160ms ease,
-    background 160ms ease;
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .actionPrimary {
   color: var(--color-brand-contrast);
   background: var(--gradient-brand);
   box-shadow: var(--shadow-brand);
+  border: 1px solid transparent;
 }
+
 .actionPrimary:hover {
   transform: translateY(-1px);
+  box-shadow: 0 22px 50px rgba(50, 174, 198, 0.32);
+}
+
+.actionSecondary {
+  color: var(--color-text-primary);
+  background: var(--secondary-button-bg);
+  border: 1px solid var(--secondary-button-border);
+  backdrop-filter: blur(8px);
+}
+
+.actionSecondary:hover {
+  transform: translateY(-1px);
+  border-color: var(--secondary-button-hover-border);
 }
 
 .heroBody {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
   gap: 18px;
   align-items: stretch;
 }
 
-.focusGrid {
+.capabilityGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-content: start;
 }
 
-.focusCard {
+.capabilityCard {
+  position: relative;
   padding: 20px 20px 22px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--marketing-card-border);
   background: var(--marketing-card-bg);
   box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  transition:
+    border-color 200ms ease,
+    transform 200ms ease,
+    box-shadow 200ms ease;
 }
 
-.focusCard h2 {
+.capabilityCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 0% 0%,
+    rgba(110, 242, 255, 0.06),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+.capabilityCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--marketing-card-hover-border);
+}
+
+.capabilityCard:hover::before {
+  opacity: 1;
+}
+
+.capabilityCard h2 {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-text-primary);
 }
 
-.focusCard p {
+.capabilityCard p {
   margin: 8px 0 0;
   color: var(--color-text-secondary);
-  font-size: 0.95rem;
+  font-size: 0.94rem;
   line-height: 1.6;
 }
 
-.chartPanel {
+.previewPanel {
   display: grid;
   gap: 18px;
   padding: 20px;
@@ -139,34 +285,73 @@
   border: 1px solid var(--marketing-card-border);
   background: var(--marketing-panel-bg);
   box-shadow: var(--shadow-soft);
+  align-self: start;
+  position: sticky;
+  top: 24px;
 }
 
-.chartChrome {
+.previewHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.chartTitle,
-.chartSymbol {
-  margin: 0;
-  font-size: 0.84rem;
-  letter-spacing: 0.08em;
+.previewIdentity {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.previewSymbol {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+}
+
+.previewMeta {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
   text-transform: uppercase;
 }
 
-.chartTitle {
-  color: var(--color-text-muted);
+.previewTabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--tab-bg);
+  border: 1px solid var(--marketing-card-border);
 }
 
-.chartSymbol {
-  color: var(--color-accent-cyan);
+.previewTab {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--tab-text);
+  border: 1px solid transparent;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.previewTabActive {
+  color: var(--tab-active-text);
+  background: var(--tab-active-bg);
+  border-color: var(--tab-active-border);
 }
 
 .chartMock {
   position: relative;
-  min-height: 250px;
+  min-height: 230px;
   overflow: hidden;
   border-radius: calc(var(--radius-lg) - 2px);
   border: 1px solid var(--chart-frame-border);
@@ -183,10 +368,20 @@
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.88), transparent 100%);
 }
 
+.forecastBand {
+  position: absolute;
+  inset: 18px 16px auto 16px;
+  height: 78px;
+  border-radius: 16px;
+  background: var(--forecast-band-bg);
+  filter: blur(0.4px);
+  pointer-events: none;
+}
+
 .candles {
   position: absolute;
   inset: auto 20px 30px 20px;
-  height: 170px;
+  height: 160px;
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 10px;
@@ -230,7 +425,7 @@
 }
 
 .candleTall {
-  height: 104px;
+  height: 100px;
 }
 
 .candleTall::before {
@@ -239,12 +434,12 @@
 }
 
 .candleTall::after {
-  bottom: -30px;
-  height: 30px;
+  bottom: -28px;
+  height: 28px;
 }
 
 .candleMid {
-  height: 72px;
+  height: 70px;
 }
 
 .candleMid::before {
@@ -258,7 +453,7 @@
 }
 
 .candleShort {
-  height: 52px;
+  height: 50px;
 }
 
 .candleShort::before {
@@ -274,38 +469,74 @@
 .trendLine {
   position: absolute;
   inset: 30px 30px auto 30px;
-  height: 160px;
-  background: linear-gradient(135deg, transparent 12%, rgba(112, 181, 255, 0.92) 18%, rgba(112, 181, 255, 0.92) 21%, transparent 22%, transparent 37%, rgba(112, 181, 255, 0.92) 43%, rgba(112, 181, 255, 0.92) 46%, transparent 47%, transparent 60%, rgba(255, 214, 134, 0.88) 67%, rgba(255, 214, 134, 0.88) 70%, transparent 71%);
+  height: 150px;
+  background: linear-gradient(
+    135deg,
+    transparent 12%,
+    rgba(112, 181, 255, 0.92) 18%,
+    rgba(112, 181, 255, 0.92) 21%,
+    transparent 22%,
+    transparent 37%,
+    rgba(112, 181, 255, 0.92) 43%,
+    rgba(112, 181, 255, 0.92) 46%,
+    transparent 47%,
+    transparent 60%,
+    rgba(255, 214, 134, 0.88) 67%,
+    rgba(255, 214, 134, 0.88) 70%,
+    transparent 71%
+  );
   opacity: 0.7;
   filter: drop-shadow(0 0 14px var(--trend-line-shadow));
   pointer-events: none;
 }
 
-.chartMetrics {
+.signalDot {
+  position: absolute;
+  top: 36px;
+  right: 38px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--signal-dot-bg);
+  box-shadow: 0 0 0 4px var(--signal-dot-glow), 0 0 18px var(--signal-dot-glow);
+  animation: signal-pulse 2.6s ease-in-out infinite;
+}
+
+.previewMetrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+  margin: 0;
+}
+
+.previewMetrics > div {
+  margin: 0;
 }
 
 .metricLabel {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 0.74rem;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .metricValue {
-  margin: 0;
-  padding-top: 6px;
+  margin: 6px 0 0;
   color: var(--color-text-primary);
   font-size: 0.96rem;
   font-weight: 600;
 }
 
-.summaryBand {
+.metricMuted {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.statusBand {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
   padding: 22px 24px;
   border-radius: calc(var(--radius-lg) + 4px);
@@ -314,61 +545,104 @@
   box-shadow: var(--shadow-soft);
 }
 
-.summaryLabel {
+.statusBandLabel {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 0.76rem;
-  letter-spacing: 0.1em;
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
-.summaryValue {
-  margin: 0;
-  padding-top: 8px;
-  font-size: 1.02rem;
+.statusBandValue {
+  margin: 8px 0 0;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--color-text-primary);
   line-height: 1.45;
 }
 
+@keyframes status-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+@keyframes signal-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
 @media (max-width: 1024px) {
-  .title {
-    max-width: 14ch;
-  }
-
-  .heroBody,
-  .focusGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .heroBody {
     grid-template-columns: 1fr;
   }
 
-  .summaryBand {
-    grid-template-columns: 1fr;
+  .previewPanel {
+    position: static;
+  }
+
+  .statusBand {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
   .hero {
     padding-top: 20px;
+    gap: 24px;
   }
 
   .title {
-    font-size: clamp(2.3rem, 11vw, 3.3rem);
-    max-width: 12ch;
+    font-size: clamp(2.2rem, 11vw, 3.2rem);
+    max-width: 14ch;
   }
 
-  .focusGrid {
+  .capabilityGrid {
     grid-template-columns: 1fr;
   }
 
-  .chartMetrics {
+  .previewMetrics {
     grid-template-columns: 1fr;
   }
 
-  .summaryBand {
+  .previewTabs {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .statusBand {
+    grid-template-columns: 1fr;
     padding: 18px;
+  }
+
+  .actionRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actionPrimary,
+  .actionSecondary {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statusDot,
+  .signalDot {
+    animation: none;
   }
 }

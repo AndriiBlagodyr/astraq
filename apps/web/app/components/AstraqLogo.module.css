@@ -1,199 +1,163 @@
 .logo {
-  --logo-panel-start: #071320;
-  --logo-panel-mid: #0d2138;
-  --logo-panel-end: #06101b;
+  --logo-stop-1: #6ef2ff;
+  --logo-stop-2: #7d91ff;
+  --logo-stop-3: #f4c96d;
+  --logo-halo: #6ef2ff;
+  --logo-orbit: rgba(124, 244, 255, 0.32);
+  --logo-star: #c3d0ea;
+  --logo-apex: #ffffff;
+  --logo-shadow: 0 8px 24px rgba(110, 242, 255, 0.18);
+
   width: 100%;
   height: auto;
   display: block;
+  filter: drop-shadow(var(--logo-shadow));
+  overflow: visible;
 }
 
 :global(:root[data-mantine-color-scheme="light"]) .logo {
-  --logo-panel-start: #f7fbff;
-  --logo-panel-mid: #e8f0fb;
-  --logo-panel-end: #dbe7f5;
+  --logo-stop-1: #0ca9b7;
+  --logo-stop-2: #4464e8;
+  --logo-stop-3: #c8881a;
+  --logo-halo: #4464e8;
+  --logo-orbit: rgba(68, 100, 232, 0.28);
+  --logo-star: #4e6483;
+  --logo-apex: #0f2038;
+  --logo-shadow: 0 8px 22px rgba(68, 100, 232, 0.18);
 }
 
-.floatLayer {
-  animation: logo-float 8s ease-in-out infinite;
-  transform-origin: center;
+.halo {
+  transform-origin: 24px 9px;
+  transform-box: view-box;
+  animation: logo-halo 4.4s ease-in-out infinite;
+}
+
+.frame {
+  animation: logo-glow 6s ease-in-out infinite;
+}
+
+.candles {
+  transform-origin: 24px 39px;
+  transform-box: view-box;
+}
+
+.candleA,
+.candleB,
+.candleC {
+  transform-origin: center bottom;
   transform-box: fill-box;
 }
 
-.orbitSlow {
-  animation: orbit-spin 20s linear infinite;
-  transform-origin: center;
-  transform-box: fill-box;
+.candleA {
+  animation: candle-rise 3.2s ease-in-out infinite;
 }
 
-.orbitReverse {
-  animation: orbit-spin-reverse 26s linear infinite;
-  transform-origin: center;
-  transform-box: fill-box;
+.candleB {
+  animation: candle-rise 3.2s ease-in-out infinite 0.18s;
 }
 
-.scanLayer {
-  animation: scan-breathe 4.6s ease-in-out infinite;
+.candleC {
+  animation: candle-rise 3.2s ease-in-out infinite 0.36s;
 }
 
-.sparkLayer {
-  animation: spark-drift 5.4s ease-in-out infinite;
+.stars circle {
+  animation: star-twinkle 3.6s ease-in-out infinite;
 }
 
-.runner {
-  animation: runner-fade 6.5s linear infinite;
+.stars circle:nth-of-type(2) {
+  animation-delay: 1.4s;
 }
 
-.guideRing {
-  fill: none;
-  stroke: rgba(116, 176, 255, 0.12);
-  stroke-width: 2;
+.apex {
+  transform-origin: 24px 7px;
+  transform-box: view-box;
+  animation: apex-pulse 2.8s ease-in-out infinite;
 }
 
-.guideRingInner {
-  fill: none;
-  stroke: rgba(244, 201, 93, 0.08);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 12;
+.orbit {
+  animation: orbit-dash 4.2s linear infinite;
 }
 
-.orbitTrack {
-  fill: none;
-  stroke: rgba(124, 244, 255, 0.2);
-  stroke-width: 6;
-}
-
-.secondaryOrbit {
-  fill: none;
-  stroke: rgba(250, 214, 108, 0.18);
-  stroke-width: 4;
-  stroke-dasharray: 6 16;
-}
-
-.signalOrbit {
-  animation: signal-dash 6s linear infinite;
-}
-
-.pulseDot {
-  animation: pulse 2.8s ease-in-out infinite;
-}
-
-.pulseDotDelay {
-  animation: pulse 2.8s ease-in-out infinite 0.5s;
-}
-
-.pulseDotSlow {
-  animation: pulse 3.3s ease-in-out infinite 0.9s;
-}
-
-.whisper {
-  animation: whisper-dash 3.8s linear infinite;
-  stroke-dasharray: 12 22;
-}
-
-@keyframes logo-float {
+@keyframes logo-halo {
   0%,
   100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-@keyframes orbit-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes orbit-spin-reverse {
-  from {
-    transform: rotate(360deg);
-  }
-  to {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes scan-breathe {
-  0%,
-  100% {
-    opacity: 0.92;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes spark-drift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(0, -5px, 0);
-  }
-}
-
-@keyframes signal-dash {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: -96;
-  }
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.9;
+    opacity: 0.7;
     transform: scale(1);
-    transform-origin: center;
-    transform-box: fill-box;
   }
   50% {
     opacity: 1;
-    transform: scale(1.28);
-    transform-origin: center;
-    transform-box: fill-box;
+    transform: scale(1.08);
   }
 }
 
-@keyframes whisper-dash {
+@keyframes logo-glow {
+  0%,
+  100% {
+    opacity: 0.96;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes candle-rise {
+  0%,
+  100% {
+    transform: scaleY(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scaleY(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes star-twinkle {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+}
+
+@keyframes apex-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+@keyframes orbit-dash {
   from {
     stroke-dashoffset: 0;
   }
   to {
-    stroke-dashoffset: -68;
-  }
-}
-
-@keyframes runner-fade {
-  0%,
-  100% {
-    opacity: 0.75;
-  }
-  50% {
-    opacity: 1;
+    stroke-dashoffset: -18;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .floatLayer,
-  .orbitSlow,
-  .orbitReverse,
-  .scanLayer,
-  .sparkLayer,
-  .runner,
-  .signalOrbit,
-  .pulseDot,
-  .pulseDotDelay,
-  .pulseDotSlow,
-  .whisper {
+  .halo,
+  .frame,
+  .candleA,
+  .candleB,
+  .candleC,
+  .stars circle,
+  .apex,
+  .orbit {
     animation: none;
   }
 }
