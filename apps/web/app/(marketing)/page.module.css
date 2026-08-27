@@ -41,7 +41,7 @@
   --tab-active-text: var(--color-text-primary);
 }
 
-:global(:root[data-mantine-color-scheme="light"]) .page {
+:global(:root[data-mode="light"]) .page {
   --marketing-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(240, 246, 255, 0.94));
   --marketing-card-border: rgba(92, 121, 190, 0.16);
   --marketing-card-hover-border: rgba(68, 100, 232, 0.32);

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { buttonVariants } from "@astraq/ui";
 import { AstraqLogo } from "@/app/components/AstraqLogo";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { marketingAuthActions, marketingNavigation } from "@/lib/navigation";
@@ -29,13 +30,13 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
           <div className={styles.authActions}>
             <Link
               href={marketingAuthActions[0].href}
-              className={styles.authLinkSecondary}
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
             >
               {marketingAuthActions[0].label}
             </Link>
             <Link
               href={marketingAuthActions[1].href}
-              className={styles.authLinkPrimary}
+              className={buttonVariants({ size: "sm" })}
             >
               {marketingAuthActions[1].label}
             </Link>
@@ -48,8 +49,8 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
       <footer className={styles.footer}>
         <p className={styles.footerTitle}>Astraq</p>
         <p className={styles.footerText}>
-          Market data, charting, paper trading, strategies, and prediction research in one focused
-          workspace.
+          Market data, charting, paper trading, strategies, and prediction
+          research in one focused workspace.
         </p>
       </footer>
     </div>

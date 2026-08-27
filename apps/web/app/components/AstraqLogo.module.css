@@ -15,7 +15,7 @@
   overflow: visible;
 }
 
-:global(:root[data-mantine-color-scheme="light"]) .logo {
+:global(:root[data-mode="light"]) .logo {
   --logo-stop-1: #0ca9b7;
   --logo-stop-2: #4464e8;
   --logo-stop-3: #c8881a;

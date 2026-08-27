@@ -1,0 +1,149 @@
+:root,
+:root[data-theme="astraq"] {
+  --ds-font-sans: "Geist", "Avenir Next", "Segoe UI", sans-serif;
+  --ds-font-display: "Sora", "Avenir Next", "Segoe UI", sans-serif;
+  --ds-font-mono: "SFMono-Regular", "SF Mono", "Consolas", monospace;
+
+  --ds-radius-sm: 0.75rem;
+  --ds-radius-md: 1.125rem;
+  --ds-radius-lg: 1.5rem;
+  --ds-radius-xl: 2rem;
+  --ds-motion-fast: 160ms;
+  --ds-motion-base: 220ms;
+
+  --ds-brand: #4ceeff;
+  --ds-brand-strong: #466cef;
+  --ds-brand-warm: #f4c96d;
+  --ds-positive: #39d98a;
+  --ds-negative: #ff6b7b;
+  --ds-warning: #ffb04d;
+  --ds-brand-contrast: #04101c;
+  --ds-gradient-brand: linear-gradient(
+    135deg,
+    #6ef2ff 0%,
+    #7d91ff 55%,
+    #f4c96d 100%
+  );
+}
+
+:root[data-theme="terminal"] {
+  --ds-brand: #67f7a2;
+  --ds-brand-strong: #17b968;
+  --ds-brand-warm: #e2ff6a;
+  --ds-positive: #67f7a2;
+  --ds-negative: #ff6f91;
+  --ds-warning: #e2ff6a;
+  --ds-brand-contrast: #03110a;
+  --ds-gradient-brand: linear-gradient(
+    135deg,
+    #67f7a2 0%,
+    #18c978 58%,
+    #e2ff6a 100%
+  );
+}
+
+:root[data-theme="midnight"] {
+  --ds-brand: #a8a3ff;
+  --ds-brand-strong: #725cff;
+  --ds-brand-warm: #ff9bd5;
+  --ds-positive: #4fe2b1;
+  --ds-negative: #ff7797;
+  --ds-warning: #ffc46b;
+  --ds-brand-contrast: #0a0718;
+  --ds-gradient-brand: linear-gradient(
+    135deg,
+    #a8a3ff 0%,
+    #725cff 52%,
+    #ff9bd5 100%
+  );
+}
+
+:root,
+:root[data-mode="dark"] {
+  color-scheme: dark;
+  --ds-background: #06111f;
+  --ds-background-elevated: #0a172a;
+  --ds-surface: rgba(10, 20, 35, 0.82);
+  --ds-surface-strong: rgba(12, 27, 47, 0.94);
+  --ds-surface-muted: rgba(10, 20, 35, 0.6);
+  --ds-overlay: rgba(5, 11, 22, 0.78);
+  --ds-border: rgba(149, 176, 255, 0.14);
+  --ds-border-strong: rgba(149, 176, 255, 0.26);
+  --ds-foreground: #eef4ff;
+  --ds-foreground-secondary: #c3d0ea;
+  --ds-foreground-muted: #8ea2c7;
+  --ds-focus: color-mix(in srgb, var(--ds-brand) 42%, transparent);
+  --ds-row: rgba(149, 176, 255, 0.08);
+  --ds-shadow-soft: 0 28px 80px rgba(1, 7, 18, 0.34);
+  --ds-shadow-brand: 0 18px 44px
+    color-mix(in srgb, var(--ds-brand-strong) 28%, transparent);
+  --ds-gradient-page:
+    radial-gradient(
+      circle at 12% 18%,
+      color-mix(in srgb, var(--ds-brand) 12%, transparent),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 82% 12%,
+      color-mix(in srgb, var(--ds-brand-warm) 10%, transparent),
+      transparent 24%
+    ),
+    linear-gradient(160deg, #06111f 0%, #0d1d35 56%, #07111d 100%);
+  --ds-gradient-surface:
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--ds-brand-strong) 14%, transparent),
+      transparent 32%
+    ),
+    linear-gradient(180deg, rgba(8, 18, 32, 0.9), rgba(12, 27, 47, 0.76));
+}
+
+:root[data-mode="light"] {
+  color-scheme: light;
+  --ds-background: #f3f7fc;
+  --ds-background-elevated: #e9f0f8;
+  --ds-surface: rgba(255, 255, 255, 0.84);
+  --ds-surface-strong: rgba(241, 246, 252, 0.96);
+  --ds-surface-muted: rgba(255, 255, 255, 0.74);
+  --ds-overlay: rgba(255, 255, 255, 0.86);
+  --ds-border: rgba(92, 121, 190, 0.14);
+  --ds-border-strong: rgba(92, 121, 190, 0.26);
+  --ds-foreground: #0f2038;
+  --ds-foreground-secondary: #4e6483;
+  --ds-foreground-muted: #7f93b0;
+  --ds-focus: color-mix(in srgb, var(--ds-brand-strong) 34%, transparent);
+  --ds-row: rgba(92, 121, 190, 0.1);
+  --ds-shadow-soft: 0 28px 70px rgba(43, 64, 112, 0.12);
+  --ds-shadow-brand: 0 18px 44px
+    color-mix(in srgb, var(--ds-brand-strong) 20%, transparent);
+  --ds-gradient-page:
+    radial-gradient(
+      circle at 12% 18%,
+      color-mix(in srgb, var(--ds-brand) 12%, transparent),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 82% 12%,
+      color-mix(in srgb, var(--ds-brand-warm) 10%, transparent),
+      transparent 24%
+    ),
+    linear-gradient(160deg, #f3f7fc 0%, #e8eef7 56%, #eef4fb 100%);
+  --ds-gradient-surface:
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--ds-brand-strong) 12%, transparent),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.88),
+      rgba(240, 246, 255, 0.74)
+    );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ds-motion-fast: 0ms;
+    --ds-motion-base: 0ms;
+  }
+}

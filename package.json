@@ -4,15 +4,24 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.18.3",
   "scripts": {
-    "dev": "pnpm dev:web",
+    "dev": "turbo dev",
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter @astraq/api dev",
+    "dev:storybook": "pnpm --filter @astraq/ui storybook",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
     "test": "pnpm test:unit",
-    "test:unit": "pnpm test:unit:web && pnpm test:unit:api && pnpm test:unit:ml",
+    "test:unit": "pnpm test:unit:ui && pnpm test:unit:web && pnpm test:unit:api && pnpm test:unit:ml",
+    "test:unit:ui": "pnpm --filter @astraq/ui test:unit",
     "test:unit:web": "pnpm --filter web test:unit",
     "test:unit:api": "pnpm --filter @astraq/api test:unit",
     "test:unit:ml": "python3 -m pytest services/ml/tests",
     "test:e2e": "pnpm test:e2e:web",
-    "test:e2e:web": "pnpm --filter web test:e2e"
+    "test:e2e:web": "pnpm --filter web test:e2e",
+    "storybook:build": "pnpm --filter @astraq/ui build-storybook"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.12"
   }
 }

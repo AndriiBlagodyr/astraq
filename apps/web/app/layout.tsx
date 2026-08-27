@@ -1,10 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import "@mantine/core/styles.css";
-import { ColorSchemeScript } from "@mantine/core";
-import { COLOR_SCHEME_STORAGE_KEY, DEFAULT_COLOR_SCHEME } from "@/lib/color-scheme";
+import { ThemeScript } from "@astraq/ui";
 import { siteConfig } from "@/lib/site";
 import { AppProviders } from "./providers";
-import "./globals.css";
+import "@astraq/ui/styles.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -15,7 +13,15 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   manifest: "/manifest.webmanifest",
-  keywords: ["trading", "market data", "stocks", "visualization", "predictions", "machine learning", "next.js"],
+  keywords: [
+    "trading",
+    "market data",
+    "stocks",
+    "visualization",
+    "predictions",
+    "machine learning",
+    "next.js",
+  ],
   openGraph: {
     title: siteConfig.name,
     description: siteConfig.description,
@@ -43,12 +49,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      data-theme="astraq"
+      data-mode="dark"
+      suppressHydrationWarning
+    >
       <head>
-        <ColorSchemeScript
-          defaultColorScheme={DEFAULT_COLOR_SCHEME}
-          localStorageKey={COLOR_SCHEME_STORAGE_KEY}
-        />
+        <ThemeScript />
       </head>
       <body>
         <AppProviders>{children}</AppProviders>

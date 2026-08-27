@@ -39,9 +39,9 @@ const capabilities = [
 ] as const;
 
 const statusBand = [
-  { label: "Stage", value: "Phase 1 of 11" },
+  { label: "Stage", value: "Phase 1 of 12" },
   { label: "Live now", value: "Charts, market data, prediction views" },
-  { label: "Up next", value: "Auth, watchlists, paper trading" },
+  { label: "Up next", value: "OpenAPI, SDK, design system" },
   { label: "North star", value: "Watchlist → chart → strategy → backtest" },
 ] as const;
 
@@ -66,9 +66,10 @@ export default function MarketingPage() {
           </h1>
 
           <p className={styles.lead}>
-            Astraq pairs clean charts with watchlists, paper trading, rule-based strategies, and ML
-            forecasts. One calm, readable surface for researching ideas, testing them on real
-            history, and tracking the markets you care about.
+            Astraq pairs clean charts with watchlists, paper trading, rule-based
+            strategies, and ML forecasts. One calm, readable surface for
+            researching ideas, testing them on real history, and tracking the
+            markets you care about.
           </p>
 
           <div className={styles.actionRow}>
@@ -82,7 +83,10 @@ export default function MarketingPage() {
         </div>
 
         <div className={styles.heroBody}>
-          <div className={styles.capabilityGrid} aria-label="Platform capabilities">
+          <div
+            className={styles.capabilityGrid}
+            aria-label="Platform capabilities"
+          >
             {capabilities.map((item) => (
               <article key={item.title} className={styles.capabilityCard}>
                 <h2>{item.title}</h2>
@@ -98,7 +102,11 @@ export default function MarketingPage() {
                 <span className={styles.previewMeta}>1D · EMA 20 / 50</span>
               </div>
               <div className={styles.previewTabs} aria-hidden="true">
-                <span className={`${styles.previewTab} ${styles.previewTabActive}`}>Chart</span>
+                <span
+                  className={`${styles.previewTab} ${styles.previewTabActive}`}
+                >
+                  Chart
+                </span>
                 <span className={styles.previewTab}>Backtest</span>
                 <span className={styles.previewTab}>Forecast</span>
               </div>
@@ -108,18 +116,42 @@ export default function MarketingPage() {
               <div className={styles.chartGrid} aria-hidden="true" />
               <div className={styles.forecastBand} aria-hidden="true" />
               <div className={styles.candles} aria-hidden="true">
-                <span className={`${styles.candle} ${styles.candleTall} ${styles.positive}`} />
-                <span className={`${styles.candle} ${styles.candleMid} ${styles.negative}`} />
-                <span className={`${styles.candle} ${styles.candleShort} ${styles.positive}`} />
-                <span className={`${styles.candle} ${styles.candleTall} ${styles.positive}`} />
-                <span className={`${styles.candle} ${styles.candleMid} ${styles.negative}`} />
-                <span className={`${styles.candle} ${styles.candleTall} ${styles.positive}`} />
-                <span className={`${styles.candle} ${styles.candleShort} ${styles.positive}`} />
-                <span className={`${styles.candle} ${styles.candleMid} ${styles.negative}`} />
-                <span className={`${styles.candle} ${styles.candleTall} ${styles.positive}`} />
-                <span className={`${styles.candle} ${styles.candleShort} ${styles.positive}`} />
-                <span className={`${styles.candle} ${styles.candleMid} ${styles.negative}`} />
-                <span className={`${styles.candle} ${styles.candleTall} ${styles.positive}`} />
+                <span
+                  className={`${styles.candle} ${styles.candleTall} ${styles.positive}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleMid} ${styles.negative}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleShort} ${styles.positive}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleTall} ${styles.positive}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleMid} ${styles.negative}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleTall} ${styles.positive}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleShort} ${styles.positive}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleMid} ${styles.negative}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleTall} ${styles.positive}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleShort} ${styles.positive}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleMid} ${styles.negative}`}
+                />
+                <span
+                  className={`${styles.candle} ${styles.candleTall} ${styles.positive}`}
+                />
               </div>
               <div className={styles.trendLine} aria-hidden="true" />
               <span className={styles.signalDot} aria-hidden="true" />

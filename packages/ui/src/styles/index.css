@@ -1,0 +1,141 @@
+@import "tailwindcss";
+@import "../tokens/index.css";
+
+@source "../components/**/*.{ts,tsx}";
+@source "../../../../apps/web/**/*.{ts,tsx}";
+
+@theme inline {
+  --font-sans: var(--ds-font-sans);
+  --font-display: var(--ds-font-display);
+  --font-mono: var(--ds-font-mono);
+
+  --color-background: var(--ds-background);
+  --color-elevated: var(--ds-background-elevated);
+  --color-surface: var(--ds-surface);
+  --color-surface-strong: var(--ds-surface-strong);
+  --color-surface-muted: var(--ds-surface-muted);
+  --color-overlay: var(--ds-overlay);
+  --color-border: var(--ds-border);
+  --color-border-strong: var(--ds-border-strong);
+  --color-foreground: var(--ds-foreground);
+  --color-secondary: var(--ds-foreground-secondary);
+  --color-muted: var(--ds-foreground-muted);
+  --color-brand: var(--ds-brand);
+  --color-brand-strong: var(--ds-brand-strong);
+  --color-brand-warm: var(--ds-brand-warm);
+  --color-positive: var(--ds-positive);
+  --color-negative: var(--ds-negative);
+  --color-warning: var(--ds-warning);
+  --color-focus: var(--ds-focus);
+
+  --radius-sm: var(--ds-radius-sm);
+  --radius-md: var(--ds-radius-md);
+  --radius-lg: var(--ds-radius-lg);
+  --radius-xl: var(--ds-radius-xl);
+}
+
+:root {
+  /* Transitional aliases for app-owned patterns during the package migration. */
+  --font-sans: var(--ds-font-sans);
+  --font-display: var(--ds-font-display);
+  --font-mono: var(--ds-font-mono);
+  --radius-sm: var(--ds-radius-sm);
+  --radius-md: var(--ds-radius-md);
+  --radius-lg: var(--ds-radius-lg);
+  --radius-xl: var(--ds-radius-xl);
+  --gradient-brand: var(--ds-gradient-brand);
+  --gradient-page: var(--ds-gradient-page);
+  --gradient-auth-panel: var(--ds-gradient-surface);
+  --gradient-surface-elevated: var(--ds-gradient-surface);
+  --gradient-panel-highlight: var(--ds-gradient-surface);
+  --color-brand-contrast: var(--ds-brand-contrast);
+  --color-bg-canvas: var(--ds-background);
+  --color-bg-elevated: var(--ds-background-elevated);
+  --color-surface: var(--ds-surface);
+  --color-surface-strong: var(--ds-surface-strong);
+  --color-surface-glass: var(--ds-gradient-surface);
+  --color-button-secondary: var(--ds-surface-muted);
+  --color-overlay-surface: var(--ds-overlay);
+  --color-overlay-border: var(--ds-border);
+  --color-input-surface: var(--ds-surface-muted);
+  --color-border-subtle: var(--ds-border);
+  --color-border-strong: var(--ds-border-strong);
+  --color-text-primary: var(--ds-foreground);
+  --color-text-secondary: var(--ds-foreground-secondary);
+  --color-text-muted: var(--ds-foreground-muted);
+  --color-accent-cyan: var(--ds-brand);
+  --color-accent-blue: var(--ds-brand-strong);
+  --color-accent-gold: var(--ds-brand-warm);
+  --color-success: var(--ds-positive);
+  --color-danger: var(--ds-negative);
+  --color-warning: var(--ds-warning);
+  --color-focus-ring: var(--ds-focus);
+  --color-table-row: var(--ds-row);
+  --color-tag-bg: color-mix(in srgb, var(--ds-brand-strong) 9%, transparent);
+  --color-tag-border: color-mix(
+    in srgb,
+    var(--ds-brand-strong) 18%,
+    transparent
+  );
+  --color-pill-bg: color-mix(in srgb, var(--ds-brand) 9%, transparent);
+  --color-pill-border: color-mix(in srgb, var(--ds-brand) 18%, transparent);
+  --color-panel-glow: color-mix(
+    in srgb,
+    var(--ds-brand-strong) 25%,
+    transparent
+  );
+  --shadow-soft: var(--ds-shadow-soft);
+  --shadow-brand: var(--ds-shadow-brand);
+  --shadow-focus: 0 0 0 4px color-mix(in srgb, var(--ds-focus) 40%, transparent);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--ds-border);
+  }
+
+  html,
+  body {
+    min-height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: var(--ds-gradient-page);
+    background-attachment: fixed;
+    color: var(--ds-foreground);
+    font-family: var(--ds-font-sans);
+    transition:
+      background var(--ds-motion-base) ease,
+      color var(--ds-motion-fast) ease;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  img,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ds-brand);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--ds-brand) 20%, transparent);
+    color: var(--ds-foreground);
+  }
+}

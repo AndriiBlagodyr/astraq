@@ -5,7 +5,9 @@
 
 node_modules/
 .next/
+.turbo/
 dist/
+storybook-static/
 coverage/
 playwright-report/
 test-results/

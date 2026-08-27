@@ -12,6 +12,7 @@ Goals the codebase must serve:
 - `apps/api`  — Node.js domain API (NestJS target). Auth, portfolios, orders, market data orchestration.
 - `services/ml` — Python FastAPI service. Forecasting, backtesting, signal generation.
 - `services/ingest` (planned) — Python websocket ingestor -> Redis/NATS streams.
+- `packages/ui` — semantic design tokens and accessible, reusable React components.
 - `packages/shared` (planned) — Zod schemas + TS types shared across web and api.
 - `packages/sdk` (planned) — typed client generated from api OpenAPI.
 
@@ -24,6 +25,8 @@ Goals the codebase must serve:
 - All env vars validated with Zod (Node) / Pydantic Settings (Python) at boot.
 - Every endpoint has: schema -> service -> repo -> tests -> OpenAPI doc.
 - No secrets in repo; prefer `.env.local` and Doppler/SOPS in prod.
+- Shared UI consumes semantic CSS variables and supports theme identity independently from light/dark mode.
+- Trading-specific patterns and app shells stay in `apps/web`; do not move product behavior into `packages/ui`.
 - Learning > shipping: when a simple library exists AND a teaching opportunity exists, prefer implementing one layer by hand first (e.g. JWT refresh rotation, event-driven backtester).
 
 ## Current phase
