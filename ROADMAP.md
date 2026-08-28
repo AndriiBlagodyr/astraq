@@ -1,8 +1,9 @@
 # Astraq Roadmap
 
-> **Status (2026-05-04)** — Phase 1 in progress: API foundation and contracts.
-> **Just shipped:** Phase 0 — pnpm workspaces, env validation, marketing surface, theming.
-> **Next milestone:** NestJS skeleton + first OpenAPI handshake consumed by `apps/web`.
+> **Status (2026-08-28)** — Phase 1 in progress: API foundation and contracts.
+> **Just shipped:** NestJS API skeleton, structured logging, health endpoints, and `uv` for `services/ml`.
+> **Next milestone:** OpenAPI generation + the first generated SDK flow consumed by `apps/web`.
+> **Known foundation gaps:** Turborepo, `packages/*`, CI, and local Docker infrastructure.
 
 Astraq has two jobs at the same time:
 
@@ -34,7 +35,7 @@ If a phase doesn't move one of those user outcomes forward or clearly deepen a c
 - **Postgres + TimescaleDB** is the source of truth for transactional and time-series data.
 - **MongoDB** enters in **Phase 6** for news, transcripts, and raw provider payloads — and only there. It does not get added "just in case".
 - **Redis** powers caching, rate limits, BullMQ queues, and lightweight streams.
-- **Python owns analytics and ML.** It does not own transactional flows.
+- **Python owns analytics and ML.** `services/ml` is packaged with **uv** (lockfile + `.python-version`). It does not own transactional flows. Do not reintroduce Poetry or ad-hoc `pip install` workflows.
 - **`lightweight-charts` is the OHLCV engine.** `d3` is reserved for bespoke visuals — heatmaps, distributions, seasonality views.
 - **`services/ingest` is built in Phase 9**, only when polling and scheduled refreshes are no longer enough.
 
@@ -44,11 +45,11 @@ astraq/
 │   ├── web/     Next.js 16 frontend (App Router, RSC-first)
 │   └── api/     NestJS domain API (auth, portfolios, orders, market data)
 ├── services/
-│   ├── ml/      FastAPI analytics, forecasting, advanced backtests
+│   ├── ml/      FastAPI analytics, forecasting, advanced backtests (uv, Python 3.12)
 │   └── ingest/  Python streaming ingestor (Phase 9)
 ├── packages/
-│   ├── shared/  Zod schemas + shared TS types (internal, changesets-tracked)
-│   └── sdk/     Typed client generated from API OpenAPI
+│   ├── shared/  Zod schemas + shared TS types (planned)
+│   └── sdk/     Typed client generated from API OpenAPI (planned)
 └── infra/
     ├── docker/  local infra and compose files
     └── k8s/     optional, post-deployment
@@ -75,11 +76,12 @@ These apply to every phase. Don't restate them inside phase descriptions.
 - User-facing API features always include: schema → service → repository → tests → OpenAPI update → web integration.
 - Internal infra work doesn't need forced Playwright coverage if there's no user flow to exercise.
 
-## Current scaffold (May 2026)
+## Current scaffold (August 2026)
 
 - `apps/web` — Next.js 16 + Mantine + React Query + `lightweight-charts` + Playwright + Vitest.
-- `apps/api` — bare Express starter (`cors`, `dotenv`, `express`).
-- `services/ml` — minimal FastAPI with `/health` and `/predict`.
+- `apps/api` — NestJS + TypeScript + Pino + Zod environment validation.
+- `services/ml` — FastAPI with `/health` and `/predict`, managed by `uv` (Python 3.12 pin in `.python-version`, lockfile in `uv.lock`).
+- The workspace currently includes `apps/*` only; `packages/*`, Turborepo, and `infra/docker` remain to be added.
 
 ---
 
@@ -87,10 +89,10 @@ These apply to every phase. Don't restate them inside phase descriptions.
 
 **Goal:** create a stable workspace that can carry the rest of the project.
 
-1. Move to **pnpm workspaces + Turborepo**.
-2. Add `packages/shared` and `packages/sdk` (placeholders are fine).
+1. Move to **pnpm workspaces + Turborepo**. **pnpm workspaces are in place; Turborepo is still deferred.**
+2. Add `packages/shared` and `packages/sdk` (still deferred).
 3. Centralize linting, formatting, TS config, root scripts, and workspace conventions.
-4. Add local infra in `infra/docker/`:
+4. Add local infra in `infra/docker/` (deferred until it becomes a Phase 2 prerequisite):
    - Postgres 16 + TimescaleDB
    - MongoDB 7 (image only — first use is Phase 6)
    - Redis 7
@@ -117,7 +119,7 @@ These apply to every phase. Don't restate them inside phase descriptions.
 
 **Goal:** turn `apps/api` into a real backend foundation that the web app can rely on.
 
-1. Replace bare Express with **NestJS**.
+1. Replace bare Express with **NestJS**. **Done** (skeleton, logging, health, exception handling). Remaining Phase 1 work is OpenAPI and the SDK.
 2. Establish module boundaries: controllers, services, repositories, common cross-cutting modules.
 3. Add structured logging with `pino` and request-id propagation.
 4. Add global exception handling and problem-style error responses.
@@ -351,7 +353,7 @@ At this point Astraq becomes very strong for personal use even before heavy ML.
 **Goal:** expand Astraq from rule-based tooling into advanced research.
 
 1. Upgrade `services/ml` structure: `app/api/`, `app/core/`, `app/data/`, `app/features/`, `app/models/`, `app/backtest/`, `app/services/`.
-2. Adopt `uv`, `ruff`, `mypy`, `pytest`.
+2. Finish Python tooling: `ruff` and `mypy` (strict on `app/`). **`uv` (lockfile + `.python-version`) and pytest are already in place.**
 3. Feature engineering: returns, rolling volatility, RSI, MACD, ATR, OBV.
 4. Statistical and classical ML models first: ARIMA / SARIMA, GARCH, gradient boosting for directional prediction.
 5. Only after the classical baselines are honest, explore deeper models: LSTM, TCN, N-BEATS.

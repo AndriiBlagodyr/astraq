@@ -5,11 +5,15 @@
 
 node_modules/
 .next/
+.turbo/
 dist/
+storybook-static/
 coverage/
 playwright-report/
 test-results/
 
 .venv/
+.pytest_cache/
 __pycache__/
 *.pyc
+*.egg-info/

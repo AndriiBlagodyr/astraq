@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 
 # Rendering
-- Default to Server Components. Add `"use client"` only for: state, effects, event handlers, browser-only libs (charts, d3, Mantine portals).
+- Default to Server Components. Add `"use client"` only for: state, effects, event handlers, browser-only libs (charts, d3, portals).
 - Pass serializable data into client children.
 
 # Routing
@@ -14,7 +14,7 @@ alwaysApply: false
 
 # Components
 - Prefer simple functional components.
-- Prefer Mantine primitives and theme tokens over one-off styling.
+- Prefer `@astraq/ui` primitives and semantic theme tokens over one-off styling.
 - Keep reusable styles and component logic easy to find and maintain.
 - Keep local UI state local.
 

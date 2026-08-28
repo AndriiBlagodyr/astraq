@@ -10,8 +10,8 @@ The project has two goals:
 ## Current status
 
 - `apps/web` is the most developed app today and contains the current UI.
-- `apps/api` is still a lightweight Express starter and is planned to move to NestJS.
-- `services/ml` is a minimal FastAPI service that will grow into the analytics and ML layer.
+- `apps/api` is a NestJS service with structured logging, validated environment configuration, and health endpoints.
+- `services/ml` is a FastAPI service managed with `uv` (Python 3.12, lockfile in `uv.lock`).
 - The product plan and phased execution live in [ROADMAP.md](./ROADMAP.md).
 
 ## Repository structure
@@ -20,9 +20,9 @@ The project has two goals:
 astraq/
 ├── apps/
 │   ├── web/         Next.js 16 frontend
-│   └── api/         Node.js backend
+│   └── api/         NestJS backend
 ├── services/
-│   └── ml/          Python FastAPI service
+│   └── ml/          Python FastAPI service (uv)
 └── packages/        Shared packages to be added during roadmap execution
 ```
 
@@ -36,12 +36,18 @@ astraq/
 
 ## Running locally
 
-Current commands reflect the repository after the package-manager migration to `pnpm`.
+Node workspaces use **pnpm**. The ML service uses **uv**, not Poetry or a manual `pip` + venv workflow.
 
-If `pnpm` is not available on your machine yet, enable the Corepack shim once:
+If `pnpm` is not available yet, enable the Corepack shim once:
 
 ```bash
 corepack enable
+```
+
+If `uv` is not available yet:
+
+```bash
+brew install uv
 ```
 
 ### Root
@@ -69,12 +75,12 @@ pnpm dev
 
 ### ML service
 
+Python 3.12 is pinned in `services/ml/.python-version`. From the repo root or `services/ml`:
+
 ```bash
 cd services/ml
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .[dev]
-uvicorn app.main:app --reload
+uv sync --group dev
+uv run uvicorn app.main:app --reload
 ```
 
 ## Testing
@@ -92,12 +98,13 @@ Common commands:
 pnpm test:unit:web
 pnpm test:unit:api
 pnpm test:e2e:web
-python3 -m pytest services/ml/tests
+pnpm test:unit:ml
 ```
+
+`pnpm test:unit:ml` runs `uv run --directory services/ml pytest`.
 
 ## Near-term priorities
 
-- stabilize the workspace and local infrastructure
-- migrate the API foundation to NestJS
-- add shared contracts and generated SDK usage
+- finish Phase 1: OpenAPI generation and a typed SDK consumed by `apps/web`
+- add local Docker infra (Postgres + TimescaleDB) as a Phase 2 prerequisite
 - ship the first useful personal-use flows: watchlists, candles, auth, and paper trading
