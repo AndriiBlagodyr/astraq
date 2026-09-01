@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { buttonVariants } from "@astraq/ui";
 import { AppNavigation } from "@/app/components/AppNavigation";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import styles from "./layout.module.css";
@@ -10,10 +11,19 @@ export default function ProductLayout({ children }: { children: ReactNode }) {
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <Link href="/" className={styles.brand}>
-          <Image src="/icon.svg" alt="" aria-hidden="true" width={38} height={38} className={styles.brandIcon} />
+          <Image
+            src="/icon.svg"
+            alt=""
+            aria-hidden="true"
+            width={38}
+            height={38}
+            className={styles.brandIcon}
+          />
           <div>
             <p className={styles.brandTitle}>Astraq</p>
-            <p className={styles.brandSubtitle}>Full-stack + ML learning workspace</p>
+            <p className={styles.brandSubtitle}>
+              Full-stack + ML learning workspace
+            </p>
           </div>
         </Link>
 
@@ -22,8 +32,8 @@ export default function ProductLayout({ children }: { children: ReactNode }) {
         <div className={styles.sidebarCard}>
           <p className={styles.sidebarCardLabel}>Current focus</p>
           <p className={styles.sidebarCardText}>
-            Build one clean data flow, visualize it in two ways, and attach prediction experiments to the same
-            stock-specific routes.
+            Build one clean data flow, visualize it in two ways, and attach
+            prediction experiments to the same stock-specific routes.
           </p>
         </div>
       </aside>
@@ -37,10 +47,16 @@ export default function ProductLayout({ children }: { children: ReactNode }) {
 
           <div className={styles.headerActions}>
             <ThemeToggle />
-            <Link href="/" className={styles.headerLink}>
+            <Link
+              href="/"
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
+            >
               Home
             </Link>
-            <Link href="/experiments" className={styles.headerLinkPrimary}>
+            <Link
+              href="/experiments"
+              className={buttonVariants({ size: "sm" })}
+            >
               Experiments
             </Link>
           </div>

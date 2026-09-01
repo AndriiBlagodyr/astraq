@@ -1,9 +1,9 @@
 # Astraq Roadmap
 
-> **Status (2026-08-28)** — Phase 1 in progress: API foundation and contracts.
-> **Just shipped:** NestJS API skeleton, structured logging, health endpoints, and `uv` for `services/ml`.
+> **Status (2026-09-01)** — Phase 1 in progress: API foundation and contracts.
+> **Just shipped:** NestJS API skeleton, `packages/ui` design system, Turborepo, and `uv` for `services/ml`.
 > **Next milestone:** OpenAPI generation + the first generated SDK flow consumed by `apps/web`.
-> **Known foundation gaps:** Turborepo, `packages/*`, CI, and local Docker infrastructure.
+> **Known foundation gaps:** `packages/shared`, `packages/sdk`, CI, and local Docker infrastructure.
 
 Astraq has two jobs at the same time:
 
@@ -48,6 +48,7 @@ astraq/
 │   ├── ml/      FastAPI analytics, forecasting, advanced backtests (uv, Python 3.12)
 │   └── ingest/  Python streaming ingestor (Phase 9)
 ├── packages/
+│   ├── ui/      Semantic tokens and accessible React components
 │   ├── shared/  Zod schemas + shared TS types (planned)
 │   └── sdk/     Typed client generated from API OpenAPI (planned)
 └── infra/
@@ -65,6 +66,7 @@ These apply to every phase. Don't restate them inside phase descriptions.
 - **`packages/shared` versioning.** Internal-only, tracked with Changesets, no public semver until extracted from the monorepo.
 - **Data licensing.** Providers like `yahoo-finance2` and Binance are for personal and learning use. No redistribution, no public dashboards exposing raw vendor data.
 - **Observability is not a phase.** Structured logging starts in Phase 1. Tracing starts in Phase 4 (paper trading needs it). Phase 10 is for metrics, dashboards, and load testing — not for inventing observability from scratch.
+- **Design system ownership.** Reusable tokens and accessible core components live in `packages/ui`; product-specific trading patterns and app shells stay in `apps/web`.
 
 ## Delivery guardrails
 
@@ -78,19 +80,19 @@ These apply to every phase. Don't restate them inside phase descriptions.
 
 ## Current scaffold (August 2026)
 
-- `apps/web` — Next.js 16 + Mantine + React Query + `lightweight-charts` + Playwright + Vitest.
+- `apps/web` — Next.js 16 + Tailwind + `@astraq/ui` tokens + React Query + `lightweight-charts` + Playwright + Vitest.
 - `apps/api` — NestJS + TypeScript + Pino + Zod environment validation.
 - `services/ml` — FastAPI with `/health` and `/predict`, managed by `uv` (Python 3.12 pin in `.python-version`, lockfile in `uv.lock`).
-- The workspace currently includes `apps/*` only; `packages/*`, Turborepo, and `infra/docker` remain to be added.
+- Workspace includes `apps/*`, `packages/ui`, and Turborepo. `packages/shared`, `packages/sdk`, and `infra/docker` remain to be added.
 
 ---
 
-## Phase 0 — Monorepo and developer foundation [done]
+## Phase 0 — Monorepo and developer foundation [baseline complete, gaps tracked]
 
 **Goal:** create a stable workspace that can carry the rest of the project.
 
-1. Move to **pnpm workspaces + Turborepo**. **pnpm workspaces are in place; Turborepo is still deferred.**
-2. Add `packages/shared` and `packages/sdk` (still deferred).
+1. Move to **pnpm workspaces + Turborepo**. **pnpm workspaces and Turborepo are in place.**
+2. Add `packages/shared` and `packages/sdk` (still deferred). `packages/ui` shipped in Phase 1.5.
 3. Centralize linting, formatting, TS config, root scripts, and workspace conventions.
 4. Add local infra in `infra/docker/` (deferred until it becomes a Phase 2 prerequisite):
    - Postgres 16 + TimescaleDB
@@ -138,6 +140,44 @@ These apply to every phase. Don't restate them inside phase descriptions.
 - ADR: "Why NestJS over Fastify-only or staying on Express"
 
 **Kill/pivot trigger:** if NestJS DI ergonomics are blocking shipping after two weeks, fall back to Fastify with a hand-rolled module pattern and capture the reasons in the ADR.
+
+---
+
+## Phase 1.5 — Design system foundation [done]
+
+**Goal:** establish a distinct, accessible, multi-theme UI foundation before Phase 2 expands Astraq's product surface.
+
+This is a bounded migration, not a mandate to design every future trading pattern up front. Tailwind provides styling primitives; semantic tokens, accessible behavior, documented states, and consistent composition form the design system.
+
+1. Add Turborepo and expand the pnpm workspace to `packages/*`.
+2. Create `packages/ui` with:
+   - Tailwind CSS
+   - CSS-variable design tokens
+   - typed component variants
+   - Storybook as the component catalog and playground
+3. Model theme identity and color mode separately:
+   - at least one Astraq brand theme
+   - light and dark modes
+   - semantic tokens for surfaces, text, borders, focus, status, charts, motion, radii, and shadows
+4. Use accessible headless primitives selectively for interaction-heavy components such as dialogs, selects, menus, tabs, and tooltips.
+5. Build only the core components required by current screens: buttons, form controls, cards, badges, tabs, overlays, table primitives, feedback states, and theme controls.
+6. Keep domain patterns such as order forms, portfolio summaries, watchlist tables, chart toolbars, and app shells in `apps/web`.
+7. Migrate the marketing, auth, navigation, and application shells; remove Mantine after its final consumer is migrated.
+
+**Learning focus:** token architecture, accessible component APIs, visual systems, package boundaries, Storybook workflows, responsive composition, and theme persistence.
+
+**Exit criteria:**
+
+- a representative Astraq page is composed entirely from `packages/ui` and app-owned patterns
+- every core component documents its important states and theme variants in Storybook
+- keyboard navigation and visible focus behavior work for interactive components
+- light/dark mode renders without a first-paint theme flash
+- migrated shells work at mobile and desktop widths
+- Mantine is removed from `apps/web`
+- lint, strict type checking, focused interaction tests, Storybook accessibility checks, and a small multi-theme Playwright smoke path are green
+- ADR: "Tailwind + headless primitives over Mantine"
+
+**Kill/pivot trigger:** if migration work expands into speculative components not used by a current screen, stop at the representative page and defer those components until their product phase.
 
 ---
 
@@ -491,14 +531,15 @@ Only pick from these after Phase 7 has shipped and the core loop (watchlist → 
 ## Recommended execution summary
 
 1. Build the workspace and backend foundation (Phases 0–1).
-2. Ship a useful personal product fast (Phase 2: data + shim auth + bootstrap candles + basic chart).
-3. Harden auth (Phase 3) once the app is worth protecting.
-4. Add paper trading and request tracing together (Phase 4) — money-handling code deserves traceability from day one.
-5. Replace bootstrap ingestion with real infrastructure (Phase 5).
-6. Upgrade charts and earn MongoDB its keep with news/transcripts (Phase 6).
-7. Author and backtest strategies (Phase 7).
-8. Layer in ML only after the core product loop is already valuable (Phase 8).
-9. Go realtime and stand up `services/ingest` only when polling stops being enough (Phase 9).
-10. Finish with observability, performance, and deployment maturity (Phases 10–11).
+2. Establish the reusable design-system foundation before product UI expands (Phase 1.5).
+3. Ship a useful personal product fast (Phase 2: data + shim auth + bootstrap candles + basic chart).
+4. Harden auth (Phase 3) once the app is worth protecting.
+5. Add paper trading and request tracing together (Phase 4) — money-handling code deserves traceability from day one.
+6. Replace bootstrap ingestion with real infrastructure (Phase 5).
+7. Upgrade charts and earn MongoDB its keep with news/transcripts (Phase 6).
+8. Author and backtest strategies (Phase 7).
+9. Layer in ML only after the core product loop is already valuable (Phase 8).
+10. Go realtime and stand up `services/ingest` only when polling stops being enough (Phase 9).
+11. Finish with observability, performance, and deployment maturity (Phases 10–11).
 
 That order gives you earlier wins, better retention of new backend concepts, and a much higher chance that Astraq becomes something you genuinely use.

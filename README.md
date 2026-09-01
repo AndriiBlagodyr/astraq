@@ -11,6 +11,7 @@ The project has two goals:
 
 - `apps/web` is the most developed app today and contains the current UI.
 - `apps/api` is a NestJS service with structured logging, validated environment configuration, and health endpoints.
+- `packages/ui` contains the Tailwind-based semantic design system and Storybook catalog.
 - `services/ml` is a FastAPI service managed with `uv` (Python 3.12, lockfile in `uv.lock`).
 - The product plan and phased execution live in [ROADMAP.md](./ROADMAP.md).
 
@@ -23,7 +24,8 @@ astraq/
 │   └── api/         NestJS backend
 ├── services/
 │   └── ml/          Python FastAPI service (uv)
-└── packages/        Shared packages to be added during roadmap execution
+└── packages/
+    └── ui/          Shared tokens, accessible components, and Storybook
 ```
 
 ## Key documents
@@ -64,6 +66,14 @@ cd apps/web
 pnpm install
 pnpm dev
 ```
+
+### Design system
+
+```bash
+pnpm dev:storybook
+```
+
+Storybook runs on `http://localhost:6006`.
 
 ### API
 
