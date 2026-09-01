@@ -5,8 +5,8 @@ alwaysApply: true
 
 # Astraq Context
 
-- Monorepo with `apps/web` (Next.js), `apps/api` (Node API), and `services/ml` (Python FastAPI).
-- Use `pnpm` workspaces at the repo root.
+- Monorepo with `apps/web` (Next.js), `apps/api` (NestJS), `services/ml` (Python FastAPI + uv), and `packages/ui`.
+- Use `pnpm` workspaces at the repo root. Use `uv` for `services/ml`.
 - Keep business logic inside the app or service that owns it. Do not couple `web`, `api`, and `ml` through direct internal imports.
 
 # When adding a feature

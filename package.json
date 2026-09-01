@@ -16,7 +16,7 @@
     "test:unit:ui": "pnpm --filter @astraq/ui test:unit",
     "test:unit:web": "pnpm --filter web test:unit",
     "test:unit:api": "pnpm --filter @astraq/api test:unit",
-    "test:unit:ml": "python3 -m pytest services/ml/tests",
+    "test:unit:ml": "uv run --directory services/ml pytest",
     "test:e2e": "pnpm test:e2e:web",
     "test:e2e:web": "pnpm --filter web test:e2e",
     "storybook:build": "pnpm --filter @astraq/ui build-storybook"

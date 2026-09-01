@@ -9,8 +9,8 @@ Goals the codebase must serve:
 
 ## Architecture
 - `apps/web`  — Next.js 16 frontend (RSC-first). UI, charts, auth surface.
-- `apps/api`  — Node.js domain API (NestJS target). Auth, portfolios, orders, market data orchestration.
-- `services/ml` — Python FastAPI service. Forecasting, backtesting, signal generation.
+- `apps/api`  — NestJS domain API. Auth, portfolios, orders, market data orchestration.
+- `services/ml` — Python FastAPI service managed with `uv`. Forecasting, backtesting, signal generation.
 - `services/ingest` (planned) — Python websocket ingestor -> Redis/NATS streams.
 - `packages/ui` — semantic design tokens and accessible, reusable React components.
 - `packages/shared` (planned) — Zod schemas + TS types shared across web and api.

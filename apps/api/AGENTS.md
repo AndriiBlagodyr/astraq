@@ -1,6 +1,6 @@
 # apps/api — Astraq Node.js Backend
 
-- Target framework: NestJS 10 (migration from bare Express is Phase 1).
+- Framework: NestJS 11. Remaining Phase 1 work is OpenAPI generation and the typed SDK.
 - Layering: `controller -> service -> repository -> db`. No DB calls in controllers.
 - DB access: Prisma for Postgres (+ TimescaleDB). Mongoose for MongoDB.
 - Jobs/queues: BullMQ on Redis. Cron via `@nestjs/schedule`.
