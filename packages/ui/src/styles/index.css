@@ -1,8 +1,12 @@
 @import "tailwindcss";
 @import "../tokens/index.css";
 
+/*
+ * The package scans only its own source. Consumers declare their own
+ * `@source` for app code (see apps/web/app/globals.css).
+ */
 @source "../components/**/*.{ts,tsx}";
-@source "../../../../apps/web/**/*.{ts,tsx}";
+@source "../theme/**/*.{ts,tsx}";
 
 @theme inline {
   --font-sans: var(--ds-font-sans);
@@ -26,12 +30,97 @@
   --color-positive: var(--ds-positive);
   --color-negative: var(--ds-negative);
   --color-warning: var(--ds-warning);
+  --color-brand-fg: var(--ds-brand-fg);
+  --color-brand-strong-fg: var(--ds-brand-strong-fg);
+  --color-positive-fg: var(--ds-positive-fg);
+  --color-negative-fg: var(--ds-negative-fg);
+  --color-warning-fg: var(--ds-warning-fg);
   --color-focus: var(--ds-focus);
+  --color-focus-ring: var(--ds-focus-ring);
 
   --radius-sm: var(--ds-radius-sm);
   --radius-md: var(--ds-radius-md);
   --radius-lg: var(--ds-radius-lg);
   --radius-xl: var(--ds-radius-xl);
+
+  --ease-out: var(--ds-ease-out);
+  --ease-in: var(--ds-ease-in);
+}
+
+/*
+ * Enter/exit motion for overlays. Durations read motion tokens, which drop to
+ * 0ms under prefers-reduced-motion. Exits are shorter than entries so
+ * dismissals feel immediate.
+ */
+@theme {
+  --animate-ds-fade-in: ds-fade-in var(--ds-motion-base) var(--ds-ease-out);
+  --animate-ds-fade-out: ds-fade-out var(--ds-motion-fast) var(--ds-ease-in)
+    forwards;
+  --animate-ds-pop-in: ds-pop-in var(--ds-motion-base) var(--ds-ease-out);
+  --animate-ds-pop-out: ds-pop-out var(--ds-motion-fast) var(--ds-ease-in)
+    forwards;
+  --animate-ds-slide-down: ds-slide-down var(--ds-motion-base)
+    var(--ds-ease-out);
+  --animate-ds-slide-up: ds-slide-up var(--ds-motion-base) var(--ds-ease-out);
+  --animate-ds-slide-left: ds-slide-left var(--ds-motion-base)
+    var(--ds-ease-out);
+  --animate-ds-slide-right: ds-slide-right var(--ds-motion-base)
+    var(--ds-ease-out);
+
+  @keyframes ds-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes ds-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes ds-pop-in {
+    from {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+
+  @keyframes ds-pop-out {
+    to {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+
+  /* Popovers move away from their trigger: content below slides down, etc. */
+  @keyframes ds-slide-down {
+    from {
+      opacity: 0;
+      translate: 0 -0.375rem;
+    }
+  }
+
+  @keyframes ds-slide-up {
+    from {
+      opacity: 0;
+      translate: 0 0.375rem;
+    }
+  }
+
+  @keyframes ds-slide-left {
+    from {
+      opacity: 0;
+      translate: 0.375rem 0;
+    }
+  }
+
+  @keyframes ds-slide-right {
+    from {
+      opacity: 0;
+      translate: -0.375rem 0;
+    }
+  }
 }
 
 :root {
@@ -64,11 +153,11 @@
   --color-text-secondary: var(--ds-foreground-secondary);
   --color-text-muted: var(--ds-foreground-muted);
   --color-accent-cyan: var(--ds-brand);
-  --color-accent-blue: var(--ds-brand-strong);
+  --color-accent-blue: var(--ds-brand-strong-fg);
   --color-accent-gold: var(--ds-brand-warm);
-  --color-success: var(--ds-positive);
-  --color-danger: var(--ds-negative);
-  --color-warning: var(--ds-warning);
+  --color-success: var(--ds-positive-fg);
+  --color-danger: var(--ds-negative-fg);
+  --color-warning: var(--ds-warning-fg);
   --color-focus-ring: var(--ds-focus);
   --color-table-row: var(--ds-row);
   --color-tag-bg: color-mix(in srgb, var(--ds-brand-strong) 9%, transparent);
@@ -129,9 +218,10 @@
     max-width: 100%;
   }
 
+  /* One focus indicator for every interactive element, keyboard only. */
   :focus-visible {
-    outline: 2px solid var(--ds-brand);
-    outline-offset: 3px;
+    outline: 2px solid var(--ds-focus-ring);
+    outline-offset: 2px;
   }
 
   ::selection {

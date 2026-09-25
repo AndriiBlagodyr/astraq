@@ -53,7 +53,7 @@ export default function StatusPage() {
     <section className={styles.page}>
       <div className={styles.hero}>
         <p className={styles.eyebrow}>Roadmap status</p>
-        <h2 className={styles.title}>Where Astraq is, and what ships next.</h2>
+        <h2 className={styles.title}>Where Forelume is, and what ships next.</h2>
         <p className={styles.lead}>
           A live mirror of <code>ROADMAP.md</code>. Phase 1 is in progress, and
           the focused design system foundation comes before Phase 2 product

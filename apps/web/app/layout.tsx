@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { ThemeScript } from "@astraq/ui";
 import { siteConfig } from "@/lib/site";
 import { AppProviders } from "./providers";
-import "@astraq/ui/styles.css";
+import "./global.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -51,7 +51,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      data-theme="astraq"
+      data-theme="forelume"
       data-mode="dark"
       suppressHydrationWarning
     >

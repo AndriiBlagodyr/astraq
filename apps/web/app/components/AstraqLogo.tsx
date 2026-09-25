@@ -30,7 +30,7 @@ export function AstraqLogo({ className, decorative = false }: AstraqLogoProps) {
 
   return (
     <svg viewBox="0 0 48 48" className={rootClassName} {...a11yProps}>
-      {!decorative ? <title id={titleId}>Astraq</title> : null}
+      {!decorative ? <title id={titleId}>Forelume</title> : null}
 
       <defs>
         <linearGradient

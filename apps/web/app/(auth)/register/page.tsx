@@ -9,11 +9,11 @@ export default function RegisterPage() {
   return (
     <Card className="grid w-[min(27.5rem,100%)] gap-6 p-7">
       <header className="grid gap-2">
-        <p className="m-0 text-xs font-semibold tracking-[0.16em] text-brand-strong uppercase">
+        <p className="m-0 text-xs font-semibold tracking-[0.16em] text-brand-strong-fg uppercase">
           Phase 3 · Auth
         </p>
         <h1 className="m-0 font-display text-3xl font-bold tracking-tight text-foreground">
-          Create an Astraq account
+          Create an Forelume account
         </h1>
         <p className="m-0 leading-7 text-secondary">
           Sign up to claim watchlists, paper trades, and saved strategies. Phase

@@ -1,0 +1,8 @@
+@import "@astraq/ui/styles.css";
+
+/*
+ * @astraq/ui only scans its own components for Tailwind classes. The app
+ * declares its own sources.
+ */
+@source "./";
+@source "../lib";

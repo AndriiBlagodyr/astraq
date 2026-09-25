@@ -8,7 +8,7 @@ export default function NotFound() {
         <p className={styles.eyebrow}>404</p>
         <h1 className={styles.title}>Route not found</h1>
         <p className={styles.text}>
-          The page you requested is outside the current Astraq route map. Use the production shell routes to
+          The page you requested is outside the current Forelume route map. Use the production shell routes to
           continue exploring the app setup.
         </p>
         <div className={styles.actions}>

@@ -12,7 +12,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <span className={styles.brandIcon} aria-hidden="true">
             <AstraqLogo decorative className={styles.brandLogo} />
           </span>
-          <span className={styles.brandText}>Astraq</span>
+          <span className={styles.brandText}>Forelume</span>
         </Link>
         <ThemeToggle />
       </header>
@@ -21,7 +21,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
       <footer className={styles.footer}>
         <p>
-          Astraq is a personal trading research lab. Use it for learning and your own portfolio
+          Forelume is a personal trading research lab. Use it for learning and your own portfolio
           only — not for redistributing market data.
         </p>
       </footer>
