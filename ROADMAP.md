@@ -1,545 +1,493 @@
 # Astraq Roadmap
 
-> **Status (2026-09-01)** — Phase 1 in progress: API foundation and contracts.
-> **Just shipped:** NestJS API skeleton, `packages/ui` design system, Turborepo, and `uv` for `services/ml`.
-> **Next milestone:** OpenAPI generation + the first generated SDK flow consumed by `apps/web`.
-> **Known foundation gaps:** `packages/shared`, `packages/sdk`, CI, and local Docker infrastructure.
+> **Status (2026-09-24)** — Phase 0 (close the foundation) is next. Rewritten roadmap, see [Revision log](#revision-log).
+> **Actually working today:** NestJS skeleton (Pino, request ids, Zod env, error filter, health), `packages/ui` design system + Storybook, Turborepo, `uv`-managed `services/ml` stub.
+> **Not yet real:** any database, any web → api call, any chart, CI, local infra, deployment. Most `apps/web` routes are descriptive placeholders.
+> **Rule for this block:** it describes what runs, not what is planned. Update it in the same PR that changes reality.
 
-Astraq has two jobs at the same time:
+Astraq has two jobs at once:
 
-1. Turn a frontend-heavy background into real fullstack depth across Node.js, Python, databases, and infrastructure.
-2. Become a genuinely useful personal trading and market-analysis app — not a sandbox of disconnected experiments.
+1. Turn a frontend-heavy background into real fullstack depth — Node.js, Python, SQL, data modeling, infrastructure.
+2. Become a personal market-research tool you actually use — not a sandbox of disconnected experiments.
 
-This roadmap optimizes for both. It pushes a usable product earlier, keeps the architecture serious, and leaves space for deeper learning later. It is a living plan, not a contract — review it at the start of every phase.
+The plan optimizes for both by shipping **one thin, deployed, end-to-end slice first** and then thickening it. Every later phase adds depth to something that already runs in production.
+
+---
 
 ## Product North Star
 
-The first meaningful Astraq release should let you:
+**The core loop:** watchlist → chart → strategy → honest backtest → paper trade → review.
+
+The first meaningful release lets you:
 
 - sign in securely
-- search and track symbols
-- view historical candles and indicators
-- build watchlists
-- run paper trades
-- track portfolio and PnL
+- search US equities and keep watchlists
+- read adjusted historical candles with indicators
 - define simple rule-based strategies
-- backtest those strategies on historical data
+- backtest them with bias guards you can trust
+- paper trade the same rules and see accurate portfolio PnL
 
-If a phase doesn't move one of those user outcomes forward or clearly deepen a core engineering skill, question it.
+**The wedge** — what makes Astraq worth opening instead of TradingView: *honesty*. Backtests and paper trading share one fill model, results always show a buy-and-hold benchmark, and look-ahead or survivorship shortcuts are impossible by construction rather than by discipline. That is also where the deepest engineering learning lives.
 
-## Architecture at a glance
+If a task doesn't move the core loop forward or clearly deepen a core engineering skill, question it.
 
-`AGENTS.md` is the source of truth for the tech baseline. The roadmap adds these locked-in decisions on top:
+---
 
-- `apps/api` standardizes on **NestJS**. The API owns auth; the web app is a BFF, never a second auth system.
-- **Postgres + TimescaleDB** is the source of truth for transactional and time-series data.
-- **MongoDB** enters in **Phase 6** for news, transcripts, and raw provider payloads — and only there. It does not get added "just in case".
-- **Redis** powers caching, rate limits, BullMQ queues, and lightweight streams.
-- **Python owns analytics and ML.** `services/ml` is packaged with **uv** (lockfile + `.python-version`). It does not own transactional flows. Do not reintroduce Poetry or ad-hoc `pip install` workflows.
-- **`lightweight-charts` is the OHLCV engine.** `d3` is reserved for bespoke visuals — heatmaps, distributions, seasonality views.
-- **`services/ingest` is built in Phase 9**, only when polling and scheduled refreshes are no longer enough.
+## Scope decisions
+
+These are locked unless an ADR reverses them.
+
+| Decision | Choice | Why |
+|---|---|---|
+| Asset class for v1 | **US equities, daily bars** | Matches current UI, teaches market calendars and corporate actions. Crypto arrives later as a second adapter. |
+| Primary data provider | **Alpaca Market Data** (free plan) | Official API with keys, split/dividend-adjusted bars, asset list, market calendar, websocket feed for Phase 9. |
+| Fallback provider | `yahoo-finance2` | Keyless, good for quick local bootstrap. Unofficial and brittle: never the only path. |
+| Bar resolution | Daily until Phase 9 | Keeps storage, jobs, and fill logic simple while the domain model settles. |
+| Price adjustment | Store raw bars + corporate actions; derive adjusted series | Needed for correct PnL on splits *and* correct backtests. |
+| Money | `numeric` in Postgres, `Decimal` in TS/Python, never floats | Portfolio math must reconcile to the cent. |
+| Time | `timestamptz` UTC everywhere; exchange-local only at the edges | Avoids DST and session-boundary bugs. |
+| Deployment | From Phase 1, not the end | Product checks like "from my phone" need a real URL. Observability needs real traffic. |
+
+---
+
+## Stack
+
+`AGENTS.md` holds repo-wide guardrails; this table is the authoritative stack and when each piece enters.
+
+| Layer | Choice | Enters | Notes |
+|---|---|---|---|
+| Web | Next.js 16 App Router, RSC-first, TanStack Query for client state | now | Web is a BFF: holds tokens in `HttpOnly` cookies, never a second auth system. |
+| UI | `packages/ui` (Tailwind + semantic tokens + headless primitives) | now | Trading patterns stay in `apps/web`. |
+| Charts | `lightweight-charts` for OHLCV, `d3` only for bespoke visuals | Phase 1 / Phase 6 | |
+| API | NestJS 11, `nestjs-zod`, `@nestjs/swagger` | now | Layering `controller → service → repository`. |
+| Contracts | `packages/shared` (Zod) → OpenAPI → `packages/sdk` via `openapi-typescript` + `openapi-fetch` | Phase 1 | Small, readable generated client — no heavyweight codegen. |
+| Cross-language contracts | Zod → JSON Schema (`z.toJSONSchema`) → Pydantic (`datamodel-code-generator`) | Phase 5 | One source of truth for the strategy DSL. CI fails on drift. |
+| Relational + time series | Postgres 16 + TimescaleDB | Phase 0 infra, Phase 1 schema | |
+| ORM / SQL | Prisma for relational models; hand-written SQL (Prisma TypedSQL / `$queryRaw`) for candle and analytics queries | Phase 1 | Learning goal: be fluent in real SQL, not just the ORM. Hypertables created in raw SQL migrations. |
+| Cache, limits, queues | Redis 7 + BullMQ | Phase 2 (rate limits), Phase 4 (jobs) | |
+| Node ↔ Python jobs | BullMQ on both sides (`bullmq` Python package for workers) | Phase 5 | One queue technology instead of BullMQ + Celery. |
+| Documents | MongoDB 7 | Phase 4 | Raw provider payload archive, later news and research notes. Explicit learning goal; ADR compares against `JSONB`. |
+| Python service | FastAPI, `uv`, polars, ruff, mypy (strict), pytest + hypothesis | now | Owns backtesting, analytics, and ML. Never owns transactional flows. |
+| Streaming | Redis Streams → SSE to the browser | Phase 9 | NATS/Kafka dropped from scope. |
+| Observability | Pino now → OpenTelemetry tracing in Phase 3 → metrics/dashboards in Phase 10 | | |
+| CI/CD | GitHub Actions + Turborepo cache + `uv` cache, Renovate | Phase 0 | |
+| Hosting | Vercel (web), Railway or Fly.io (api, ml workers), Postgres **with TimescaleDB support** | Phase 1 | Many managed Postgres products lack Timescale — verify before choosing. Timescale's own cloud or the official image on a volume both work. |
+| Secrets | Platform env vars in Phase 1 → Doppler or SOPS once there's more than one environment | Phase 10 | |
+
+**Dropped or deferred:** NATS (Redis Streams covers the scope), Celery/arq (replaced by BullMQ Python workers), Kubernetes (stretch), GraphQL/gRPC (stretch comparisons), MLflow (only if model work justifies it), a second backtest engine in TypeScript (never).
+
+### Service boundaries
+
+```text
+browser ──► apps/web (BFF, RSC) ──SDK──► apps/api ──► Postgres/Timescale  (api is the only writer of domain tables)
+                                            │   └──► Redis (cache, rate limits)
+                                            │   └──► MongoDB (raw payloads, news, notes)
+                                            └──BullMQ──► services/ml workers
+                                                            └──► Postgres (read-only role on market data)
+                                                            └──► job result returned to api, api persists it
+```
+
+- `services/ml` never writes domain tables. It reads market data through a read-only role and returns results through the job.
+- Every cross-service shape lives in `packages/shared` or the generated OpenAPI — never duplicated by hand.
 
 ```text
 astraq/
 ├── apps/
-│   ├── web/     Next.js 16 frontend (App Router, RSC-first)
-│   └── api/     NestJS domain API (auth, portfolios, orders, market data)
+│   ├── web/      Next.js 16 frontend (BFF)
+│   └── api/      NestJS domain API
 ├── services/
-│   ├── ml/      FastAPI analytics, forecasting, advanced backtests (uv, Python 3.12)
-│   └── ingest/  Python streaming ingestor (Phase 9)
+│   ├── ml/       FastAPI + BullMQ workers: backtests, analytics, forecasting
+│   └── ingest/   streaming ingestor (Phase 9)
 ├── packages/
-│   ├── ui/      Semantic tokens and accessible React components
-│   ├── shared/  Zod schemas + shared TS types (planned)
-│   └── sdk/     Typed client generated from API OpenAPI (planned)
-└── infra/
-    ├── docker/  local infra and compose files
-    └── k8s/     optional, post-deployment
+│   ├── ui/       tokens + accessible core components
+│   ├── shared/   Zod schemas, exported JSON Schema
+│   └── sdk/      generated OpenAPI client
+├── infra/
+│   └── docker/   local compose
+└── docs/
+    └── decisions/  ADRs
 ```
 
-## Cross-cutting principles
+---
 
-These apply to every phase. Don't restate them inside phase descriptions.
+## Working rules
 
-- **Testing.** Follow [.cursor/rules/testing-strategy.mdc](./.cursor/rules/testing-strategy.mdc). The pyramid is: unit → integration with real infra → contract tests for the SDK → Playwright for core user journeys. Add load tests where they earn it.
-- **Secrets and security.** Follow [.cursor/rules/security-and-secrets.mdc](./.cursor/rules/security-and-secrets.mdc). Env validation crashes startup if missing. No secrets in repo. Fail-closed defaults for auth, CORS, permissions.
-- **ADR cadence.** Every phase ships at least one decision record in `docs/decisions/`. The exit criteria below assume this.
-- **`packages/shared` versioning.** Internal-only, tracked with Changesets, no public semver until extracted from the monorepo.
-- **Data licensing.** Providers like `yahoo-finance2` and Binance are for personal and learning use. No redistribution, no public dashboards exposing raw vendor data.
-- **Observability is not a phase.** Structured logging starts in Phase 1. Tracing starts in Phase 4 (paper trading needs it). Phase 10 is for metrics, dashboards, and load testing — not for inventing observability from scratch.
-- **Design system ownership.** Reusable tokens and accessible core components live in `packages/ui`; product-specific trading patterns and app shells stay in `apps/web`.
+### Delivery
 
-## Delivery guardrails
+- **Walking skeleton first.** Each phase extends something already deployed. No phase ends with work that only runs locally.
+- **Time boxes.** Each phase has an estimate (assuming ~10–12 hours/week). Passing 1.5× the estimate triggers the phase's kill/pivot rule — descope, don't grind.
+- **Exit green or change the rule.** Don't start a phase until the previous one exits. If you deliberately carry a gap forward, record it under "Carried gaps" in the status block — never silently.
+- **No placeholder routes.** A route exists only when it renders real data. Future ideas live in this file, not in the UI.
+- **One implementation path.** Alternatives become ADRs, not parallel code.
+- **User-facing features ship complete:** schema → service → repository → tests → OpenAPI → SDK → web → deployed.
 
-- Do not start a new phase until the prior phase exits green.
-- Each phase ships **code, tests, an ADR or doc page, and a product check.**
-- A **product check** is a lightweight UX outcome — for example, "I opened Astraq three days last week without being prompted to," or "I placed five paper trades from my phone."
-- Each phase has a **kill/pivot trigger.** If a phase blows past its trigger without a working slice, descope before pushing further.
-- Prefer one clear implementation path over two competing patterns. Capture the alternative as an ADR if you want the comparison.
-- User-facing API features always include: schema → service → repository → tests → OpenAPI update → web integration.
-- Internal infra work doesn't need forced Playwright coverage if there's no user flow to exercise.
+### Definition of done (every phase)
 
-## Current scaffold (August 2026)
+1. Code merged to `master`, CI green, deployed.
+2. Tests at the right level (see [testing strategy](./.cursor/rules/testing-strategy.mdc)).
+3. At least one ADR in `docs/decisions/`.
+4. Status block at the top of this file updated.
+5. **Product check** passed — a concrete usage outcome, not a feature list.
 
-- `apps/web` — Next.js 16 + Tailwind + `@astraq/ui` tokens + React Query + `lightweight-charts` + Playwright + Vitest.
-- `apps/api` — NestJS + TypeScript + Pino + Zod environment validation.
-- `services/ml` — FastAPI with `/health` and `/predict`, managed by `uv` (Python 3.12 pin in `.python-version`, lockfile in `uv.lock`).
-- Workspace includes `apps/*`, `packages/ui`, and Turborepo. `packages/shared`, `packages/sdk`, and `infra/docker` remain to be added.
+### Cross-cutting
+
+- **Security.** Follow [security and secrets](./.cursor/rules/security-and-secrets.mdc). Env validated at boot in every service; fail-closed CORS, auth, and permissions.
+- **Learning over shipping** — when a library exists *and* there's a teaching opportunity, build one layer by hand first (refresh-token rotation, ledger accounting, event-driven backtester). Write down what you'd replace it with in production.
+- **Data licensing.** Provider data is for personal use. No public pages that redistribute raw vendor data; a friend's account (Phase 10) is still private use.
+- **Finance correctness is a first-class concern**, not a detail: adjusted prices, trading calendars, point-in-time data, decimal money.
 
 ---
 
-## Phase 0 — Monorepo and developer foundation [baseline complete, gaps tracked]
+## Completed
 
-**Goal:** create a stable workspace that can carry the rest of the project.
+### Design system foundation (formerly Phase 1.5) — done
 
-1. Move to **pnpm workspaces + Turborepo**. **pnpm workspaces and Turborepo are in place.**
-2. Add `packages/shared` and `packages/sdk` (still deferred). `packages/ui` shipped in Phase 1.5.
-3. Centralize linting, formatting, TS config, root scripts, and workspace conventions.
-4. Add local infra in `infra/docker/` (deferred until it becomes a Phase 2 prerequisite):
-   - Postgres 16 + TimescaleDB
-   - MongoDB 7 (image only — first use is Phase 6)
-   - Redis 7
-   - Mailhog
-   - Adminer / Mongo Express
-5. Add env validation at boot (Zod in Node, `pydantic-settings` in Python).
-6. Add CI for lint, typecheck, and tests across `apps/*` and `services/*`.
-7. Add **dependency automation** (Renovate or Dependabot) and a release-tagging convention.
-
-**Learning focus:** workspaces, build tooling, module resolution, environment safety, reproducible local infra.
-
-**Exit criteria:**
-
-- one command boots local app + dependencies
-- each service validates env and fails fast
-- CI runs successfully on the monorepo
-- ADR: "Why pnpm + Turborepo over Nx / Yarn workspaces"
-
-**Kill/pivot trigger:** if local boot still requires manual setup steps after a week of polish, freeze the workspace work and accept the rough edges — they're not the point.
+`packages/ui` with semantic tokens, independent theme identity and light/dark mode, headless primitives, Storybook, and tests. Mantine removed. ADR 0001.
+Follow-up folded into Phase 0: app pages still style themselves with `layout.module.css` — migrate the surviving routes to `packages/ui` compositions.
 
 ---
 
-## Phase 1 — API foundation and contracts [in progress]
+## Phase 0 — Close the foundation · ~1 week
 
-**Goal:** turn `apps/api` into a real backend foundation that the web app can rely on.
+**Goal:** make the repo honest, reproducible, and verified by CI before anything else is built on it.
 
-1. Replace bare Express with **NestJS**. **Done** (skeleton, logging, health, exception handling). Remaining Phase 1 work is OpenAPI and the SDK.
-2. Establish module boundaries: controllers, services, repositories, common cross-cutting modules.
-3. Add structured logging with `pino` and request-id propagation.
-4. Add global exception handling and problem-style error responses.
-5. Add `/health/live` and `/health/ready`.
-6. Generate **OpenAPI** from the API and produce `packages/sdk` (typed client).
-7. Make the web app consume the SDK for at least one real flow (today's predictions or market-data view).
-8. Add **preview deploys** for the web app on PRs.
+1. **Hygiene:** untrack `apps/api/tsconfig.build.tsbuildinfo`, `apps/web/test-results/`, and `services/ml/*.egg-info/`; ignore `*.tsbuildinfo`. Align `requires-python` with the pinned 3.12.
+2. **Delete placeholder routes** in `apps/web`. Keep marketing, auth screens, `/status`, and one app shell. Routes come back in the phase that fills them.
+3. **Local infra** in `infra/docker/compose.yml`: Postgres 16 + TimescaleDB, Redis 7. (Mongo and Mailhog join in the phases that use them.) Root scripts `pnpm infra:up` / `infra:down`.
+4. **Env validation everywhere:** `pydantic-settings` in `services/ml`; add `CORS_ORIGINS`, `DATABASE_URL`, `REDIS_URL` to the API schema. Replace `app.enableCors()` with an allowlist.
+5. **CI** (GitHub Actions): install, lint, typecheck, unit tests for all Node packages and `services/ml`, with Turborepo and `uv` caching. Add ruff + mypy to the ML job now — cheap while the codebase is tiny.
+6. **Renovate** with grouped, weekly updates.
+7. Echo `x-request-id` back in API responses.
 
-**Learning focus:** DI, module architecture, request lifecycle, OpenAPI, typed-client generation, structured logging.
+**Learning focus:** reproducible environments, CI pipelines, container basics.
 
 **Exit criteria:**
 
-- NestJS app runs locally and in CI
-- OpenAPI is generated and committed
-- web uses the generated SDK for at least one real flow
-- ADR: "Why NestJS over Fastify-only or staying on Express"
+- fresh clone → `pnpm install && pnpm infra:up && pnpm dev` boots everything with no manual steps
+- CI is green and required on `master`
+- every service crashes on invalid env
+- ADR 0002: "pnpm + Turborepo, and how Python lives in the monorepo"
 
-**Kill/pivot trigger:** if NestJS DI ergonomics are blocking shipping after two weeks, fall back to Fastify with a hand-rolled module pattern and capture the reasons in the ADR.
+**Kill/pivot trigger:** if CI or compose polish runs past a week, ship whatever runs and list the gaps under "Carried gaps".
 
 ---
 
-## Phase 1.5 — Design system foundation [done]
+## Phase 1 — Walking skeleton: candles end to end · ~2–3 weeks
 
-**Goal:** establish a distinct, accessible, multi-theme UI foundation before Phase 2 expands Astraq's product surface.
+**Goal:** one real feature from provider to deployed chart, proving every layer and contract at once.
 
-This is a bounded migration, not a mandate to design every future trading pattern up front. Tailwind provides styling primitives; semantic tokens, accessible behavior, documented states, and consistent composition form the design system.
+1. **Contracts:** create `packages/shared` (Zod) and wire `nestjs-zod` + `@nestjs/swagger`. Emit `openapi.json` at build and commit it. Generate `packages/sdk` with `openapi-typescript` + `openapi-fetch`. CI fails if the committed spec or SDK drifts from the code.
+2. **Schema (Prisma + raw SQL migration):**
+   - `Symbol` (ticker, name, exchange, active flag)
+   - `candles_daily` hypertable: `(symbol_id, ts)` primary key, raw OHLCV, `numeric` prices
+   - `corporate_actions` (split ratio / dividend, ex-date)
+3. **Bootstrap CLI** (`apps/api` script): fetch daily raw bars + corporate actions for a fixed list of ~20 tickers from Alpaca (Yahoo fallback) and upsert them. Idempotent, synchronous, no queues.
+4. **Endpoints:** `GET /api/symbols?query=`, `GET /api/symbols/:ticker/candles?from&to&adjusted=true`. Adjustment is computed in SQL from raw bars + corporate actions — the first hand-written query worth being proud of.
+5. **Web:** `/stocks/[symbol]` renders a real `lightweight-charts` candle + volume pane from the SDK, with loading, empty, and error states. Symbol search on `/stocks`.
+6. **Deploy:** web on Vercel, api on Railway/Fly, Postgres with Timescale support. Preview deploys for web PRs. `/health/ready` really checks the database.
+7. Remove the `/predictions/summary` and ML `/predict` stubs — dead placeholders teach nothing.
 
-1. Add Turborepo and expand the pnpm workspace to `packages/*`.
-2. Create `packages/ui` with:
-   - Tailwind CSS
-   - CSS-variable design tokens
-   - typed component variants
-   - Storybook as the component catalog and playground
-3. Model theme identity and color mode separately:
-   - at least one Astraq brand theme
-   - light and dark modes
-   - semantic tokens for surfaces, text, borders, focus, status, charts, motion, radii, and shadows
-4. Use accessible headless primitives selectively for interaction-heavy components such as dialogs, selects, menus, tabs, and tooltips.
-5. Build only the core components required by current screens: buttons, form controls, cards, badges, tabs, overlays, table primitives, feedback states, and theme controls.
-6. Keep domain patterns such as order forms, portfolio summaries, watchlist tables, chart toolbars, and app shells in `apps/web`.
-7. Migrate the marketing, auth, navigation, and application shells; remove Mantine after its final consumer is migrated.
-
-**Learning focus:** token architecture, accessible component APIs, visual systems, package boundaries, Storybook workflows, responsive composition, and theme persistence.
+**Learning focus:** OpenAPI and typed clients, migrations, hypertables, composite keys, SQL window functions, RSC vs client boundaries for charts, first deployment.
 
 **Exit criteria:**
 
-- a representative Astraq page is composed entirely from `packages/ui` and app-owned patterns
-- every core component documents its important states and theme variants in Storybook
-- keyboard navigation and visible focus behavior work for interactive components
-- light/dark mode renders without a first-paint theme flash
-- migrated shells work at mobile and desktop widths
-- Mantine is removed from `apps/web`
-- lint, strict type checking, focused interaction tests, Storybook accessibility checks, and a small multi-theme Playwright smoke path are green
-- ADR: "Tailwind + headless primitives over Mantine"
+- a deployed URL shows adjusted candles for any bootstrapped ticker
+- an integration test runs the candle endpoint against real Timescale in CI (Testcontainers or a compose service)
+- a unit test proves split adjustment with a known split (e.g. NVDA 2024 10:1)
+- ADR 0003: "NestJS + OpenAPI-generated SDK as the web ↔ api contract"
+- ADR 0004: "Hosting topology and Timescale availability"
+- **product check:** I opened a candle chart on my phone from the deployed URL
 
-**Kill/pivot trigger:** if migration work expands into speculative components not used by a current screen, stop at the representative page and defer those components until their product phase.
+**Kill/pivot trigger:** if the bootstrap starts growing retries, caching, or multi-provider logic, stop — that's Phase 4. If NestJS DI is blocking progress after two weeks, fall back to Fastify with a hand-rolled module pattern and record why.
 
 ---
 
-## Phase 2 — Data model, MVP core, and basic charts
+## Phase 2 — Accounts and watchlists · ~3 weeks
 
-**Goal:** build the first actually useful Astraq core — even if behind a placeholder login.
+**Goal:** real authentication, built once, protecting the first personal data.
 
-This is where the product becomes real. To get there without faking three phases of data, Phase 2 explicitly includes a **dev auth shim** and a **single-provider candle bootstrap**. Both are replaced later in dedicated phases — the goal here is the user-visible loop, not production hardening.
+No temporary auth shim: the skeleton already shows value without login, so there's nothing to migrate later. Build the auth core properly now and defer the peripheral flows to Phase 7.
 
-1. Add Prisma with Postgres.
-2. Model the first core entities:
-   - `User`
-   - `Session`
-   - `RefreshToken`
-   - `Watchlist`
-   - `WatchlistItem`
-   - `Portfolio`
-   - `Position`
-   - `Order`
-   - `Trade`
-   - `AuditLog`
-3. Add TimescaleDB hypertables for OHLCV candles, with sane indexes.
-4. **Dev auth shim:** email + password sign-in only, single role, plain JWT, no refresh rotation. Clearly marked as temporary in code and docs.
-5. **Candle bootstrap script:** a single synchronous CLI that pulls historical candles from `yahoo-finance2` for a hardcoded symbol list and writes them into TimescaleDB. No queues, no retries, no abstraction yet.
-6. Build the first user-facing flows:
-   - symbol search
-   - watchlist management
-   - symbol details page with a **basic candle pane** (lightweight-charts, no overlays)
-   - historical candles API
-   - read-only portfolio skeleton
+1. **Auth core, hand-built:**
+   - registration + login with **Argon2id**
+   - short-lived JWT access token + **rotating opaque refresh token with family-based reuse detection**
+   - logout and "log out everywhere"
+   - web BFF stores tokens in `HttpOnly`, `Secure`, `SameSite=Lax` cookies and refreshes transparently
+2. **Registration is invite-only** (env allowlist of emails) while the app is deployed without email verification.
+3. **Abuse protection:** Redis-backed rate limiting on auth endpoints, CSP and security headers in Next middleware.
+4. **Schema:** `User`, `Session`, `RefreshToken`, `Watchlist`, `WatchlistItem`, `AuditLog`.
+5. **Watchlists:** create, rename, reorder, add/remove symbols. Watchlist page shows last close, day change, and a sparkline per row from stored candles.
+6. **Symbol universe:** load the full active US equity list from Alpaca into `Symbol` so search covers everything; candles for a newly watched symbol are fetched on demand by the bootstrap path.
 
-**Learning focus:** relational modeling, migrations, indexing, repository pattern, transactional thinking, time-series basics, RSC vs client boundaries for charts.
+**Learning focus:** password hashing, token rotation, session security, cookie semantics, CSRF/CORS, rate limiting, authorization at the repository layer.
 
 **Exit criteria:**
 
-- a (shim-)signed-in user can view symbols, save watchlists, and see a real historical candle chart
-- core schema is migrated and seeded locally
-- bootstrap script runs cleanly against a fresh database
-- ADR: "Auth shim contract — what it does, what it doesn't, what replaces it"
-- product check: I can sit down and look at one of my watchlists' candles without external tools
+- register → login → refresh → logout works end to end on the deployed app
+- reuse of a rotated refresh token revokes the whole family (integration-tested)
+- users cannot read or modify another user's watchlist (tested at API level)
+- ADR 0005: "Refresh-token rotation and reuse-detection design"
+- **product check:** I keep my real watchlist in Astraq and stay logged in on my phone
 
-**Kill/pivot trigger:** if the bootstrap script keeps growing features (caching, retries, symbol metadata, multi-provider), stop — those belong to Phase 5. Lock the script at "fetches one symbol's daily candles into one table".
+**Kill/pivot trigger:** if the auth core isn't stable after three weeks, ship without "log out everywhere" and fine-grained rate limits. Rotation and reuse detection are non-negotiable.
 
 ---
 
-## Phase 3 — Production auth and account security
+## Phase 3 — Paper trading and portfolio accounting · ~3–4 weeks
 
-**Goal:** replace the Phase 2 shim with a real auth system, now that the app already has value worth protecting.
+**Goal:** a portfolio whose numbers you would bet on, and the tracing to prove it.
 
-The web app already has flows that use the shim — Phase 3 is migration plus hardening, not greenfield design.
+1. **Fill model ADR first.** It will be shared with the backtester in Phase 5:
+   - market orders placed outside market hours fill at the next session's open
+   - market orders during the session fill at the latest known price (latest daily close until realtime exists), plus configurable slippage
+   - limit orders fill when a bar's range crosses the limit
+   - commissions are configurable per portfolio
+2. **Ledger-based accounting, hand-built:** every cash and position change is an immutable ledger entry; balances and positions are *derived*. Realized PnL uses FIFO lots (average cost can come later).
+3. **Order lifecycle:** `Portfolio`, `Order`, `Fill`, `Lot`, `LedgerEntry`. Place, cancel, fill. **Idempotency keys** on order placement.
+4. **Corporate actions:** applying a split adjusts open lots. Dividends credit cash on the pay date.
+5. **Risk rules:** market-calendar awareness (Alpaca calendar), max order notional, insufficient-cash and short-selling guards.
+6. **Portfolio screens:** holdings, cash, realized/unrealized PnL, equity curve, orders and fills — restore the `/portfolio` routes with real data.
+7. **Tracing:** OpenTelemetry in `apps/api` and the web BFF, with a span per order placement and propagation web → api → database. Local Jaeger in compose.
+8. **Backups:** automated nightly Postgres backups on the host — paper trades are now data worth keeping.
 
-1. Email/password registration and login with **Argon2id** hashing.
-2. **JWT access token + rotating opaque refresh token with reuse detection.**
-3. Email verification and password reset (Mailhog locally).
-4. RBAC roles: `user`, `pro`, `admin`.
-5. Optional but recommended in this phase:
-   - TOTP 2FA
-   - recovery codes
-   - API keys for personal bots and scripts
-6. Secure cookie and header defaults: `HttpOnly`, `Secure`, `SameSite`, CORS allowlist, CSP in web middleware, Redis-backed rate limiting.
-7. Migrate the web app off the shim and delete the shim code in the same PR.
-
-**Not in the main path:** a second Auth.js implementation. If you still want that learning exercise, capture it as an ADR or a separate spike.
-
-**Learning focus:** auth flows, token rotation, session security, authorization, abuse protection.
+**Learning focus:** transactions and isolation levels, invariants, double-entry thinking, decimal math, idempotency, instrumentation.
 
 **Exit criteria:**
 
-- a user can register, verify email, log in, refresh session, and reset password
-- protected SDK-backed flows work end to end
-- the shim no longer exists in the codebase
-- ADR: "Refresh-token rotation and reuse-detection design"
-- product check: I trust the app enough to leave it logged in on my phone
+- property-based tests (fast-check) prove invariants: cash + market value reconciles with the ledger, no negative positions without short permission, and replaying the ledger reproduces the state
+- concurrent duplicate order submissions with the same idempotency key produce exactly one order (integration test against real Postgres)
+- a split on a held symbol leaves the portfolio's market value unchanged
+- every order is traceable from browser request to SQL statement
+- ADR 0006: "Fill model shared by paper trading and backtesting"
+- ADR 0007: "Ledger accounting and order transaction boundaries"
+- **product check:** I placed at least five paper trades in a week and the PnL matched my own spreadsheet
 
-**Kill/pivot trigger:** if reuse detection and email flows are still flaky after a week, ship without 2FA/API keys and put them in a follow-up phase. Auth core is non-negotiable; advanced features are.
+**Kill/pivot trigger:** if PnL drifts between sessions, stop adding features until the property tests find the bug.
 
 ---
 
-## Phase 4 — Paper trading MVP and request tracing
+## Phase 4 — Market data pipeline · ~3 weeks
 
-**Goal:** make Astraq useful for daily personal usage and add the minimum tracing needed to debug money-handling code.
+**Goal:** replace the bootstrap with ingestion you never have to think about.
 
-1. Paper trading flows:
-   - place buy/sell orders
-   - record fills
-   - update positions
-   - compute realized and unrealized PnL
-2. Portfolio screens: holdings, cash balance, PnL summary, recent orders and trades.
-3. Audit logging for order-related actions.
-4. Simple risk rules: market-closed handling, max order size, insufficient cash guard.
-5. Seeded demo data so the feature is easy to use during development.
-6. **Minimal OpenTelemetry tracing** in `apps/api`: request-id propagation, span around each order placement, console exporter (or a local Jaeger if it's free). No metrics, no Prometheus yet — those are Phase 10.
+1. **`MarketDataProvider` contract** with Alpaca and Yahoo adapters. Contract tests run the same suite against both, using recorded fixtures.
+2. **BullMQ jobs:** symbol backfill, end-of-day refresh, corporate-action refresh. Retries with backoff, a dead-letter queue, idempotent upserts.
+3. **Scheduling from the exchange calendar**, not from cron guesses: refresh after the close on trading days only; handle half days.
+4. **Data quality checks:** missing sessions, duplicate bars, OHLC sanity (low ≤ open/close ≤ high), stale symbols. Failures surface on `/status`.
+5. **Timescale maintenance:** compression and retention policies, a continuous aggregate for weekly bars.
+6. **Redis caching** for hot reads (latest bar per symbol, symbol search).
+7. **MongoDB enters:** an append-only archive of raw provider responses (schema varies by provider and version, TTL index, replayable into the normalizer). Add Mongo + Mongo Express to compose.
+8. Bull Board (or equivalent) behind admin auth to inspect queues.
 
-**Learning focus:** transactions, invariants, money-safe data handling, portfolio accounting, domain design, instrumentation.
+**Learning focus:** adapter pattern, contract testing, queue design, retry semantics, data quality, time-series storage policies, document modeling.
 
 **Exit criteria:**
 
-- you can paper trade from the UI and see portfolio state update correctly
-- order placement is covered by integration tests against a real Postgres
-- every order has a traceable request id from web → api → database
-- ADR: "Order placement transaction boundaries and idempotency keys"
-- product check: I placed at least five paper trades this week without thinking about the plumbing
+- any watched symbol stays fresh automatically for two weeks with no manual action
+- replaying one archived raw payload reproduces the stored bars exactly
+- ADR 0008: "Provider contract and failure modes"
+- ADR 0009: "MongoDB vs Postgres JSONB for the raw payload archive" — if JSONB wins, drop Mongo and say so
+- **product check:** I haven't run the bootstrap script by hand in two weeks
 
-**Kill/pivot trigger:** if PnL math keeps drifting between sessions, stop adding features and write a property-based test for the accounting before continuing.
+**Kill/pivot trigger:** if the second adapter costs more than a week, ship with Alpaca only. The contract is the deliverable, not the number of providers.
 
 ---
 
-## Phase 5 — Market data infrastructure
+## Phase 5 — Strategy DSL and backtesting v1 · ~4 weeks
 
-**Goal:** replace Phase 2's bootstrap script with real ingestion that you can lean on.
+**Goal:** close the core loop — define a rule, test it honestly, trade it on paper.
 
-1. Define a `MarketDataProvider` contract.
-2. Integrate at least two historical providers to learn the adapter pattern. Suggested starting pair:
-   - `yahoo-finance2` for easy historical equity data (already used by the bootstrap)
-   - Binance for free live-ish crypto experimentation
-3. BullMQ jobs for:
-   - symbol backfill
-   - refresh latest candles
-   - retry and dead-letter handling
-4. Schedulers for end-of-day updates.
-5. Promote the bootstrap script's data path into proper hypertable maintenance — partitions, compression policies, retention.
-6. Use Redis for hot quote caches and recently viewed symbols.
+1. **Strategy DSL** as a versioned JSON structure defined in Zod in `packages/shared`:
+   - indicators (SMA, EMA, RSI, ATR, Bollinger), comparisons, crossovers, AND/OR
+   - entry rules, exit rules, stop-loss / take-profit, position sizing (fixed notional or % of equity)
+   - `version` field from day one
+   - exported to JSON Schema → Pydantic models in `services/ml`, with CI checking for drift
+2. **Event-driven backtester, hand-built in Python** (`services/ml/app/backtest/`): bar events → strategy → signals → orders → fills, using the **same fill model as Phase 3** (ported and tested against shared fixtures).
+3. **Bias guards by construction:**
+   - a signal computed on bar *t* can only fill at bar *t+1* or later
+   - the engine only sees data up to the current bar (point-in-time iterator, no dataframe look-ahead)
+   - adjusted prices for signals, raw prices plus corporate actions for fills and cash
+   - delisted symbols stay in the universe for dates when they traded
+4. **Job flow:** api validates and stores the strategy → enqueues a BullMQ backtest job → Python worker runs it → result returns through the job → api persists `BacktestRun` + trades + equity curve.
+5. **Metrics:** CAGR, volatility, Sharpe, Sortino, max drawdown and duration, win rate, exposure, turnover — always next to a **buy-and-hold benchmark**.
+6. **UI:** strategy builder form (templates for SMA crossover, RSI threshold, breakout), run list, result page with equity curve vs benchmark, drawdown pane, and trade markers on the candle chart. Restore `/strategies` and `/backtests`.
+7. **Paper-trade a strategy:** a daily job evaluates saved strategies after the close and places paper orders through the Phase 3 order path.
 
-**Mongo is still not introduced here.** It enters in Phase 6.
-
-**Learning focus:** adapters, jobs, idempotency, retries, queue design, time-series storage, cache design.
+**Learning focus:** event-driven design, cross-language contracts, job orchestration, quantitative evaluation, result visualization.
 
 **Exit criteria:**
 
-- candles can be backfilled and refreshed automatically
-- symbol pages read from your own stored data instead of ad hoc external calls
-- ADR: "Provider adapter contract and failure modes"
-- product check: I haven't manually re-run the bootstrap script in a week
+- the same strategy + data + seed produces byte-identical results (golden-file test)
+- a **parity test** shows backtest fills match fills from replaying the same signals through the paper-trading engine
+- a deliberately leaky strategy (peeking at tomorrow's close) is rejected or has no effect
+- ADR 0010: "Strategy DSL shape and versioning"
+- ADR 0011: "Bias guards in the backtest engine"
+- **product check:** a strategy I care about has been running on a paper portfolio for two weeks
 
-**Kill/pivot trigger:** if any one provider eats more than a week of integration time, drop it for now and ship with a single working adapter — the contract is the deliverable, not provider count.
+**Kill/pivot trigger:** if the DSL design runs past a week without a backtest running, freeze it at SMA crossover + RSI threshold and move on.
 
 ---
 
-## Phase 6 — Advanced charting, market analysis, and document data
+## Phase 6 — Analysis dashboard and research journal · ~3 weeks
 
-**Goal:** turn Astraq into a tool you actually want to open every morning.
+**Goal:** make Astraq the tab you open every morning.
 
-This is also where **MongoDB earns its keep** — for news, transcripts, and raw provider payloads where document storage is genuinely better than relational rows.
+1. **Symbol page upgrade:** multi-pane layout with synced crosshairs, indicator overlays (EMA/SMA/Bollinger), RSI/MACD panes, markers for your fills and strategy signals.
+2. **Analysis views:** watchlist performance table, relative performance comparison, drawdown chart, returns distribution, seasonality heatmap (`d3`).
+3. **Saved chart layouts** (Postgres `JSONB` — relational ownership, flexible payload).
+4. **News per symbol** from a free source into MongoDB, shown on the symbol page.
+5. **Research journal:** notes attached to a symbol, trade, or backtest run, with tags and full-text search. Use Mongo or Postgres per the Phase 4 ADR.
+6. Mobile layout pass across all core pages.
 
-1. Upgrade the symbol page:
-   - candles
-   - volume
-   - EMA / SMA overlays
-   - Bollinger bands
-   - crosshair sync across panes
-2. Market analysis views:
-   - watchlist performance table
-   - relative performance comparison
-   - drawdown chart
-   - returns distribution
-   - seasonality heatmap (`d3` lives here)
-3. Saved chart layouts.
-4. Streaming updates **only where they materially improve the UX** — not as a goal in itself.
-5. Introduce MongoDB:
-   - news headlines per symbol
-   - earnings transcripts (when free sources allow)
-   - raw provider payloads kept for replay/debugging
-6. Wire the news layer into the symbol page.
-
-**Learning focus:** RSC vs client boundaries, chart rendering, visualization design, performance, progressive hydration, document modeling.
+**Learning focus:** chart performance, visualization design, progressive hydration, document modeling, full-text search.
 
 **Exit criteria:**
 
-- the app feels like a legitimate market dashboard, not a scaffold
-- core chart pages work well on desktop and mobile
-- news and headlines render alongside the chart for at least one symbol
-- ADR: "Why Mongo for these collections specifically (and not Postgres JSONB)"
-- product check: I can replace one daily browser tab habit (TradingView lite, finviz, etc.) with Astraq
+- core pages are usable at phone and desktop widths
+- symbol page interaction stays under 100 ms on 10 years of daily bars (measured)
+- ADR 0012: "Chart composition: lightweight-charts panes vs d3 views"
+- **product check:** Astraq replaced one daily habit (finviz, TradingView lite, a spreadsheet)
 
-**Kill/pivot trigger:** if the news layer is harder to source than to display, ship the chart upgrades on their own and defer Mongo to Phase 9. The roadmap should not block on data licensing.
+**Kill/pivot trigger:** if sourcing news is harder than displaying it, ship charts and the journal without news.
 
 ---
 
-## Phase 7 — Strategy engine and backtesting v1
+## Phase 7 — Account hardening · ~2 weeks
 
-**Goal:** move from passive analysis into active decision support.
+**Goal:** make accounts safe enough to invite someone else.
 
-1. Define a simple **strategy DSL in TypeScript**, validated with Zod and stored in `packages/shared`.
-2. Support first rule-based strategies:
-   - SMA crossover
-   - RSI threshold
-   - breakout
-3. Build a backtest engine with:
-   - entry and exit rules
-   - commissions and slippage
-   - equity curve output
-   - trade log output
-4. Let users save strategy definitions and run backtests from the UI.
-5. Summary metrics: total return, Sharpe, max drawdown, win rate.
+1. Email verification and password reset (Mailhog locally, a transactional email provider in prod).
+2. TOTP 2FA with recovery codes.
+3. Personal API keys (hashed, scoped, revocable) for scripts and bots.
+4. Roles: `user`, `admin` (add `pro` only if billing ever happens).
+5. Admin-only operational pages (queues, data quality, users).
+6. Replace the invite allowlist with verified open registration, or keep invites — decide in the ADR.
 
-At this point Astraq becomes very strong for personal use even before heavy ML.
-
-**Learning focus:** event-driven thinking, domain modeling, evaluation pipelines, result visualization, trading-system ergonomics.
+**Learning focus:** email flows, OTP, key management, authorization models.
 
 **Exit criteria:**
 
-- you can define a strategy, run a backtest, and inspect results in the UI
-- backtest results are deterministic for a fixed input
-- ADR: "Strategy DSL shape and versioning story"
-- product check: at least one strategy definition I personally care about lives in the system
+- a new user can register, verify, enable 2FA, reset their password, and recover with a recovery code
+- ADR 0013: "2FA and API-key design"
+- **product check:** a friend signed up without my help
 
-**Kill/pivot trigger:** if the DSL design takes more than a week without a single backtest running, pick the simplest possible JSON shape and move on.
+**Kill/pivot trigger:** if email deliverability eats the phase, keep invite-only and ship 2FA + API keys.
 
 ---
 
-## Phase 8 — Python analytics and ML service
+## Phase 8 — Forecasting and signals · ~4–5 weeks
 
-**Goal:** expand Astraq from rule-based tooling into advanced research.
+**Goal:** add research depth without faking predictive power.
 
-1. Upgrade `services/ml` structure: `app/api/`, `app/core/`, `app/data/`, `app/features/`, `app/models/`, `app/backtest/`, `app/services/`.
-2. Finish Python tooling: `ruff` and `mypy` (strict on `app/`). **`uv` (lockfile + `.python-version`) and pytest are already in place.**
-3. Feature engineering: returns, rolling volatility, RSI, MACD, ATR, OBV.
-4. Statistical and classical ML models first: ARIMA / SARIMA, GARCH, gradient boosting for directional prediction.
-5. Only after the classical baselines are honest, explore deeper models: LSTM, TCN, N-BEATS.
-6. APIs for forecast bands, signal generation, advanced backtests.
-7. Experiment tracking with MLflow if model work becomes active enough to justify it.
+1. `services/ml` structure: `app/api`, `app/core`, `app/data`, `app/features`, `app/models`, `app/backtest`, `app/workers`.
+2. **Feature pipeline** (polars): returns, rolling volatility, RSI, MACD, ATR, OBV — computed point-in-time, shared with the backtester.
+3. **Walk-forward validation harness first**, before any model: expanding window, embargo gap, benchmark against naive forecasts.
+4. Baselines, in order: naive / drift / SMA → ARIMA and GARCH (volatility bands) → gradient boosting for direction.
+5. Forecast bands and signal overlays on the symbol chart, with each model's out-of-sample score shown next to its forecast.
+6. **ML signals become DSL inputs**, so the Phase 5 backtester evaluates them like any other rule.
+7. MLflow only if you're comparing more than a handful of runs a week.
 
-**Important:** ML upgrades Astraq, it does not delay usefulness.
-
-**Learning focus:** Python project structure, feature pipelines, time-series evaluation, model serving, experiment hygiene.
+**Learning focus:** time-series validation, feature engineering, statistical modeling, model serving, experiment hygiene.
 
 **Exit criteria:**
 
-- forecasts or signals can be requested from the main app and displayed meaningfully
-- at least one model path is evaluated with time-series-safe validation (no leakage)
-- ADR: "Time-series validation strategy"
-- product check: I can read a forecast band on a chart I care about and have an opinion about whether it's reasonable
+- every served model has a model card: data window, validation method, out-of-sample metrics vs naive baseline
+- the leakage test suite passes (shuffled-target and future-feature canaries)
+- ADR 0014: "Time-series validation strategy"
+- **product check:** I read a forecast band on a chart I care about and can say whether it beats naive
 
-**Kill/pivot trigger:** if four weeks pass without a single model serving real predictions to the web app, downscope to a hand-rolled SMA-based "forecast" stub and revisit ML later.
+**Kill/pivot trigger:** if four weeks pass without a model beating naive out of sample, ship the volatility bands (GARCH) and the harness — an honest "no edge" result is a valid outcome.
 
 ---
 
-## Phase 9 — Realtime, alerts, and `services/ingest`
+## Phase 9 — Realtime and alerts · ~3–4 weeks
 
-**Goal:** make Astraq feel alive and operational.
+**Goal:** make Astraq feel alive without making it fragile.
 
-1. Strategy execution against streaming or periodic data.
-2. Alerts via:
-   - email
-   - in-app notifications
-   - optional Telegram
-3. Lightweight live updates for portfolio PnL, latest candles, triggered strategy conditions.
-4. **Stand up `services/ingest`** as a Python websocket worker — once polling and scheduled refreshes from Phase 5 are no longer enough.
-5. Use Redis Streams first; only reach for NATS if there's a real reason.
+1. **`services/ingest`** (Python): Alpaca websocket (IEX) for watched symbols → Redis Streams, with reconnects, heartbeats, and gap backfill.
+2. Intraday bars (1-minute hypertable + continuous aggregates). Paper-trading fills move to latest-trade price during the session.
+3. **Live updates over SSE** (simpler than websockets for one-way data): latest price, portfolio PnL, triggered alerts.
+4. **Alerts:** price and indicator conditions, strategy signals; delivered in-app, by email, and optionally by Telegram. Deduplicated with cool-downs.
+5. Optional second adapter: Binance for 24/7 crypto, exercising the calendar abstraction.
 
-**Learning focus:** streaming trade-offs, background processing, event-driven updates, operational safety.
+**Learning focus:** streaming trade-offs, backpressure, reconnection logic, event-driven UI, operational safety.
 
 **Exit criteria:**
 
-- Astraq can monitor market conditions and surface actionable updates without manual refresh
-- `services/ingest` runs reliably for at least one market session
-- ADR: "Why Redis Streams over NATS / Kafka for this scope"
-- product check: I got an alert that actually changed what I did that day
+- ingest survives a full trading week including a forced restart, with gaps backfilled automatically
+- alerts arrive within 60 seconds of the triggering condition
+- ADR 0015: "Redis Streams + SSE for this scope"
+- **product check:** an alert changed what I did that day
 
-**Kill/pivot trigger:** if `services/ingest` is failing to stay up overnight after a week, fall back to scheduled refreshes and capture the streaming work as a follow-up.
+**Kill/pivot trigger:** if ingest can't stay up for a week, fall back to 5-minute polling and keep alerts.
 
 ---
 
-## Phase 10 — Observability, testing, performance
+## Phase 10 — Operate: observability, performance, reliability · ~3 weeks
 
-**Goal:** make the platform trustworthy. Tracing already exists from Phase 4 — this phase is about metrics, dashboards, and tightening the test pyramid.
+**Goal:** run Astraq like a small production system. There's real traffic by now, so the dashboards mean something.
 
-1. Expand OpenTelemetry coverage to web and ML, with proper exporters.
-2. Add Prometheus + Grafana dashboards for API latency, queue depth, ingestion lag, model serve time.
-3. Expand the testing pyramid per [.cursor/rules/testing-strategy.mdc](./.cursor/rules/testing-strategy.mdc):
-   - unit
-   - integration with real infra
-   - contract tests for the SDK
-   - Playwright for core user journeys
-4. Load testing for hot endpoints (symbol details, candle reads, order placement).
-5. Profiling and query analysis for slow DB paths.
-6. Define the first **SLOs** — request latency, ingestion freshness, alert delivery time.
+1. OpenTelemetry across web, api, ml workers, and ingest; metrics to Prometheus + Grafana (or Grafana Cloud's free tier).
+2. Dashboards: API latency, queue depth, job failures, ingestion lag, data freshness, model serve time.
+3. **SLOs** with alerting: candle freshness, API p95 latency, alert delivery time.
+4. Load tests (k6) on candle reads, order placement, and backtest submission; fix the slowest queries using `EXPLAIN ANALYZE`.
+5. **Restore drill:** restore Postgres (and Mongo, if kept) from backup into a fresh environment, and time it.
+6. Secrets move to Doppler or SOPS. Staging environment. A documented rollback procedure.
+7. Complete the test pyramid: SDK contract tests, and Playwright journeys for login → watchlist → backtest → paper trade.
 
-**Learning focus:** production debugging, tracing, metrics, performance tuning, SLO thinking.
+**Learning focus:** SLO thinking, production debugging, performance tuning, disaster recovery.
 
 **Exit criteria:**
 
-- failures are observable end-to-end
-- critical user journeys are covered by repeatable automated tests
-- at least three SLOs are defined and visible on a dashboard
-- ADR: "First SLOs and what they protect"
+- three SLOs defined, visible, and alerting
+- a real restore performed and documented, with the measured recovery time
+- ADR 0016: "SLOs and what they protect"
+- **product check:** I found and fixed a production issue from a dashboard, not a bug report
 
-**Kill/pivot trigger:** if dashboards stay empty because the app isn't deployed yet, swap order with Phase 11 — observability without traffic is theater.
-
----
-
-## Phase 11 — Deployment and operations
-
-**Goal:** deploy simply first, grow operational maturity from there.
-
-1. Dockerfiles for `web`, `api`, and `ml` (and `ingest` if Phase 9 has shipped).
-2. Production compose and environment templates.
-3. Cheapest sensible deploy path first:
-   - Vercel for web
-   - Railway or Fly.io for API and ML
-   - managed Postgres / Redis / Mongo
-4. Secrets management with Doppler or SOPS.
-5. Explore Kubernetes only after the app is already useful and deployed.
-6. Backup and restore drill for Postgres + Mongo. Run it once for real.
-
-**Learning focus:** deployment workflows, secrets handling, containerization, production readiness, recovery procedures.
-
-**Exit criteria:**
-
-- Astraq is accessible outside local development, on a domain you control
-- deploys are repeatable and documented
-- a real restore from backup has been performed at least once
-- ADR: "Deployment topology and rollback story"
-- product check: a friend can sign up and use the app without your laptop being on
-
-**Kill/pivot trigger:** if production keeps breaking on every deploy, freeze features and spend a phase on CI/CD hardening before adding anything new.
+**Kill/pivot trigger:** if deploys keep breaking, freeze features and harden CI/CD before anything else.
 
 ---
 
 ## Beyond v1 — research and stretch
 
-Only pick from these after Phase 7 has shipped and the core loop (watchlist → chart → strategy → backtest) is something you actually use weekly.
+Only after the core loop has been in weekly use for a month.
 
-### Trading depth
-
-- advanced order simulator with partial fills and latency modeling
-- options support with payoff diagrams and Greeks
-- factor dashboards and portfolio exposure analytics
-- event sourcing for portfolio and order history
-
-### Analytics depth
-
-- regime detection and macro overlays
-- alternative-data experiments (sentiment, search trends)
-- model ensembling with proper out-of-sample evaluation
-
-### Platform depth
-
-- GraphQL gateway for comparison with REST + SDK
-- gRPC between API and ML
-- paid tiers, quotas, and a billing model
-- mobile-first companion app
-
-### AI depth
-
-- LLM research assistant grounded in your transcripts and notes
-- code-aware backtest authoring (natural language → strategy DSL)
+- **Trading depth:** partial fills and latency modeling, options with payoff diagrams and Greeks, factor exposure, event-sourced order history.
+- **Research depth:** regime detection, parameter sweeps with overfitting guards (deflated Sharpe, walk-forward optimization), portfolio-level backtests.
+- **Platform comparisons:** GraphQL gateway vs REST + SDK, gRPC between api and ml, Kubernetes deployment.
+- **AI depth:** an LLM research assistant grounded in your journal and news, and natural language → strategy DSL (validated by the same Zod schema).
 
 ---
 
-## Recommended execution summary
+## Learning map
 
-1. Build the workspace and backend foundation (Phases 0–1).
-2. Establish the reusable design-system foundation before product UI expands (Phase 1.5).
-3. Ship a useful personal product fast (Phase 2: data + shim auth + bootstrap candles + basic chart).
-4. Harden auth (Phase 3) once the app is worth protecting.
-5. Add paper trading and request tracing together (Phase 4) — money-handling code deserves traceability from day one.
-6. Replace bootstrap ingestion with real infrastructure (Phase 5).
-7. Upgrade charts and earn MongoDB its keep with news/transcripts (Phase 6).
-8. Author and backtest strategies (Phase 7).
-9. Layer in ML only after the core product loop is already valuable (Phase 8).
-10. Go realtime and stand up `services/ingest` only when polling stops being enough (Phase 9).
-11. Finish with observability, performance, and deployment maturity (Phases 10–11).
+| Skill | Where it's learned |
+|---|---|
+| SQL, indexing, time series | Phase 1 (adjustment query), Phase 4 (policies, aggregates), Phase 10 (query tuning) |
+| Transactions and invariants | Phase 3 (ledger, idempotency, isolation) |
+| Auth and security | Phase 2 (core), Phase 7 (hardening) |
+| API design and contracts | Phase 1 (OpenAPI/SDK), Phase 5 (cross-language DSL) |
+| Queues and distributed jobs | Phase 4 (ingestion), Phase 5 (Node → Python workers) |
+| Document databases | Phase 4 (raw archive), Phase 6 (news, journal) |
+| Python engineering | Phase 5 (engine), Phase 8 (ML), Phase 9 (ingest) |
+| Quant correctness | Phases 1, 3, 5, 8 (adjustment, fills, bias guards, validation) |
+| Frontend and visualization | Phase 1 (first chart), Phase 6 (dashboard), Phase 9 (live UI) |
+| Operations | Phase 0 (CI), Phase 1 (deploy), Phase 3 (tracing), Phase 10 (SLOs, DR) |
 
-That order gives you earlier wins, better retention of new backend concepts, and a much higher chance that Astraq becomes something you genuinely use.
+**Estimated total:** roughly 34–40 weeks at 10–12 hours/week for Phases 0–10. Re-estimate at the start of every phase.
+
+---
+
+## Revision log
+
+**2026-09-24 — full rewrite.** Key changes from the previous plan:
+
+- Deployment moved from Phase 11 to Phase 1; the first phase is now a walking skeleton (provider → database → API → SDK → chart → deployed URL).
+- Temporary auth shim removed: the auth core is built once in Phase 2, and peripheral flows move to Phase 7.
+- Strategies and backtesting moved ahead of advanced charting, because they complete the core loop.
+- One backtest engine (Python) that shares a fill model with paper trading, replacing the earlier TypeScript v1 + Python "advanced" split.
+- Scope locked to US equities on daily bars; Alpaca is the primary provider and Yahoo the fallback.
+- Finance correctness made explicit: corporate actions, adjusted vs raw prices, trading calendars, decimal money, bias guards.
+- MongoDB enters in Phase 4 with an ADR that may remove it; NATS, Celery, and TypeScript backtesting dropped.
+- Added time boxes, a definition of done, a no-placeholder-routes rule, an honest status block, and a learning map.
+- The completed design-system phase (1.5) is recorded under Completed.

@@ -10,16 +10,16 @@ Goals the codebase must serve:
 ## Architecture
 - `apps/web`  — Next.js 16 frontend (RSC-first). UI, charts, auth surface.
 - `apps/api`  — NestJS domain API. Auth, portfolios, orders, market data orchestration.
-- `services/ml` — Python FastAPI service managed with `uv`. Forecasting, backtesting, signal generation.
-- `services/ingest` (planned) — Python websocket ingestor -> Redis/NATS streams.
+- `services/ml` — Python FastAPI service + BullMQ workers, managed with `uv`. Owns backtesting, analytics, forecasting. Read-only on market data; never writes domain tables.
+- `services/ingest` (Phase 9) — Python websocket ingestor -> Redis Streams.
 - `packages/ui` — semantic design tokens and accessible, reusable React components.
-- `packages/shared` (planned) — Zod schemas + TS types shared across web and api.
-- `packages/sdk` (planned) — typed client generated from api OpenAPI.
+- `packages/shared` (Phase 1) — Zod schemas + TS types; exports JSON Schema for Python (Pydantic) consumers.
+- `packages/sdk` (Phase 1) — typed client generated from api OpenAPI (`openapi-typescript` + `openapi-fetch`).
 
 ## Data stores
 - Postgres (+ TimescaleDB) — users, portfolios, orders, OHLCV hypertables.
-- MongoDB — flexible documents: news, transcripts, strategy JSON, raw provider payloads.
-- Redis — cache, rate limits, BullMQ queues, streams.
+- MongoDB (Phase 4) — raw provider payload archive, later news and research notes. Strategy definitions live in Postgres.
+- Redis — cache, rate limits, BullMQ queues (Node and Python workers), streams.
 
 ## Non-negotiables
 - All env vars validated with Zod (Node) / Pydantic Settings (Python) at boot.
@@ -27,6 +27,9 @@ Goals the codebase must serve:
 - No secrets in repo; prefer `.env.local` and Doppler/SOPS in prod.
 - Shared UI consumes semantic CSS variables and supports theme identity independently from light/dark mode.
 - Trading-specific patterns and app shells stay in `apps/web`; do not move product behavior into `packages/ui`.
+- Money is `numeric`/`Decimal`, never float. Timestamps are `timestamptz` UTC.
+- Backtesting and paper trading share one fill model; there is exactly one backtest engine (Python).
+- No placeholder routes: a web route exists only when it renders real data.
 - Learning > shipping: when a simple library exists AND a teaching opportunity exists, prefer implementing one layer by hand first (e.g. JWT refresh rotation, event-driven backtester).
 
 ## Current phase
