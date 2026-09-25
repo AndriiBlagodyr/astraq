@@ -115,6 +115,6 @@ pnpm test:unit:ml
 
 ## Near-term priorities
 
-- finish Phase 1: OpenAPI generation and a typed SDK consumed by `apps/web`
-- add local Docker infra (Postgres + TimescaleDB) as a Phase 2 prerequisite
-- ship the first useful personal-use flows: watchlists, candles, auth, and paper trading
+- Phase 0: repo hygiene, local Docker infra (Postgres + TimescaleDB, Redis), CI, and removing placeholder routes
+- Phase 1: walking skeleton — adjusted daily candles from provider to a deployed chart through the generated SDK
+- see [ROADMAP.md](./ROADMAP.md) for the full phased plan
