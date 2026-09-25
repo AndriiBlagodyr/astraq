@@ -6,19 +6,19 @@ test.describe("design system themes", () => {
   }) => {
     await page.goto("/");
     await page.evaluate(() => {
-      localStorage.setItem("astraq-color-mode", "dark");
-      localStorage.setItem("astraq-theme", "astraq");
+      localStorage.setItem("forelume-color-mode", "dark");
+      localStorage.setItem("forelume-theme", "forelume");
     });
     await page.reload();
 
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "astraq");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "forelume");
     await expect(page.locator("html")).toHaveAttribute("data-mode", "dark");
     await page.getByRole("button", { name: "Switch to light mode" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-mode", "light");
 
     await page
       .getByRole("button", {
-        name: /Current theme: astraq\. Switch to terminal/,
+        name: /Current theme: forelume\. Switch to terminal/,
       })
       .click();
     await expect(page.locator("html")).toHaveAttribute(

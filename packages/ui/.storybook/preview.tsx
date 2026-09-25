@@ -1,16 +1,23 @@
 import type { Decorator, Preview } from "@storybook/react-vite";
-import { ThemeProvider, TooltipProvider } from "../src";
+import {
+  DEFAULT_COLOR_MODE,
+  DEFAULT_THEME,
+  THEMES,
+  ThemeProvider,
+  TooltipProvider,
+  isThemeName,
+} from "../src";
 import "../src/styles/index.css";
 
 const withTheme: Decorator = (Story, context) => {
   const mode = context.globals.mode === "light" ? "light" : "dark";
-  const theme =
-    context.globals.theme === "terminal" || context.globals.theme === "midnight"
-      ? context.globals.theme
-      : "astraq";
+  const theme = isThemeName(context.globals.theme)
+    ? context.globals.theme
+    : DEFAULT_THEME;
 
   document.documentElement.dataset.mode = mode;
   document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = mode;
 
   return (
     <ThemeProvider>
@@ -31,19 +38,24 @@ const preview: Preview = {
       toolbar: {
         icon: "mirror",
         items: ["dark", "light"],
+        dynamicTitle: true,
       },
     },
     theme: {
       description: "Brand theme",
       toolbar: {
         icon: "paintbrush",
-        items: ["astraq", "terminal", "midnight"],
+        items: THEMES.map((theme) => ({
+          value: theme.name,
+          title: theme.label,
+        })),
+        dynamicTitle: true,
       },
     },
   },
   initialGlobals: {
-    mode: "dark",
-    theme: "astraq",
+    mode: DEFAULT_COLOR_MODE,
+    theme: DEFAULT_THEME,
   },
   parameters: {
     controls: { expanded: true },

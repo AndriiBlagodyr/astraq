@@ -1,20 +1,18 @@
 "use client";
 
-import { IconButton, useTheme, type ThemeName } from "@astraq/ui";
+import { IconButton, THEME_NAMES, useTheme } from "@astraq/ui";
 import { MoonStar, Palette, SunMedium } from "lucide-react";
 
 type ThemeToggleProps = {
   className?: string;
 };
 
-const themeOrder: ThemeName[] = ["astraq", "terminal", "midnight"];
-
 export function ThemeToggle({ className }: ThemeToggleProps) {
   const { mode, theme, setTheme, toggleMode } = useTheme();
   const isDark = mode === "dark";
   const nextColorScheme = isDark ? "light" : "dark";
   const nextTheme =
-    themeOrder[(themeOrder.indexOf(theme) + 1) % themeOrder.length];
+    THEME_NAMES[(THEME_NAMES.indexOf(theme) + 1) % THEME_NAMES.length];
 
   return (
     <div

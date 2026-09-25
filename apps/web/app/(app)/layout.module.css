@@ -326,7 +326,7 @@
   border-radius: 999px;
   border: 1px solid var(--color-tag-border);
   background: var(--color-tag-bg);
-  color: var(--color-accent-cyan);
+  color: var(--ds-brand-fg);
   font-size: 0.78rem;
 }
 

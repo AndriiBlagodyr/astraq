@@ -9,14 +9,14 @@ export default function ForgotPasswordPage() {
   return (
     <Card className="grid w-[min(27.5rem,100%)] gap-6 p-7">
       <header className="grid gap-2">
-        <p className="m-0 text-xs font-semibold tracking-[0.16em] text-brand-strong uppercase">
+        <p className="m-0 text-xs font-semibold tracking-[0.16em] text-brand-strong-fg uppercase">
           Phase 3 · Auth
         </p>
         <h1 className="m-0 font-display text-3xl font-bold tracking-tight text-foreground">
           Reset your password
         </h1>
         <p className="m-0 leading-7 text-secondary">
-          Enter the email associated with your Astraq account and we&apos;ll
+          Enter the email associated with your Forelume account and we&apos;ll
           send a single-use reset link. Tokens expire in 30 minutes and rotate
           on use to detect replay attempts.
         </p>

@@ -14,7 +14,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
           <span className={styles.brandIcon} aria-hidden="true">
             <AstraqLogo decorative className={styles.brandIconLogo} />
           </span>
-          <span className={styles.brandText}>Astraq</span>
+          <span className={styles.brandText}>Forelume</span>
         </Link>
 
         <nav className={styles.nav} aria-label="Marketing">
@@ -47,7 +47,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
       {children}
 
       <footer className={styles.footer}>
-        <p className={styles.footerTitle}>Astraq</p>
+        <p className={styles.footerTitle}>Forelume</p>
         <p className={styles.footerText}>
           Market data, charting, paper trading, strategies, and prediction
           research in one focused workspace.

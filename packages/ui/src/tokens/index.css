@@ -1,5 +1,5 @@
 :root,
-:root[data-theme="astraq"] {
+:root[data-theme="forelume"] {
   --ds-font-sans: "Geist", "Avenir Next", "Segoe UI", sans-serif;
   --ds-font-display: "Sora", "Avenir Next", "Segoe UI", sans-serif;
   --ds-font-mono: "SFMono-Regular", "SF Mono", "Consolas", monospace;
@@ -10,6 +10,9 @@
   --ds-radius-xl: 2rem;
   --ds-motion-fast: 160ms;
   --ds-motion-base: 220ms;
+  --ds-motion-slow: 320ms;
+  --ds-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ds-ease-in: cubic-bezier(0.55, 0, 1, 0.45);
 
   --ds-brand: #4ceeff;
   --ds-brand-strong: #466cef;
@@ -73,6 +76,8 @@
   --ds-foreground-secondary: #c3d0ea;
   --ds-foreground-muted: #8ea2c7;
   --ds-focus: color-mix(in srgb, var(--ds-brand) 42%, transparent);
+  /* Solid focus indicator; must reach 3:1 against every surface. */
+  --ds-focus-ring: var(--ds-brand);
   --ds-row: rgba(149, 176, 255, 0.08);
   --ds-shadow-soft: 0 28px 80px rgba(1, 7, 18, 0.34);
   --ds-shadow-brand: 0 18px 44px
@@ -112,6 +117,12 @@
   --ds-foreground-secondary: #4e6483;
   --ds-foreground-muted: #7f93b0;
   --ds-focus: color-mix(in srgb, var(--ds-brand-strong) 34%, transparent);
+  /* Brand colors are too light for a 3:1 ring on light surfaces; darken toward ink. */
+  --ds-focus-ring: color-mix(
+    in oklab,
+    var(--ds-brand-strong) 70%,
+    var(--ds-foreground)
+  );
   --ds-row: rgba(92, 121, 190, 0.1);
   --ds-shadow-soft: 0 28px 70px rgba(43, 64, 112, 0.12);
   --ds-shadow-brand: 0 18px 44px
@@ -141,9 +152,63 @@
     );
 }
 
+/*
+ * Text in brand and status hues ("fg" tokens).
+ *
+ * The base hues are tuned for fills, borders, and charts. On light surfaces
+ * they are far too pale to read as text (1.0-1.9:1). Each fg token is the
+ * same OKLCH hue and chroma with lightness moved just enough to reach 4.5:1
+ * against every surface AND the tone's own tint (8-24%, as used by badges,
+ * danger buttons, and feedback). Use `text-*-fg` for text and icons; keep
+ * `bg-*`/`border-*` on the base tokens.
+ */
+:root,
+:root[data-mode="dark"] {
+  --ds-brand-fg: var(--ds-brand);
+  --ds-brand-strong-fg: #7196ff;
+  --ds-positive-fg: var(--ds-positive);
+  --ds-negative-fg: #fe7380;
+  --ds-warning-fg: var(--ds-warning);
+}
+
+:root[data-theme="terminal"]:not([data-mode="light"]) {
+  --ds-brand-strong-fg: #22be6d;
+  --ds-negative-fg: #fe7695;
+}
+
+:root[data-theme="midnight"]:not([data-mode="light"]) {
+  --ds-brand-strong-fg: #918dfe;
+  --ds-negative-fg: var(--ds-negative);
+}
+
+:root[data-mode="light"] {
+  --ds-brand-fg: #00727c;
+  --ds-brand-strong-fg: #2c4acb;
+  --ds-positive-fg: #027243;
+  --ds-negative-fg: #b21f3e;
+  --ds-warning-fg: #8c5703;
+}
+
+:root[data-theme="terminal"][data-mode="light"] {
+  --ds-brand-fg: #027742;
+  --ds-brand-strong-fg: #056c3a;
+  --ds-positive-fg: #027742;
+  --ds-negative-fg: #af2250;
+  --ds-warning-fg: #627203;
+}
+
+:root[data-theme="midnight"][data-mode="light"] {
+  --ds-brand-fg: #5e55aa;
+  --ds-brand-strong-fg: #5736da;
+  --ds-positive-fg: #057255;
+  --ds-negative-fg: #ac2a53;
+  --ds-warning-fg: #895c04;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --ds-motion-fast: 0ms;
     --ds-motion-base: 0ms;
+    --ds-motion-slow: 0ms;
   }
 }

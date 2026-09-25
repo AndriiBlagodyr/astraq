@@ -155,7 +155,7 @@
 
 .linkPrimary:hover,
 .linkSecondary:hover {
-  color: var(--color-accent-cyan);
+  color: var(--ds-brand-fg);
 }
 
 @media (max-width: 640px) {

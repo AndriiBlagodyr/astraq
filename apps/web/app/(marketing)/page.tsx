@@ -66,7 +66,7 @@ export default function MarketingPage() {
           </h1>
 
           <p className={styles.lead}>
-            Astraq pairs clean charts with watchlists, paper trading, rule-based
+            Forelume pairs clean charts with watchlists, paper trading, rule-based
             strategies, and ML forecasts. One calm, readable surface for
             researching ideas, testing them on real history, and tracking the
             markets you care about.

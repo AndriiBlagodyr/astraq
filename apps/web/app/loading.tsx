@@ -5,7 +5,7 @@ export default function Loading() {
     <main className={styles.wrap}>
       <div className={styles.panel}>
         <p className={styles.eyebrow}>Loading</p>
-        <h1 className={styles.title}>Preparing Astraq workspace</h1>
+        <h1 className={styles.title}>Preparing Forelume workspace</h1>
         <p className={styles.text}>
           Theme tokens, route layouts, and page content are loading into the current session.
         </p>

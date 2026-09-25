@@ -20,7 +20,7 @@ export default function ProductLayout({ children }: { children: ReactNode }) {
             className={styles.brandIcon}
           />
           <div>
-            <p className={styles.brandTitle}>Astraq</p>
+            <p className={styles.brandTitle}>Forelume</p>
             <p className={styles.brandSubtitle}>
               Full-stack + ML learning workspace
             </p>
@@ -42,7 +42,7 @@ export default function ProductLayout({ children }: { children: ReactNode }) {
         <header className={styles.header}>
           <div>
             <p className={styles.headerEyebrow}>Learning workspace</p>
-            <h1 className={styles.headerTitle}>Astraq Research Lab</h1>
+            <h1 className={styles.headerTitle}>Forelume Research Lab</h1>
           </div>
 
           <div className={styles.headerActions}>
