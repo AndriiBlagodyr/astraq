@@ -21,7 +21,7 @@ function SymbolTabs() {
 }
 
 describe("Tabs", () => {
-  it("moves with arrow keys, skips disabled tabs, and wraps", async () => {
+  it("moves with arrow keys, keeps disabled tabs focusable but inactive, and wraps", async () => {
     const user = userEvent.setup();
     render(<SymbolTabs />);
 
@@ -30,6 +30,11 @@ describe("Tabs", () => {
 
     await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("tab", { name: "Signals" })).toHaveFocus();
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("Signals panel");
+
+    // Disabled tabs stay discoverable by keyboard but never activate.
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "News" })).toHaveFocus();
     expect(screen.getByRole("tabpanel")).toHaveTextContent("Signals panel");
 
     await user.keyboard("{ArrowRight}");

@@ -45,6 +45,19 @@ globalThis.ResizeObserver ??= class {
   disconnect() {}
 };
 // Skipped for tests that opt into the Node environment.
+if (typeof window !== "undefined") {
+  // Base UI dispatches a PointerEvent when Enter/Space activates a button.
+  window.PointerEvent ??= class extends MouseEvent {
+    readonly pointerId: number;
+    readonly pointerType: string;
+
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 0;
+      this.pointerType = init.pointerType ?? "";
+    }
+  } as typeof PointerEvent;
+}
 if (typeof Element !== "undefined") {
   Element.prototype.hasPointerCapture ??= () => false;
   Element.prototype.releasePointerCapture ??= () => {};

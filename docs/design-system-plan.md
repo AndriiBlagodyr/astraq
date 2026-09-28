@@ -45,7 +45,8 @@ packages/ui/
 - **No outer margins.** Layout is the parent's job.
 - **Consistent props:** sizes are `sm | md | lg` and read density tokens. Every component uses the same prop names for intent: `variant`, `size`, `tone`.
 - **States in stories:** default, hover, focus-visible, active, disabled, invalid (`aria-invalid`), loading, and read-only where relevant. Every state must appear in stories.
-- **Server Components by default.** Add `"use client"` only to files that need it; display components stay RSC-safe.
+- **Motion:** follow the rules in [motion.md](motion.md): tokens only, transitions over keyframes, exits faster than entries, reduced motion respected.
+- **Server Components by default. Add `"use client"` only to files that need it; display components stay RSC-safe.
 - **Tests: minimal for now.** Check keyboard and ARIA behavior by hand in Storybook, and give every variant a story. Only add an automated test for rules that break silently and are hard to spot by eye, such as token contrast.
 
 ## PR 1 — Extraction hygiene and restructure ✅
@@ -96,7 +97,7 @@ Fonts, radii and motion are shared across themes.
 
 **Learning focus:** color science (OKLCH vs. sRGB), perceptual scales, codegen, testing design constraints.
 
-## PR 3 — Base UI migration
+## PR 3 — Base UI migration ✅
 
 1. Add `@base-ui/react` and remove all `@radix-ui/*` packages.
 2. Rewrite Dialog, Select, Tabs, and Tooltip on Base UI.
@@ -105,6 +106,19 @@ Fonts, radii and motion are shared across themes.
    - Replace `TooltipProvider` with the Base UI provider, re-exported under the same name.
 3. Keep the exported component names stable so `apps/web` doesn't change.
 4. Check each migrated component by hand in Storybook: Escape, focus return, arrow keys, typeahead. The existing PR 1 keyboard tests must keep passing.
+
+**What shipped**
+- `@base-ui/react` 1.8. All four Radix packages are removed, and the export names are unchanged. `apps/web` only uses `TooltipProvider` and needed no edits.
+- **Composition:** `asChild` is replaced by `render`, as in `<DialogTrigger render={<Button />}>Review order</DialogTrigger>`.
+- **Motion:** overlays use CSS transitions on `data-starting-style` / `data-ending-style` instead of keyframes, so an interrupted open or close reverses smoothly. The `animate-ds-*` keyframes are deleted. Durations still read motion tokens, which are 0ms under reduced motion.
+- **New prop types:** `TabsListProps`, `TabsTriggerProps`, `TabsContentProps`, `SelectContentProps`, `SelectItemProps`, `SelectLabelProps`, `SelectSeparatorProps`.
+
+**Behavior differences**
+- **Select labels:** Base UI shows the raw value in the trigger unless `Select` gets `items`, a value → label map or a `{ value, label }[]`. Pass `items` whenever values aren't display text.
+- **Select position:** `alignItemWithTrigger={false}` keeps the Radix layout, with the list opening below the trigger instead of overlapping it.
+- **Tabs:** `TabsList` sets `activateOnFocus` to keep automatic activation. Disabled tabs now stay focusable with the arrow keys (`aria-disabled`) but never activate.
+- **Tooltip:** Base UI treats tooltips as visual-only. Our wrapper adds `role="tooltip"` and points the trigger's `aria-describedby` at it while open, so screen readers still get the description. `children` is now typed `ReactElement`.
+- **Tests:** jsdom needed a `PointerEvent` shim (in `test/setup.ts`). The Dialog focus-wrap test now waits one tick, because Base UI wraps focus through a focus-guard element.
 
 ## PR 4 — Themes to 6 + density
 
@@ -119,15 +133,16 @@ Fonts, radii and motion are shared across themes.
 
 - Add `data-density` (`comfortable` | `compact`). Control heights, paddings, and table row heights read density tokens.
 - Add a `forced-colors: active` block in base styles, using system colors and keeping focus rings visible.
+- Add the theme switch reveal (see [motion.md](motion.md)).
 - Add a theme and density toolbar in Storybook, plus a "Theme matrix" story that shows one composition in all 12 theme × mode combinations side by side.
 
 ## PR 5 — Component expansion
 
-Build components in tiers, each wrapping Base UI unless noted.
+Build components in tiers, each wrapping Base UI unless noted. Motion requirements for `Skeleton`, `Toast`, `Drawer`, `EmptyState`, plus the new spring presets and `AnimatedNumber`, are in [motion.md](motion.md).
 
 - **Tier A (forms):** Field (label, description, error wiring), Input, Textarea, Checkbox, CheckboxGroup, RadioGroup, Switch, Select (restyled), Combobox, Autocomplete, NumberField, Slider, Toggle, ToggleGroup, Form. **SegmentedControl is hand-built** (ADR 0002 §6).
 - **Tier B (overlays and feedback):** Popover, Menu, ContextMenu, AlertDialog, Drawer (Dialog variant), Toast, PreviewCard, Progress, Meter, Skeleton, Spinner.
-- **Tier C (display):** Avatar, Separator, ScrollArea, Kbd, Accordion, Collapsible, Toolbar, EmptyState, Stat (generic label/value/delta; no market semantics).
+- **Tier C (display):** AnimatedNumber, Avatar, Separator, ScrollArea, Kbd, Accordion, Collapsible, Toolbar, EmptyState, Stat (generic label/value/delta; no market semantics).
 - **Tier D (data):** the Table primitive restyled with density and sticky headers, a DataTable recipe (TanStack Table + Virtual, supporting sort, column visibility, and row selection), and DateRangePicker (React Aria, wrapped).
 
 ## PR 6 — Distribution

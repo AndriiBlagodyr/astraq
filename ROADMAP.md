@@ -134,6 +134,7 @@ astraq/
 - **Security.** Follow [security and secrets](./.cursor/rules/security-and-secrets.mdc). Env validated at boot in every service; fail-closed CORS, auth, and permissions.
 - **Learning over shipping** — when a library exists *and* there's a teaching opportunity, build one layer by hand first (refresh-token rotation, ledger accounting, event-driven backtester). Write down what you'd replace it with in production.
 - **Data licensing.** Provider data is for personal use. No public pages that redistribute raw vendor data; a friend's account (Phase 10) is still private use.
+- **Motion.** UI motion follows [docs/motion.md](docs/motion.md). Each phase ships the motion items listed for it there; none are built on placeholder routes.
 - **Finance correctness is a first-class concern**, not a detail: adjusted prices, trading calendars, point-in-time data, decimal money.
 
 ---
@@ -143,6 +144,14 @@ astraq/
 ### Design system foundation (formerly Phase 1.5) — done
 
 `packages/ui` with semantic tokens, independent theme identity and light/dark mode, headless primitives, Storybook, and tests. Mantine removed. ADR 0001.
+
+### Design system v2 — in progress
+
+Base UI primitives, a generated token pipeline, 6 themes, density, and an extractable `@astraq/ui`. [ADR 0002](docs/decisions/0002-design-system-base-ui-and-token-architecture.md); tracked in [docs/design-system-plan.md](docs/design-system-plan.md) as 7 PRs.
+
+- PR 1 (restructure, interaction states) — done
+- PR 2 (hand-built token pipeline, full per-theme palettes, contrast matrix) — done
+- PR 3–7 (Base UI migration, themes + density, components, distribution, docs) — next
 Follow-up folded into Phase 0: app pages still style themselves with `layout.module.css` — migrate the surviving routes to `packages/ui` compositions.
 
 ---
@@ -166,7 +175,7 @@ Follow-up folded into Phase 0: app pages still style themselves with `layout.mod
 - fresh clone → `pnpm install && pnpm infra:up && pnpm dev` boots everything with no manual steps
 - CI is green and required on `master`
 - every service crashes on invalid env
-- ADR 0002: "pnpm + Turborepo, and how Python lives in the monorepo"
+- ADR 0003: "pnpm + Turborepo, and how Python lives in the monorepo"
 
 **Kill/pivot trigger:** if CI or compose polish runs past a week, ship whatever runs and list the gaps under "Carried gaps".
 
