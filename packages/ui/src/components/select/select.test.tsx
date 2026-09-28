@@ -9,7 +9,11 @@ describe("Select", () => {
     const onValueChange = vi.fn();
     render(
       <FormField htmlFor="direction" label="Direction" hint="Trigger side">
-        <Select defaultValue="above" onValueChange={onValueChange}>
+        <Select
+          items={{ above: "Moves above", below: "Moves below" }}
+          defaultValue="above"
+          onValueChange={onValueChange}
+        >
           <SelectTrigger />
           <SelectContent>
             <SelectItem value="above">Moves above</SelectItem>
@@ -27,7 +31,7 @@ describe("Select", () => {
     expect(await screen.findByRole("listbox")).toBeVisible();
 
     await user.keyboard("{ArrowDown}{Enter}");
-    expect(onValueChange).toHaveBeenCalledWith("below");
+    expect(onValueChange).toHaveBeenCalledWith("below", expect.anything());
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     expect(trigger).toHaveTextContent("Moves below");
     expect(trigger).toHaveFocus();

@@ -106,7 +106,10 @@ export const FormsAndSelection: Story = {
           <Input id="price" inputMode="decimal" defaultValue="0" invalid />
         </FormField>
         <FormField htmlFor="direction" label="Direction">
-          <Select defaultValue="above">
+          <Select
+            items={{ above: "Moves above", below: "Moves below" }}
+            defaultValue="above"
+          >
             <SelectTrigger id="direction" placeholder="Choose direction" />
             <SelectContent>
               <SelectItem value="above">Moves above</SelectItem>
@@ -140,9 +143,7 @@ export const NavigationAndOverlays: Story = {
       </Tabs>
       <div className="flex gap-3">
         <Dialog>
-          <DialogTrigger asChild>
-            <Button>Review order</Button>
-          </DialogTrigger>
+          <DialogTrigger render={<Button />}>Review order</DialogTrigger>
           <DialogContent
             title="Review paper order"
             description="Confirm the simulated order before submission."
@@ -152,9 +153,7 @@ export const NavigationAndOverlays: Story = {
               description="Estimated value: $2,140.50"
             />
             <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="secondary">Back</Button>
-              </DialogClose>
+              <DialogClose render={<Button variant="secondary" />}>Back</DialogClose>
               <Button>Confirm</Button>
             </DialogFooter>
           </DialogContent>

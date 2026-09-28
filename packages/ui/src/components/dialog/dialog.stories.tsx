@@ -27,9 +27,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   render: () => (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button>Review order</Button>
-      </DialogTrigger>
+      <DialogTrigger render={<Button />}>Review order</DialogTrigger>
       <DialogContent
         title="Review paper order"
         description="Confirm the simulated order before submission."
@@ -39,9 +37,7 @@ export const Default: Story = {
           description="Estimated value: $2,140.50"
         />
         <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="secondary">Back</Button>
-          </DialogClose>
+          <DialogClose render={<Button variant="secondary" />}>Back</DialogClose>
           <Button>Confirm order</Button>
         </DialogFooter>
       </DialogContent>
@@ -52,17 +48,13 @@ export const Default: Story = {
 export const Destructive: Story = {
   render: () => (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="danger">Delete strategy</Button>
-      </DialogTrigger>
+      <DialogTrigger render={<Button variant="danger" />}>Delete strategy</DialogTrigger>
       <DialogContent
         title="Delete “SMA crossover”?"
         description="Backtest history for this strategy is removed too. This can’t be undone."
       >
         <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="secondary">Keep strategy</Button>
-          </DialogClose>
+          <DialogClose render={<Button variant="secondary" />}>Keep strategy</DialogClose>
           <Button variant="danger">Delete</Button>
         </DialogFooter>
       </DialogContent>

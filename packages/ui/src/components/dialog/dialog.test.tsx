@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Button } from "../button";
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from "./dialog";
@@ -6,13 +6,9 @@ import { Dialog, DialogClose, DialogContent, DialogTrigger } from "./dialog";
 function OrderDialog() {
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button>Review order</Button>
-      </DialogTrigger>
+      <DialogTrigger render={<Button />}>Review order</DialogTrigger>
       <DialogContent title="Review order" description="Confirm first.">
-        <DialogClose asChild>
-          <Button variant="secondary">Back</Button>
-        </DialogClose>
+        <DialogClose render={<Button variant="secondary" />}>Back</DialogClose>
         <Button>Confirm</Button>
       </DialogContent>
     </Dialog>
@@ -41,11 +37,12 @@ describe("Dialog", () => {
     const back = screen.getByRole("button", { name: "Back" });
     expect(back).toHaveFocus();
 
-    // Back -> Confirm -> Close -> wraps to Back.
+    // Back -> Confirm -> Close -> wraps to Back. The wrap goes through a
+    // focus guard that redirects on the next tick.
     await user.tab();
     await user.tab();
     await user.tab();
-    expect(back).toHaveFocus();
+    await waitFor(() => expect(back).toHaveFocus());
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

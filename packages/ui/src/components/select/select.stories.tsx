@@ -26,9 +26,23 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const directions = {
+  above: "Moves above",
+  below: "Moves below",
+  cross: "Crosses (soon)",
+};
+
+const intervals = {
+  "1m": "1 minute",
+  "5m": "5 minutes",
+  "1h": "1 hour",
+  "1d": "1 day",
+  "1w": "1 week",
+};
+
 function DirectionSelect(props: { invalid?: boolean; disabled?: boolean; label?: string }) {
   return (
-    <Select defaultValue="above" disabled={props.disabled}>
+    <Select items={directions} defaultValue="above" disabled={props.disabled}>
       <SelectTrigger
         aria-label={props.label ?? "Direction"}
         invalid={props.invalid}
@@ -63,7 +77,7 @@ export const GroupedInField: Story = {
   render: () => (
     <div className="max-w-sm">
       <FormField htmlFor="interval" label="Interval" hint="Bars used for signals.">
-        <Select>
+        <Select items={intervals}>
           <SelectTrigger placeholder="Choose an interval" />
           <SelectContent>
             <SelectGroup>
