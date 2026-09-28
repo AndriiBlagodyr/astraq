@@ -59,6 +59,25 @@
   --radius-md: var(--ds-radius-md);
   --radius-lg: var(--ds-radius-lg);
   --radius-xl: var(--ds-radius-xl);
+  /* Pills and chips. `rounded-full` stays a true circle (spinners, avatars). */
+  --radius-pill: var(--ds-radius-pill);
+
+  /* Every bare `border` utility; the contrast theme uses 2px. */
+  --default-border-width: var(--ds-border-width);
+
+  /* Density: h-control-md, px-inset-md, py-cell-y, ... */
+  --spacing-control-sm: var(--ds-control-sm);
+  --spacing-control-md: var(--ds-control-md);
+  --spacing-control-lg: var(--ds-control-lg);
+  --spacing-inset-sm: var(--ds-inset-sm);
+  --spacing-inset-md: var(--ds-inset-md);
+  --spacing-inset-lg: var(--ds-inset-lg);
+  --spacing-cell-y: var(--ds-cell-y);
+  --spacing-head-y: var(--ds-head-y);
+
+  /* Glass themes blur; solid themes resolve these to 0px. */
+  --blur-surface: var(--ds-blur-surface);
+  --blur-overlay: var(--ds-blur-overlay);
 
   --shadow-soft: var(--ds-shadow-soft);
   --shadow-brand: var(--ds-shadow-brand);
@@ -149,6 +168,16 @@
     text-decoration: none;
   }
 
+  /* Inline links follow the theme; links styled as components opt out. */
+  a:not([data-slot]) {
+    text-decoration-line: var(--ds-link-decoration);
+    text-underline-offset: 0.2em;
+  }
+
+  a:not([data-slot]):hover {
+    text-decoration-line: underline;
+  }
+
   button,
   input,
   textarea,
@@ -164,7 +193,7 @@
 
   /* One focus indicator for every interactive element, keyboard only. */
   :focus-visible {
-    outline: 2px solid var(--ds-focus-ring);
+    outline: var(--ds-focus-width) solid var(--ds-focus-ring);
     outline-offset: 2px;
   }
 
@@ -172,4 +201,46 @@
     background: color-mix(in srgb, var(--ds-brand) 20%, transparent);
     color: var(--ds-fg-default);
   }
+}
+
+/*
+ * Windows High Contrast / forced colors. Unlayered so it beats utilities.
+ * The browser swaps author colors for system colors, which erases
+ * box-shadow focus halos and states shown only by a background tint.
+ */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: var(--ds-focus-width) solid Highlight;
+    outline-offset: 2px;
+  }
+
+  /* Selected and highlighted states. */
+  [data-slot="tabs-trigger"][data-active],
+  [data-slot="select-item"][data-highlighted],
+  [data-slot="table-row"][data-selected] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  /* Buttons with transparent borders (primary, ghost) still need an edge. */
+  [data-slot="button"] {
+    border-color: ButtonText;
+  }
+
+  :disabled,
+  [aria-disabled="true"],
+  [data-disabled] {
+    color: GrayText;
+  }
+}
+
+/*
+ * Theme switch reveal (ThemeProvider). The new snapshot is clipped by a
+ * growing circle from JS; turn off the default crossfade so only that shows.
+ */
+:root[data-theme-reveal]::view-transition-old(root),
+:root[data-theme-reveal]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }

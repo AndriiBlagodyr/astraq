@@ -5,16 +5,37 @@ export const THEMES = [
     name: "forelume",
     label: "Forelume",
     description: "Cyan to indigo with a warm gold accent. Glass surfaces.",
+    density: "comfortable",
   },
   {
     name: "terminal",
     label: "Terminal",
     description: "Phosphor green and acid yellow on green-black. Dense trading screens.",
+    density: "compact",
   },
   {
     name: "midnight",
     label: "Midnight",
     description: "Violet and pink on deep indigo. Soft, low-glare surfaces.",
+    density: "comfortable",
+  },
+  {
+    name: "paper",
+    label: "Paper",
+    description: "Warm off-white and ink, like a printed research report. Sepia at night.",
+    density: "comfortable",
+  },
+  {
+    name: "graphite",
+    label: "Graphite",
+    description: "Neutral monochrome with one restrained blue accent.",
+    density: "comfortable",
+  },
+  {
+    name: "contrast",
+    label: "High contrast",
+    description: "Accessibility first: AAA text, solid 2px borders, a thick focus ring, underlined links.",
+    density: "comfortable",
   },
 ] as const;
 

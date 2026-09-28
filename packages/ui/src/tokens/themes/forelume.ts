@@ -1,9 +1,19 @@
-import type { ThemeSource } from "../schema";
+import { FONTS, type ThemeSource } from "../schema";
 
 export const forelume = {
   name: "forelume",
   label: "Forelume",
   description: "Cyan to indigo with a warm gold accent. Glass surfaces.",
+  density: "comfortable",
+  surfaces: "glass",
+  contrast: "AA",
+  type: { sans: FONTS.geist, display: FONTS.sora, mono: FONTS.mono },
+  shape: {
+    radius: { sm: "0.75rem", md: "1.125rem", lg: "1.5rem", xl: "2rem", pill: "9999px" },
+    border: "1px",
+    focusRing: "2px",
+  },
+  links: "plain",
   neutral: { hue: 257, chroma: 1 },
   brand: {
     base: "#4ceeff",

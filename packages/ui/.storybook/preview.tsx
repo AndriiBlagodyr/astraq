@@ -5,6 +5,7 @@ import {
   THEMES,
   ThemeProvider,
   TooltipProvider,
+  isDensity,
   isThemeName,
 } from "../src";
 import "../src/styles/index.css";
@@ -15,9 +16,13 @@ const withTheme: Decorator = (Story, context) => {
     ? context.globals.theme
     : DEFAULT_THEME;
 
-  document.documentElement.dataset.mode = mode;
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.colorScheme = mode;
+  const root = document.documentElement;
+  root.dataset.mode = mode;
+  root.dataset.theme = theme;
+  root.style.colorScheme = mode;
+  // "theme" (or anything unknown) leaves the attribute off: the theme's default applies.
+  if (isDensity(context.globals.density)) root.dataset.density = context.globals.density;
+  else delete root.dataset.density;
 
   return (
     <ThemeProvider>
@@ -52,10 +57,23 @@ const preview: Preview = {
         dynamicTitle: true,
       },
     },
+    density: {
+      description: "Density",
+      toolbar: {
+        icon: "component",
+        items: [
+          { value: "theme", title: "Theme default" },
+          { value: "comfortable", title: "Comfortable" },
+          { value: "compact", title: "Compact" },
+        ],
+        dynamicTitle: true,
+      },
+    },
   },
   initialGlobals: {
     mode: DEFAULT_COLOR_MODE,
     theme: DEFAULT_THEME,
+    density: "theme",
   },
   parameters: {
     controls: { expanded: true },

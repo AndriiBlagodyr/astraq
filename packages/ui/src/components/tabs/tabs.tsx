@@ -19,7 +19,7 @@ export function TabsList({ className, ...props }: TabsListProps) {
       data-slot="tabs-list"
       activateOnFocus
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-border bg-surface-muted p-1",
+        "inline-flex items-center gap-1 rounded-pill border border-border bg-surface-muted p-1",
         className,
       )}
       {...props}
@@ -37,7 +37,7 @@ export function TabsTrigger({ className, ...props }: TabsTriggerProps) {
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
       className={cn(
-        "inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full px-4 text-xs font-semibold whitespace-nowrap text-muted select-none",
+        "inline-flex min-h-control-sm cursor-pointer items-center gap-2 rounded-pill px-inset-sm text-xs font-semibold whitespace-nowrap text-muted select-none",
         "transition-[background-color,color,box-shadow,scale] duration-(--ds-motion-fast) ease-out",
         "hover:text-foreground motion-safe:active:scale-[0.97]",
         "data-active:bg-brand/12 data-active:text-foreground data-active:shadow-sm",

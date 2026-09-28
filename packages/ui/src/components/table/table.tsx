@@ -62,7 +62,7 @@ export function Th({
       data-slot="table-head"
       scope={scope}
       className={cn(
-        "border-b border-border-subtle py-3 pr-5 text-xs font-semibold tracking-widest text-muted uppercase last:pr-0",
+        "border-b border-border-subtle py-head-y pr-5 text-xs font-semibold tracking-widest text-muted uppercase last:pr-0",
         className,
       )}
       {...props}
@@ -75,7 +75,7 @@ export function Td({ className, ...props }: ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "border-b border-border-subtle py-4 pr-5 text-secondary last:pr-0 [tr:last-child_&]:border-b-0",
+        "border-b border-border-subtle py-cell-y pr-5 text-secondary last:pr-0 [tr:last-child_&]:border-b-0",
         className,
       )}
       {...props}

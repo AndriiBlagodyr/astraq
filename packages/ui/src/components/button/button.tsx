@@ -5,7 +5,7 @@ import { Spinner } from "../spinner";
 
 export const buttonVariants = cva(
   [
-    "relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border font-semibold whitespace-nowrap select-none",
+    "relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-pill border font-semibold whitespace-nowrap select-none",
     "transition-[translate,scale,background-color,border-color,color,box-shadow,filter,opacity] duration-(--ds-motion-fast) ease-out",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0",
     // Hover lifts, press sinks. Transforms only when motion is allowed.
@@ -30,9 +30,9 @@ export const buttonVariants = cva(
           "border-negative/35 bg-negative/12 text-negative-fg hover:border-negative/55 hover:bg-negative/18 active:bg-negative/24",
       },
       size: {
-        sm: "min-h-9 px-4 text-xs [&_svg:not([class*='size-'])]:size-3.5",
-        md: "min-h-11 px-5 text-sm [&_svg:not([class*='size-'])]:size-4",
-        lg: "min-h-12 px-6 text-base [&_svg:not([class*='size-'])]:size-5",
+        sm: "min-h-control-sm px-inset-sm text-xs [&_svg:not([class*='size-'])]:size-3.5",
+        md: "min-h-control-md px-inset-md text-sm [&_svg:not([class*='size-'])]:size-4",
+        lg: "min-h-control-lg px-inset-lg text-base [&_svg:not([class*='size-'])]:size-5",
       },
     },
     defaultVariants: {

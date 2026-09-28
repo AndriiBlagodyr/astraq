@@ -10,6 +10,7 @@ function ThemeHarness() {
   return (
     <>
       <output>{`${theme}:${mode}:${modePreference}`}</output>
+      <DensityHarness />
       <button type="button" onClick={toggleMode}>
         Toggle mode
       </button>
@@ -18,6 +19,25 @@ function ThemeHarness() {
       </button>
       <button type="button" onClick={() => setTheme("terminal")}>
         Use terminal
+      </button>
+    </>
+  );
+}
+
+function DensityHarness() {
+  const { density, densityPreference, setDensity } = useTheme();
+
+  return (
+    <>
+      <output>{`density ${density}:${densityPreference}`}</output>
+      <button type="button" onClick={() => setDensity("compact")}>
+        Use compact
+      </button>
+      <button type="button" onClick={() => setDensity("comfortable")}>
+        Use comfortable
+      </button>
+      <button type="button" onClick={() => setDensity("theme")}>
+        Use theme density
       </button>
     </>
   );
@@ -50,6 +70,7 @@ describe("ThemeProvider", () => {
     localStorage.clear();
     document.documentElement.dataset.mode = "dark";
     document.documentElement.dataset.theme = "forelume";
+    delete document.documentElement.dataset.density;
   });
 
   it("updates mode and brand theme independently", async () => {
@@ -95,6 +116,35 @@ describe("ThemeProvider", () => {
     await user.click(screen.getByRole("button", { name: "Toggle mode" }));
     act(() => setScheme("light"));
     expect(screen.getByText("forelume:dark:dark")).toBeVisible();
+  });
+});
+
+describe("density", () => {
+  it("follows the theme's default until the user picks one", async () => {
+    const user = userEvent.setup();
+    render(
+      <ThemeProvider>
+        <ThemeHarness />
+      </ThemeProvider>,
+    );
+    const root = document.documentElement;
+
+    expect(screen.getByText("density comfortable:theme")).toBeVisible();
+
+    // Terminal defaults to compact; no attribute, so its CSS default applies.
+    await user.click(screen.getByRole("button", { name: "Use terminal" }));
+    expect(screen.getByText("density compact:theme")).toBeVisible();
+    expect(root.dataset.density).toBeUndefined();
+
+    // An explicit choice overrides every theme and is remembered.
+    await user.click(screen.getByRole("button", { name: "Use comfortable" }));
+    expect(screen.getByText("density comfortable:comfortable")).toBeVisible();
+    expect(root.dataset.density).toBe("comfortable");
+    expect(localStorage.getItem("forelume-density")).toBe("comfortable");
+
+    await user.click(screen.getByRole("button", { name: "Use theme density" }));
+    expect(screen.getByText("density compact:theme")).toBeVisible();
+    expect(root.dataset.density).toBeUndefined();
   });
 });
 

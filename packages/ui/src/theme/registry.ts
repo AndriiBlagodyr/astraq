@@ -14,6 +14,8 @@ export type ThemeDefinition = {
   name: string;
   label: string;
   description: string;
+  /** Density used when the user hasn't picked one. */
+  density: Density;
 };
 
 export type ThemeName = (typeof THEMES)[number]["name"];
@@ -33,8 +35,27 @@ export type ColorModePreference = ColorMode | "system";
 
 export const DEFAULT_COLOR_MODE: ColorMode = "dark";
 
+export const DENSITIES = ["comfortable", "compact"] as const;
+export type Density = (typeof DENSITIES)[number];
+
+/** What the user chose. `theme` follows the active theme's default density. */
+export type DensityPreference = Density | "theme";
+
 export const COLOR_MODE_STORAGE_KEY = "forelume-color-mode";
 export const THEME_STORAGE_KEY = "forelume-theme";
+export const DENSITY_STORAGE_KEY = "forelume-density";
+
+export function themeDensity(theme: ThemeName): Density {
+  return THEMES.find((entry) => entry.name === theme)?.density ?? "comfortable";
+}
+
+export function isDensity(value: unknown): value is Density {
+  return DENSITIES.includes(value as Density);
+}
+
+export function isDensityPreference(value: unknown): value is DensityPreference {
+  return value === "theme" || isDensity(value);
+}
 
 export function isThemeName(value: unknown): value is ThemeName {
   return THEME_NAMES.includes(value as ThemeName);
