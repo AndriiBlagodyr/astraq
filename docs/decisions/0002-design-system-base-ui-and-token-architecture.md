@@ -44,7 +44,7 @@ The current package has limits that block this:
 
 | Tier | Example | Who references it |
 |---|---|---|
-| Primitive | `--p-cyan-9`, 12-step OKLCH scales per hue, separate light and dark scales | Theme definitions only |
+| Primitive | 12-step OKLCH scales per hue, separate light and dark curves. Emitted to `tokens.json` only, never CSS. | Theme definitions only |
 | Semantic | `--ds-bg-surface`, `--ds-fg-muted`, `--ds-accent`, `--ds-positive-subtle`, `--ds-radius-control`, `--ds-density` | Components and apps |
 | Component | `--ds-button-height-md` | That component only, and only when a semantic token isn't enough |
 

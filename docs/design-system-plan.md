@@ -10,17 +10,20 @@ packages/ui/
 │   └── build-tokens.ts          # hand-built: TS themes -> CSS + DTCG JSON + registry
 ├── src/
 │   ├── tokens/
+│   │   ├── color.ts             # sRGB <-> OKLCH, gamut clipping
+│   │   ├── contrast.ts          # WCAG contrast, alpha flattening, lightness solver
 │   │   ├── scale.ts             # OKLCH 12-step scale generator
-│   │   ├── contrast.ts          # WCAG contrast + alpha flattening
-│   │   ├── schema.ts            # SemanticTokens type (the theme contract)
+│   │   ├── schema.ts            # the theme contract + semantic token names
+│   │   ├── resolve.ts           # seeds -> semantic tokens per mode
+│   │   ├── emit.ts              # CSS, DTCG JSON, runtime registry
 │   │   ├── themes/
 │   │   │   ├── forelume.ts  terminal.ts  midnight.ts
-│   │   │   └── paper.ts   graphite.ts  contrast.ts
+│   │   │   └── paper.ts   graphite.ts  contrast.ts   (PR 4)
 │   │   ├── contrast.test.ts     # every theme × mode × pair
-│   │   └── generated/           # themes.css, tokens.json, registry.ts (committed, CI drift check)
+│   │   ├── index.css            # generated token CSS (committed)
+│   │   └── generated/           # tokens.json, registry.ts (committed)
 │   ├── styles/
-│   │   ├── index.css            # tailwind + @theme inline mapping + base layer
-│   │   └── base.css
+│   │   └── index.css            # tailwind + @theme inline mapping + base layer
 │   ├── lib/cn.ts
 │   ├── theme/                   # ThemeProvider, ThemeScript, useTheme (registry-driven)
 │   ├── components/
@@ -63,30 +66,33 @@ packages/ui/
 
 **Status text contrast (fixed after PR 1):** base hues are for fills. Text and icons now use `--ds-{brand,brand-strong,positive,negative,warning}-fg`, which keep the base hue in OKLCH and adjust lightness per theme × mode. `tokens/fg-contrast.test.ts` checks each of them against every surface and the tone's own 8–24% tint, at 4.5:1 or better. PR 2 generalizes this into the full contrast matrix.
 
-## PR 2 — Token pipeline (hand-built)
+## PR 2 — Token pipeline (hand-built) ✅
 
-1. `schema.ts`: define the semantic contract.
-   - **Backgrounds:** `bg.canvas`, `bg.subtle`, `bg.surface`, `bg.raised`, `bg.overlay`, `bg.sunken`, `bg.inverse`.
-   - **Foreground:** `fg.default`, `fg.muted`, `fg.subtle`, `fg.disabled`, `fg.onAccent`, `fg.inverse`.
-   - **Borders:** `border.subtle`, `border.default`, `border.strong`, `border.focus`.
-   - **Accent:** `accent.base`, `accent.hover`, `accent.active`, `accent.subtle`, `accent.fg`.
-   - **Status:** `positive`, `negative`, `warning`, `info`, each with `base`, `subtle`, `fg` and `border`.
-   - **Charts:** `chart.1` … `chart.8` (categorical), plus `chart.grid` and `chart.axis`.
-   - **Effects:** `shadow.sm`, `shadow.md`, `shadow.lg`, `shadow.accent`; `gradient.brand`, `gradient.page`, `gradient.surface`.
-   - **Shape:** `radius.control`, `radius.card`, `radius.pill`.
-   - **Type:** `font.sans`, `font.display`, `font.mono`.
-   - **Layout and motion:** `density.*`, `motion.*`.
-2. `scale.ts`: generate 12-step OKLCH scales from a hue and chroma. Steps 1–2 are backgrounds, 3–5 interactive fills, 6–8 borders, 9–10 solid fills, and 11–12 text. The light and dark curves are separate.
-3. `contrast.ts`: WCAG 2.2 relative luminance, with alpha compositing over `bg.canvas` for translucent tokens.
-4. `build-tokens.ts`: emit `generated/themes.css`, `tokens.json` (W3C DTCG format), and `registry.ts`. Wire it into `build`, and add a CI check that the generated files are current.
-5. Port `forelume`, `terminal`, and `midnight` into TS. Their **light and dark neutrals now differ per theme**.
-6. `contrast.test.ts`: required pairs per theme × mode:
-   - `fg.*` on every `bg.*` (4.5:1; 3:1 for `fg.subtle`, which is reserved for large or non-essential text);
-   - `accent.fg` on `accent.base`;
-   - each status `fg` on its `subtle`;
-   - `border.focus` against `bg.canvas` and `bg.surface` (3:1);
-   - `chart.*` against `bg.surface` (3:1).
-7. Update the `@theme inline` mapping to the new names. Keep the old `--ds-*` names as aliases for this PR only.
+**What shipped**
+- **Seeds, not palettes:** each theme in `tokens/themes/*.ts` is a small set of seeds: a neutral hue and chroma, brand colors plus gradient stops, and status colors. `resolve.ts` derives every semantic token for light and dark.
+- **Full palette per theme (option 1):** neutrals come from a hue-tinted OKLCH 12-step scale, so backgrounds, surfaces, borders, text and shadows now differ per theme. The curves are fitted to the original Forelume values, so the default theme looks the same.
+- **Contrast by construction:** text, focus-ring and chart colors are solved. Lightness moves until the color passes every surface it can sit on, including translucent surfaces flattened over the canvas and tone tints of 8–24%.
+- **Committed outputs:** `pnpm --filter @astraq/ui tokens` writes `tokens/index.css`, `generated/tokens.json` (DTCG) and `generated/registry.ts`. `build` runs `tokens:check`, which fails when they're stale. That's the drift check to wire into CI once CI exists (Phase 0).
+- **Test:** `contrast.test.ts` replaces `fg-contrast.test.ts`, with 114 checks across 3 themes × 2 modes.
+
+**Semantic tokens** (`--ds-*`):
+- **Backgrounds:** `bg-{canvas,subtle,surface,raised,sunken,overlay}`
+- **Text:** `fg-{default,muted,subtle,on-brand}`
+- **Borders:** `border-{subtle,default,strong}`
+- **Focus:** `focus-{ring,halo}`
+- **Brand and status:** `brand`, `brand-strong`, `brand-warm`, `positive`, `negative`, `warning`, each with a `*-fg` text variant
+- **Charts:** `chart-1…8`, `chart-grid`, `chart-axis`
+- **Effects:** `shadow-{soft,brand}`, `gradient-{brand,page,surface}`
+
+Fonts, radii and motion are shared across themes.
+
+**Deliberate differences from the original plan**
+- **Primitives:** the 12-step ramps go to `tokens.json` only, not CSS. That structurally enforces "components never reference primitives".
+- **Utility names:** Tailwind utility names stay the same (`bg-surface`, `text-muted`, …) and only their mapping changed, so component classes didn't churn. `brand` stays the accent name; no `accent.*` rename.
+- **Deferred tokens:** `bg-inverse`, `fg-disabled`, `info`, and hover/active tone steps have no consumer yet. Add them when a component needs them.
+- **`fg-subtle` bar:** it must reach 4.5:1, not 3:1, because hints and table headers use it. Light-mode `fg-subtle` darkened from `#7f93b0` (~3:1) to `#596c88`.
+- **Midnight gradient:** the middle stop moved from `#725cff` to `#7562fe`, because button text only reached 4.44:1 on it.
+- **Legacy names:** pre-PR 2 `--ds-*` names remain as aliases in the generated CSS, for `apps/web`. Remove them in PR 7.
 
 **Learning focus:** color science (OKLCH vs. sRGB), perceptual scales, codegen, testing design constraints.
 

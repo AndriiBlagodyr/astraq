@@ -8,22 +8,29 @@
 @source "../components/**/*.{ts,tsx}";
 @source "../theme/**/*.{ts,tsx}";
 
+/*
+ * Tailwind utilities -> semantic tokens. Utility names are the component API
+ * (bg-surface, text-muted, ...); the tokens behind them are generated per
+ * theme and mode in tokens/index.css.
+ */
 @theme inline {
   --font-sans: var(--ds-font-sans);
   --font-display: var(--ds-font-display);
   --font-mono: var(--ds-font-mono);
 
-  --color-background: var(--ds-background);
-  --color-elevated: var(--ds-background-elevated);
-  --color-surface: var(--ds-surface);
-  --color-surface-strong: var(--ds-surface-strong);
-  --color-surface-muted: var(--ds-surface-muted);
-  --color-overlay: var(--ds-overlay);
-  --color-border: var(--ds-border);
+  --color-background: var(--ds-bg-canvas);
+  --color-elevated: var(--ds-bg-subtle);
+  --color-surface: var(--ds-bg-surface);
+  --color-surface-strong: var(--ds-bg-raised);
+  --color-surface-muted: var(--ds-bg-sunken);
+  --color-overlay: var(--ds-bg-overlay);
+  --color-border-subtle: var(--ds-border-subtle);
+  --color-border: var(--ds-border-default);
   --color-border-strong: var(--ds-border-strong);
-  --color-foreground: var(--ds-foreground);
-  --color-secondary: var(--ds-foreground-secondary);
-  --color-muted: var(--ds-foreground-muted);
+  --color-foreground: var(--ds-fg-default);
+  --color-secondary: var(--ds-fg-muted);
+  --color-muted: var(--ds-fg-subtle);
+  --color-on-brand: var(--ds-fg-on-brand);
   --color-brand: var(--ds-brand);
   --color-brand-strong: var(--ds-brand-strong);
   --color-brand-warm: var(--ds-brand-warm);
@@ -35,13 +42,26 @@
   --color-positive-fg: var(--ds-positive-fg);
   --color-negative-fg: var(--ds-negative-fg);
   --color-warning-fg: var(--ds-warning-fg);
-  --color-focus: var(--ds-focus);
+  --color-focus: var(--ds-focus-halo);
   --color-focus-ring: var(--ds-focus-ring);
+  --color-chart-1: var(--ds-chart-1);
+  --color-chart-2: var(--ds-chart-2);
+  --color-chart-3: var(--ds-chart-3);
+  --color-chart-4: var(--ds-chart-4);
+  --color-chart-5: var(--ds-chart-5);
+  --color-chart-6: var(--ds-chart-6);
+  --color-chart-7: var(--ds-chart-7);
+  --color-chart-8: var(--ds-chart-8);
+  --color-chart-grid: var(--ds-chart-grid);
+  --color-chart-axis: var(--ds-chart-axis);
 
   --radius-sm: var(--ds-radius-sm);
   --radius-md: var(--ds-radius-md);
   --radius-lg: var(--ds-radius-lg);
   --radius-xl: var(--ds-radius-xl);
+
+  --shadow-soft: var(--ds-shadow-soft);
+  --shadow-brand: var(--ds-shadow-brand);
 
   --ease-out: var(--ds-ease-out);
   --ease-in: var(--ds-ease-in);
@@ -124,7 +144,7 @@
 }
 
 :root {
-  /* Transitional aliases for app-owned patterns during the package migration. */
+  /* apps/web CSS-module aliases. Remove with the layout.module.css migration (PR 7). */
   --font-sans: var(--ds-font-sans);
   --font-display: var(--ds-font-display);
   --font-mono: var(--ds-font-mono);
@@ -137,29 +157,29 @@
   --gradient-auth-panel: var(--ds-gradient-surface);
   --gradient-surface-elevated: var(--ds-gradient-surface);
   --gradient-panel-highlight: var(--ds-gradient-surface);
-  --color-brand-contrast: var(--ds-brand-contrast);
-  --color-bg-canvas: var(--ds-background);
-  --color-bg-elevated: var(--ds-background-elevated);
-  --color-surface: var(--ds-surface);
-  --color-surface-strong: var(--ds-surface-strong);
+  --color-brand-contrast: var(--ds-fg-on-brand);
+  --color-bg-canvas: var(--ds-bg-canvas);
+  --color-bg-elevated: var(--ds-bg-subtle);
+  --color-surface: var(--ds-bg-surface);
+  --color-surface-strong: var(--ds-bg-raised);
   --color-surface-glass: var(--ds-gradient-surface);
-  --color-button-secondary: var(--ds-surface-muted);
-  --color-overlay-surface: var(--ds-overlay);
-  --color-overlay-border: var(--ds-border);
-  --color-input-surface: var(--ds-surface-muted);
-  --color-border-subtle: var(--ds-border);
+  --color-button-secondary: var(--ds-bg-sunken);
+  --color-overlay-surface: var(--ds-bg-overlay);
+  --color-overlay-border: var(--ds-border-default);
+  --color-input-surface: var(--ds-bg-sunken);
+  --color-border-subtle: var(--ds-border-default);
   --color-border-strong: var(--ds-border-strong);
-  --color-text-primary: var(--ds-foreground);
-  --color-text-secondary: var(--ds-foreground-secondary);
-  --color-text-muted: var(--ds-foreground-muted);
+  --color-text-primary: var(--ds-fg-default);
+  --color-text-secondary: var(--ds-fg-muted);
+  --color-text-muted: var(--ds-fg-subtle);
   --color-accent-cyan: var(--ds-brand);
   --color-accent-blue: var(--ds-brand-strong-fg);
   --color-accent-gold: var(--ds-brand-warm);
   --color-success: var(--ds-positive-fg);
   --color-danger: var(--ds-negative-fg);
   --color-warning: var(--ds-warning-fg);
-  --color-focus-ring: var(--ds-focus);
-  --color-table-row: var(--ds-row);
+  --color-focus-ring: var(--ds-focus-halo);
+  --color-table-row: var(--ds-border-subtle);
   --color-tag-bg: color-mix(in srgb, var(--ds-brand-strong) 9%, transparent);
   --color-tag-border: color-mix(
     in srgb,
@@ -175,13 +195,13 @@
   );
   --shadow-soft: var(--ds-shadow-soft);
   --shadow-brand: var(--ds-shadow-brand);
-  --shadow-focus: 0 0 0 4px color-mix(in srgb, var(--ds-focus) 40%, transparent);
+  --shadow-focus: 0 0 0 4px color-mix(in srgb, var(--ds-focus-halo) 40%, transparent);
 }
 
 @layer base {
   * {
     box-sizing: border-box;
-    border-color: var(--ds-border);
+    border-color: var(--ds-border-default);
   }
 
   html,
@@ -193,7 +213,7 @@
   body {
     background: var(--ds-gradient-page);
     background-attachment: fixed;
-    color: var(--ds-foreground);
+    color: var(--ds-fg-default);
     font-family: var(--ds-font-sans);
     transition:
       background var(--ds-motion-base) ease,
@@ -226,6 +246,6 @@
 
   ::selection {
     background: color-mix(in srgb, var(--ds-brand) 20%, transparent);
-    color: var(--ds-foreground);
+    color: var(--ds-fg-default);
   }
 }

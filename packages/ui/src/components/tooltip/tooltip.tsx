@@ -46,7 +46,7 @@ export function Tooltip({
           ].join(" ")}
         >
           {label}
-          <TooltipPrimitive.Arrow className="fill-[var(--ds-surface-strong)]" />
+          <TooltipPrimitive.Arrow className="fill-surface-strong" />
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

@@ -9,8 +9,10 @@
     "./tokens.css": "./src/tokens/index.css"
   },
   "scripts": {
-    "build": "tsc --noEmit",
-    "lint": "eslint src .storybook",
+    "build": "tsx scripts/build-tokens.ts --check && tsc --noEmit",
+    "tokens": "tsx scripts/build-tokens.ts",
+    "tokens:check": "tsx scripts/build-tokens.ts --check",
+    "lint": "eslint src scripts .storybook",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
     "storybook": "storybook dev -p 6006",
@@ -49,6 +51,7 @@
     "storybook": "^10.5.10",
     "storybook-addon-pseudo-states": "10.5.10",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.68.0",
     "vite": "^8.2.2",
