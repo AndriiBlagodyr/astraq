@@ -31,12 +31,12 @@ export function DialogContent({
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
         data-slot="dialog-overlay"
-        className="fixed inset-0 z-50 bg-[var(--ds-overlay)] backdrop-blur-sm data-[state=closed]:animate-ds-fade-out data-[state=open]:animate-ds-fade-in motion-reduce:animate-none"
+        className="fixed inset-0 z-50 bg-overlay backdrop-blur-sm data-[state=closed]:animate-ds-fade-out data-[state=open]:animate-ds-fade-in motion-reduce:animate-none"
       />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[min(92vw,34rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-y-auto rounded-xl border border-border-strong bg-surface-strong p-6 shadow-[var(--ds-shadow-soft)] outline-none",
+          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[min(92vw,34rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-y-auto rounded-xl border border-border-strong bg-surface-strong p-6 shadow-soft outline-none",
           "data-[state=closed]:animate-ds-pop-out data-[state=open]:animate-ds-pop-in motion-reduce:animate-none",
           className,
         )}

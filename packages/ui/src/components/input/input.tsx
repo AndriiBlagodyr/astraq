@@ -11,7 +11,7 @@ export const controlClassName = cn(
   // focus-ring is the brand color tuned for contrast per mode, so hover reads in light mode too.
   "placeholder:text-muted hover:border-focus-ring/50",
   // Border + soft ring instead of the global offset outline: it hugs the field.
-  "focus-visible:border-focus-ring focus-visible:shadow-[0_0_0_3px_var(--ds-focus)] focus-visible:outline-none",
+  "focus-visible:border-focus-ring focus-visible:shadow-[0_0_0_3px_var(--ds-focus-halo)] focus-visible:outline-none",
   "aria-invalid:border-negative aria-invalid:hover:border-negative aria-invalid:focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--ds-negative)_30%,transparent)]",
   "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-strong",
   "read-only:bg-transparent read-only:hover:border-border-strong",

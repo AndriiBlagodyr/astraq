@@ -9,7 +9,7 @@ export function Card({
     <section
       data-slot="card"
       className={cn(
-        "rounded-xl border border-border bg-[image:var(--ds-gradient-surface)] p-6 shadow-[var(--ds-shadow-soft)] backdrop-blur-xl",
+        "rounded-xl border border-border bg-[image:var(--ds-gradient-surface)] p-6 shadow-soft backdrop-blur-xl",
         className,
       )}
       {...props}

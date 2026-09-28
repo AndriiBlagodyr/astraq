@@ -9,7 +9,7 @@ export function TableWrap({
     <div
       data-slot="table-wrap"
       className={cn(
-        "overflow-x-auto rounded-xl border border-border bg-surface p-5 shadow-[var(--ds-shadow-soft)]",
+        "overflow-x-auto rounded-xl border border-border bg-surface p-5 shadow-soft",
         className,
       )}
       {...props}
@@ -44,7 +44,7 @@ export function Tr({ className, selected, ...props }: TrProps) {
       data-slot="table-row"
       data-selected={selected || undefined}
       className={cn(
-        "transition-colors duration-(--ds-motion-fast) [tbody_&]:hover:bg-[var(--ds-row)] data-selected:bg-brand/8",
+        "transition-colors duration-(--ds-motion-fast) [tbody_&]:hover:bg-border-subtle data-selected:bg-brand/8",
         className,
       )}
       {...props}
@@ -62,7 +62,7 @@ export function Th({
       data-slot="table-head"
       scope={scope}
       className={cn(
-        "border-b border-[var(--ds-row)] py-3 pr-5 text-xs font-semibold tracking-widest text-muted uppercase last:pr-0",
+        "border-b border-border-subtle py-3 pr-5 text-xs font-semibold tracking-widest text-muted uppercase last:pr-0",
         className,
       )}
       {...props}
@@ -75,7 +75,7 @@ export function Td({ className, ...props }: ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "border-b border-[var(--ds-row)] py-4 pr-5 text-secondary last:pr-0 [tr:last-child_&]:border-b-0",
+        "border-b border-border-subtle py-4 pr-5 text-secondary last:pr-0 [tr:last-child_&]:border-b-0",
         className,
       )}
       {...props}

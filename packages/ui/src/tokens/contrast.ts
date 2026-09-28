@@ -1,7 +1,10 @@
 /**
- * WCAG 2.2 contrast math. Hand-built on purpose (ADR 0002 §6); the token
- * pipeline in PR 2 reuses it for the full theme matrix.
+ * WCAG 2.2 contrast math and a lightness solver, hand-built (ADR 0002 §6).
+ * The token build uses it to derive text, focus, and chart colors that pass
+ * by construction; contrast.test.ts re-checks every pair.
  */
+
+import { hexToOklch, oklchToHex } from "./color";
 
 export type Rgba = { r: number; g: number; b: number; a: number };
 
@@ -47,4 +50,53 @@ export function contrastRatio(a: Rgba, b: Rgba) {
     (x, y) => y - x,
   );
   return (light + 0.05) / (dark + 0.05);
+}
+
+export type ContrastCheck = {
+  /** Opaque backgrounds the color sits on. */
+  backgrounds: Rgba[];
+  /** Also check over these tints of `tintColor` on each background. */
+  tintColor?: string;
+  tints?: number[];
+  min: number;
+};
+
+/** Lowest contrast of `color` across every background (and tint) in `check`. */
+export function worstContrast(color: string, check: ContrastCheck): number {
+  const text = parseColor(color);
+  const tints = check.tintColor ? [0, ...(check.tints ?? [])] : [0];
+  const fill = check.tintColor ? parseColor(check.tintColor) : undefined;
+
+  return Math.min(
+    ...check.backgrounds.flatMap((background) =>
+      tints.map((tint) =>
+        contrastRatio(
+          text,
+          fill && tint > 0 ? composite(fill, background, tint) : background,
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Returns `hex` unchanged if it passes; otherwise moves only its OKLCH
+ * lightness (darker on light themes, lighter on dark) until it does. Hue and
+ * chroma stay, so the result is still recognizably the same color.
+ */
+export function ensureContrast(
+  hex: string,
+  direction: "darker" | "lighter",
+  check: ContrastCheck,
+): string {
+  const start = hexToOklch(hex);
+  const step = direction === "darker" ? -0.005 : 0.005;
+
+  for (let l = start.l; l >= 0 && l <= 1; l += step) {
+    const candidate = l === start.l ? hex : oklchToHex({ ...start, l });
+    if (worstContrast(candidate, check) >= check.min) return candidate;
+  }
+  throw new Error(
+    `No ${direction} variant of ${hex} reaches ${check.min}:1 on these backgrounds`,
+  );
 }

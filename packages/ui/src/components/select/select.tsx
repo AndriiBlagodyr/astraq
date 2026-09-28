@@ -74,7 +74,7 @@ export function SelectContent({
         sideOffset={6}
         collisionPadding={8}
         className={cn(
-          "z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) origin-(--radix-select-content-transform-origin) overflow-hidden rounded-md border border-border-strong bg-surface-strong p-1 shadow-[var(--ds-shadow-soft)]",
+          "z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) origin-(--radix-select-content-transform-origin) overflow-hidden rounded-md border border-border-strong bg-surface-strong p-1 shadow-soft",
           "data-[side=bottom]:animate-ds-slide-down data-[side=top]:animate-ds-slide-up motion-reduce:animate-none",
           className,
         )}

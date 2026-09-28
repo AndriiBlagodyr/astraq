@@ -1,10 +1,14 @@
 /**
- * Single source of truth for theme identities and color modes.
+ * Theme identities and color modes for runtime code.
  *
- * ThemeProvider, ThemeScript, Storybook, and apps read from here instead of
- * hardcoding theme names. The token pipeline (ADR 0002) will generate this
- * file from the typed theme definitions.
+ * THEMES comes from the generated registry, which the token build writes from
+ * `tokens/themes/*.ts`, so apps get names and labels without bundling the
+ * theme sources or color math. Add a theme there, then run `pnpm tokens`.
  */
+
+import { DEFAULT_THEME as GENERATED_DEFAULT, THEMES } from "../tokens/generated/registry";
+
+export { THEMES };
 
 export type ThemeDefinition = {
   name: string;
@@ -12,31 +16,14 @@ export type ThemeDefinition = {
   description: string;
 };
 
-export const THEMES = [
-  {
-    name: "forelume",
-    label: "Forelume",
-    description: "Cyan to indigo with a warm gold accent. Glass surfaces.",
-  },
-  {
-    name: "terminal",
-    label: "Terminal",
-    description: "Phosphor green and acid yellow for dense trading screens.",
-  },
-  {
-    name: "midnight",
-    label: "Midnight",
-    description: "Violet and pink with soft, low-glare surfaces.",
-  },
-] as const satisfies readonly ThemeDefinition[];
-
 export type ThemeName = (typeof THEMES)[number]["name"];
 
 export const THEME_NAMES: readonly ThemeName[] = THEMES.map(
   (theme) => theme.name,
 );
 
-export const DEFAULT_THEME: ThemeName = "forelume";
+/** The first registered theme; also the CSS fallback when `data-theme` is absent. */
+export const DEFAULT_THEME: ThemeName = GENERATED_DEFAULT;
 
 export const COLOR_MODES = ["light", "dark"] as const;
 export type ColorMode = (typeof COLOR_MODES)[number];

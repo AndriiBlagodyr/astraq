@@ -21,7 +21,7 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "border-transparent bg-[image:var(--ds-gradient-brand)] text-[var(--ds-brand-contrast)] shadow-[var(--ds-shadow-brand)] hover:brightness-110 active:brightness-95",
+          "border-transparent bg-[image:var(--ds-gradient-brand)] text-on-brand shadow-brand hover:brightness-110 active:brightness-95",
         secondary:
           "border-border-strong bg-surface-muted text-foreground hover:border-focus-ring/70 hover:bg-surface active:bg-surface-strong",
         ghost:

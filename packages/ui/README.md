@@ -32,7 +32,21 @@ src/
 └── lib/cn.ts
 ```
 
-Add a theme by registering it in `theme/registry.ts` and defining its tokens. The provider, head script, Storybook, and apps read the registry.
+### Tokens and themes
+
+Themes are authored as seeds in `src/tokens/themes/*.ts`. The build derives every semantic token (`--ds-bg-*`, `--ds-fg-*`, `--ds-border-*`, brand, status, charts, effects) for light and dark. It solves text, focus and chart colors so they pass WCAG AA on every surface.
+
+```bash
+pnpm --filter @astraq/ui tokens        # regenerate after editing a theme
+pnpm --filter @astraq/ui tokens:check  # fails if committed outputs are stale (runs in build)
+```
+
+To add a theme:
+1. Write `src/tokens/themes/<name>.ts`.
+2. List it in `themes/index.ts`.
+3. Run `pnpm tokens`.
+
+The provider, head script, Storybook and apps pick it up from the generated registry. `tokens/index.css` and `tokens/generated/*` are generated, so never edit them by hand.
 
 ## Component checklist
 
