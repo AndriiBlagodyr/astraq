@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StateGrid, pseudoStates } from "../../stories/state-grid";
-import { FormField } from "../form-field";
+import { FormField } from "../field";
 import { Input } from "./input";
 
 const meta = {
@@ -43,25 +43,33 @@ export const States: Story = {
   ),
 };
 
+export const Sizes: Story = {
+  render: () => (
+    <div className="grid max-w-xs gap-3">
+      <Input aria-label="Small" size="sm" placeholder="Small" />
+      <Input aria-label="Medium" size="md" placeholder="Medium" />
+      <Input aria-label="Large" size="lg" placeholder="Large" />
+    </div>
+  ),
+};
+
 export const InFormField: Story = {
   render: () => (
     <div className="grid max-w-md gap-6">
       <FormField
-        htmlFor="symbol"
         label="Symbol"
-        hint="US equities and crypto pairs are supported."
+        description="US equities and crypto pairs are supported."
         required
       >
         <Input placeholder="AAPL" />
       </FormField>
       <FormField
-        htmlFor="price"
         label="Target price"
         error="Enter a price greater than zero."
       >
         <Input inputMode="decimal" defaultValue="0" />
       </FormField>
-      <FormField htmlFor="account" label="Account">
+      <FormField label="Account">
         <Input defaultValue="Paper #1" disabled />
       </FormField>
     </div>

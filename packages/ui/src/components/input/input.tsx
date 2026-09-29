@@ -1,47 +1,66 @@
 "use client";
 
 import type { ComponentProps } from "react";
+import { Input as InputPrimitive } from "@base-ui/react/input";
+import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/cn";
-import { useFieldControl } from "../form-field/field-context";
+import type { WithClassName } from "../../lib/types";
+import { useFieldRequired } from "../field/field-context";
 
-/** Shared by every text-like control so they read as one family. */
-export const controlClassName = cn(
-  "min-h-control-md w-full rounded-md border border-border-strong bg-surface-muted px-inset-sm text-sm text-foreground shadow-sm",
-  "transition-[border-color,box-shadow,background-color] duration-(--ds-motion-fast) ease-out",
-  // focus-ring is the brand color tuned for contrast per mode, so hover reads in light mode too.
-  "placeholder:text-muted hover:border-focus-ring/50",
-  // Border + soft ring instead of the global offset outline: it hugs the field.
-  "focus-visible:border-focus-ring focus-visible:shadow-[0_0_0_3px_var(--ds-focus-halo)] focus-visible:outline-none",
-  "aria-invalid:border-negative aria-invalid:hover:border-negative aria-invalid:focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--ds-negative)_30%,transparent)]",
-  "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-strong",
-  "read-only:bg-transparent read-only:hover:border-border-strong",
+/**
+ * The shared control surface: Input, Textarea, Select, Combobox,
+ * Autocomplete, and NumberField all use it so they read as one family.
+ */
+export const controlVariants = cva(
+  [
+    "w-full rounded-md border border-border-strong bg-surface-muted text-foreground shadow-sm",
+    "transition-[border-color,box-shadow,background-color] duration-(--ds-motion-fast) ease-out",
+    // focus-ring is the brand color tuned for contrast per mode, so hover reads in light mode too.
+    "placeholder:text-muted hover:border-focus-ring/50",
+    // Border + soft ring instead of the global offset outline: it hugs the field.
+    "focus-visible:border-focus-ring focus-visible:shadow-[0_0_0_3px_var(--ds-focus-halo)] focus-visible:outline-none",
+    "aria-invalid:border-negative aria-invalid:hover:border-negative aria-invalid:focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--ds-negative)_30%,transparent)]",
+    "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-strong",
+    "read-only:bg-transparent read-only:hover:border-border-strong",
+  ],
+  {
+    variants: {
+      size: {
+        sm: "min-h-control-sm px-3 text-xs",
+        md: "min-h-control-md px-inset-sm text-sm",
+        lg: "min-h-control-lg px-inset-md text-base",
+      },
+    },
+    defaultVariants: { size: "md" },
+  },
 );
 
-export type InputProps = ComponentProps<"input"> & {
-  invalid?: boolean;
-};
+/** The medium control surface. Kept for existing callers; prefer `controlVariants`. */
+export const controlClassName = controlVariants();
 
-export function Input({ className, invalid, ...props }: InputProps) {
-  const field = useFieldControl();
-  const isInvalid = invalid ?? field?.invalid;
-  const describedBy =
-    [field?.descriptionId, props["aria-describedby"]]
-      .filter(Boolean)
-      .join(" ") || undefined;
+export type ControlSize = NonNullable<VariantProps<typeof controlVariants>["size"]>;
 
+export type InputProps = WithClassName<
+  Omit<ComponentProps<typeof InputPrimitive>, "size">
+> &
+  VariantProps<typeof controlVariants> & {
+    /** Marks the control invalid outside a Field. Inside one, the Field decides. */
+    invalid?: boolean;
+  };
+
+export function Input({ className, size, invalid, required, ...props }: InputProps) {
+  const fieldRequired = useFieldRequired();
   return (
-    <input
+    <InputPrimitive
       data-slot="input"
-      id={field?.controlId}
-      required={field?.required || undefined}
-      aria-invalid={isInvalid || undefined}
+      required={required ?? (fieldRequired || undefined)}
+      aria-invalid={invalid || undefined}
       className={cn(
-        controlClassName,
+        controlVariants({ size }),
         "file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-semibold file:text-foreground",
         className,
       )}
       {...props}
-      aria-describedby={describedBy}
     />
   );
 }

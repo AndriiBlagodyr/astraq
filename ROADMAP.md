@@ -134,7 +134,7 @@ astraq/
 - **Security.** Follow [security and secrets](./.cursor/rules/security-and-secrets.mdc). Env validated at boot in every service; fail-closed CORS, auth, and permissions.
 - **Learning over shipping** — when a library exists *and* there's a teaching opportunity, build one layer by hand first (refresh-token rotation, ledger accounting, event-driven backtester). Write down what you'd replace it with in production.
 - **Data licensing.** Provider data is for personal use. No public pages that redistribute raw vendor data; a friend's account (Phase 10) is still private use.
-- **Motion.** UI motion follows [docs/motion.md](docs/motion.md). Each phase ships the motion items listed for it there; none are built on placeholder routes.
+- **Motion.** UI motion follows [docs/motion-and-delight-plan.md](docs/motion-and-delight-plan.md). Each phase ships the motion items listed for it there; none are built on placeholder routes.
 - **Finance correctness is a first-class concern**, not a detail: adjusted prices, trading calendars, point-in-time data, decimal money.
 
 ---
@@ -151,7 +151,10 @@ Base UI primitives, a generated token pipeline, 6 themes, density, and an extrac
 
 - PR 1 (restructure, interaction states) — done
 - PR 2 (hand-built token pipeline, full per-theme palettes, contrast matrix) — done
-- PR 3–7 (Base UI migration, themes + density, components, distribution, docs) — next
+- PR 3 (Base UI migration) — done
+- PR 4 (6 themes + density) — done
+- PR 5a (form components, hand-built SegmentedControl) — in review
+- PR 5b–5d, 6, 7 (overlays, display, data, distribution, docs) — next
 Follow-up folded into Phase 0: app pages still style themselves with `layout.module.css` — migrate the surviving routes to `packages/ui` compositions.
 
 ---
