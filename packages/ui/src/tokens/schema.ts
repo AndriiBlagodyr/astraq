@@ -11,10 +11,38 @@ export const MODES: readonly Mode[] = ["dark", "light"];
 
 export type GradientStop = { color: string; at: number };
 
+export type Density = "comfortable" | "compact";
+export const DENSITIES: readonly Density[] = ["comfortable", "compact"];
+
+/**
+ * How surfaces are drawn:
+ * - `glass`: translucent, blurred, gradient page and cards, soft glow shadows.
+ * - `opaque`: solid surfaces and fills, no blur or gradients, subtle shadows.
+ * - `flat`: like `opaque`, but no shadows at all; edges come from hairlines.
+ */
+export type SurfaceStyle = "glass" | "opaque" | "flat";
+
+/** WCAG level the colors are solved to. AAA raises text to 7:1 and non-text to 4.5:1. */
+export type ContrastLevel = "AA" | "AAA";
+
 export type ThemeSource = {
   name: string;
   label: string;
   description: string;
+  /** Used when the user hasn't picked a density. */
+  density: Density;
+  surfaces: SurfaceStyle;
+  contrast: ContrastLevel;
+  type: { sans: string; display: string; mono: string };
+  shape: {
+    radius: { sm: string; md: string; lg: string; xl: string; pill: string };
+    /** Width of every `border` utility. */
+    border: string;
+    /** Width of the keyboard focus outline. */
+    focusRing: string;
+  };
+  /** Inline links: plain until hovered, or always underlined. */
+  links: "plain" | "underline";
   /** Tints every neutral: backgrounds, surfaces, borders, text, shadows. */
   neutral: { hue: number; chroma: number };
   brand: {
@@ -77,12 +105,47 @@ export const EFFECT_TOKENS = [
   "gradient-surface",
 ] as const;
 
+/** Tokens that vary by theme but not by mode: type, shape, and surface treatment. */
+export const THEME_TOKENS = [
+  "font-sans",
+  "font-display",
+  "font-mono",
+  "radius-sm",
+  "radius-md",
+  "radius-lg",
+  "radius-xl",
+  "radius-pill",
+  "border-width",
+  "focus-width",
+  "link-decoration",
+  "blur-surface",
+  "blur-overlay",
+] as const;
+
+/**
+ * Sizing that follows `data-density` (or the theme's default): control
+ * heights, their inline padding, and table cell padding.
+ */
+export const DENSITY_TOKENS = [
+  "control-sm",
+  "control-md",
+  "control-lg",
+  "inset-sm",
+  "inset-md",
+  "inset-lg",
+  "cell-y",
+  "head-y",
+] as const;
+
 export type ColorToken = (typeof COLOR_TOKENS)[number];
+export type ThemeToken = (typeof THEME_TOKENS)[number];
+export type DensityToken = (typeof DENSITY_TOKENS)[number];
 export type EffectToken = (typeof EFFECT_TOKENS)[number];
 export type ModeTokens = Record<ColorToken | EffectToken, string>;
 
 export type ResolvedTheme = {
   source: ThemeSource;
+  tokens: Record<ThemeToken, string>;
   modes: Record<
     Mode,
     {
@@ -94,15 +157,42 @@ export type ResolvedTheme = {
   >;
 };
 
-/** Theme-independent tokens (fonts and radii become per-theme in PR 4). */
+export const DENSITY_VALUES: Record<Density, Record<DensityToken, string>> = {
+  comfortable: {
+    "control-sm": "2.25rem",
+    "control-md": "2.75rem",
+    "control-lg": "3rem",
+    "inset-sm": "1rem",
+    "inset-md": "1.25rem",
+    "inset-lg": "1.5rem",
+    "cell-y": "1rem",
+    "head-y": "0.75rem",
+  },
+  compact: {
+    "control-sm": "1.75rem",
+    "control-md": "2.25rem",
+    "control-lg": "2.5rem",
+    "inset-sm": "0.75rem",
+    "inset-md": "1rem",
+    "inset-lg": "1.25rem",
+    "cell-y": "0.5rem",
+    "head-y": "0.5rem",
+  },
+};
+
+/** Font stacks shared by several themes. */
+export const FONTS = {
+  geist: '"Geist", "Avenir Next", "Segoe UI", sans-serif',
+  sora: '"Sora", "Avenir Next", "Segoe UI", sans-serif',
+  mono: '"SFMono-Regular", "SF Mono", "Consolas", monospace',
+  /** Terminal's display face: a coding mono with strong digit shapes. */
+  terminal: '"JetBrains Mono", "IBM Plex Mono", "SFMono-Regular", "Consolas", monospace',
+  serif: '"Fraunces", "Iowan Old Style", Georgia, serif',
+  system: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+} as const;
+
+/** Theme-independent tokens. */
 export const SHARED_TOKENS = {
-  "font-sans": '"Geist", "Avenir Next", "Segoe UI", sans-serif',
-  "font-display": '"Sora", "Avenir Next", "Segoe UI", sans-serif',
-  "font-mono": '"SFMono-Regular", "SF Mono", "Consolas", monospace',
-  "radius-sm": "0.75rem",
-  "radius-md": "1.125rem",
-  "radius-lg": "1.5rem",
-  "radius-xl": "2rem",
   "motion-fast": "160ms",
   "motion-base": "220ms",
   "motion-slow": "320ms",

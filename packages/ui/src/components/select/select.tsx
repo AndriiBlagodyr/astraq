@@ -129,7 +129,7 @@ export function SelectItem({ className, children, ...props }: SelectItemProps) {
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex min-h-9 cursor-pointer items-center rounded-sm py-2 pr-9 pl-3 text-sm text-secondary outline-none select-none",
+        "relative flex min-h-control-sm cursor-pointer items-center rounded-sm py-2 pr-9 pl-3 text-sm text-secondary outline-none select-none",
         "transition-colors duration-(--ds-motion-fast)",
         "data-highlighted:bg-brand/10 data-highlighted:text-foreground",
         "data-selected:font-semibold data-selected:text-foreground",

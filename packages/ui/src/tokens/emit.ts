@@ -6,9 +6,12 @@
 
 import {
   COLOR_TOKENS,
+  DENSITIES,
+  DENSITY_VALUES,
   LEGACY_ALIASES,
   MODES,
   SHARED_TOKENS,
+  THEME_TOKENS,
   type Mode,
   type ResolvedTheme,
 } from "./schema";
@@ -20,26 +23,60 @@ const HEADER =
 const declarations = (entries: [string, string][], indent = "  ") =>
   entries.map(([name, value]) => `${indent}--ds-${name}: ${value};`).join("\n");
 
+const block = (comment: string, selector: string, body: string) =>
+  `/* ${comment} */\n${selector} {\n${body}\n}`;
+
 /**
- * Selectors per theme and mode. The first theme is also the fallback when
- * `data-theme` is absent, and dark is the fallback when `data-mode` is.
+ * Selectors per theme and mode. They match any element, not just `:root`, so
+ * a subtree can carry its own `data-theme` / `data-mode` (Storybook's theme
+ * matrix does). The first theme is also the fallback when `data-theme` is
+ * absent, and dark is the fallback when `data-mode` is.
  */
-function selectors(theme: string, mode: Mode, isDefault: boolean) {
+function modeSelectors(theme: string, mode: Mode, isDefault: boolean) {
   const own =
     mode === "dark"
-      ? `:root[data-theme="${theme}"]:not([data-mode="light"])`
-      : `:root[data-theme="${theme}"][data-mode="light"]`;
+      ? `[data-theme="${theme}"]:not([data-mode="light"])`
+      : `[data-theme="${theme}"][data-mode="light"]`;
   if (!isDefault) return own;
-  return `${mode === "dark" ? ":root" : ':root[data-mode="light"]'},\n${own}`;
+  return `${mode === "dark" ? ":root" : '[data-mode="light"]'},\n${own}`;
+}
+
+function themeSelectors(theme: string, isDefault: boolean) {
+  return isDefault ? `:root,\n[data-theme="${theme}"]` : `[data-theme="${theme}"]`;
 }
 
 export function emitCss(themes: readonly ResolvedTheme[]): string {
-  const blocks = themes.flatMap((theme, index) =>
-    MODES.map((mode) => {
-      const { tokens } = theme.modes[mode];
-      const label = `${theme.source.label} · ${mode}${index === 0 ? " (default)" : ""}`;
-      return `/* ${label} */\n${selectors(theme.source.name, mode, index === 0)} {\n  color-scheme: ${mode};\n${declarations(Object.entries(tokens))}\n}`;
-    }),
+  const themeBlocks = themes.map((theme, index) => {
+    const { name, label, density } = theme.source;
+    const entries: [string, string][] = [
+      ...THEME_TOKENS.map((token): [string, string] => [token, theme.tokens[token]]),
+      ...Object.entries(DENSITY_VALUES[density]),
+    ];
+    return block(
+      `${label}${index === 0 ? " (default)" : ""}: type, shape, surfaces, ${density} density`,
+      themeSelectors(name, index === 0),
+      declarations(entries),
+    );
+  });
+
+  // After the theme blocks, at the same specificity: an explicit
+  // `data-density` beats the theme's default.
+  const densityBlocks = DENSITIES.map((density) =>
+    block(
+      `${density} density`,
+      `[data-density="${density}"]`,
+      declarations(Object.entries(DENSITY_VALUES[density])),
+    ),
+  );
+
+  const modeBlocks = themes.flatMap((theme, index) =>
+    MODES.map((mode) =>
+      block(
+        `${theme.source.label} · ${mode}${index === 0 ? " (default)" : ""}`,
+        modeSelectors(theme.source.name, mode, index === 0),
+        `  color-scheme: ${mode};\n${declarations(Object.entries(theme.modes[mode].tokens))}`,
+      ),
+    ),
   );
 
   const motion = Object.keys(SHARED_TOKENS)
@@ -58,7 +95,11 @@ ${declarations(motion, "    ")}
   }
 }
 
-${blocks.join("\n\n")}
+${themeBlocks.join("\n\n")}
+
+${densityBlocks.join("\n\n")}
+
+${modeBlocks.join("\n\n")}
 
 /* Pre-PR 2 names for apps/web. Remove in PR 7. */
 :root {
@@ -68,6 +109,16 @@ ${Object.entries(LEGACY_ALIASES)
 }
 `;
 }
+
+const DIMENSION_TOKENS = [
+  "radius-sm",
+  "radius-md",
+  "radius-lg",
+  "radius-xl",
+  "radius-pill",
+  "border-width",
+  "focus-width",
+] as const;
 
 export function emitJson(themes: readonly ResolvedTheme[]): string {
   const color = (value: string) => ({ $type: "color", $value: value });
@@ -81,6 +132,18 @@ export function emitJson(themes: readonly ResolvedTheme[]): string {
         theme.source.name,
         {
           $description: theme.source.description,
+          font: Object.fromEntries(
+            (["sans", "display", "mono"] as const).map((role) => [
+              role,
+              { $type: "fontFamily", $value: theme.tokens[`font-${role}`] },
+            ]),
+          ),
+          dimension: Object.fromEntries(
+            DIMENSION_TOKENS.map((name) => [
+              name,
+              { $type: "dimension", $value: theme.tokens[name] },
+            ]),
+          ),
           ...Object.fromEntries(
             MODES.map((mode) => {
               const { tokens, primitives } = theme.modes[mode];
@@ -113,6 +176,7 @@ export function emitRegistry(themes: readonly ResolvedTheme[]): string {
         `    name: ${JSON.stringify(source.name)},`,
         `    label: ${JSON.stringify(source.label)},`,
         `    description: ${JSON.stringify(source.description)},`,
+        `    density: ${JSON.stringify(source.density)},`,
         "  },",
       ].join("\n"),
     )

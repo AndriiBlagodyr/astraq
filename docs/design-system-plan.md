@@ -120,7 +120,7 @@ Fonts, radii and motion are shared across themes.
 - **Tooltip:** Base UI treats tooltips as visual-only. Our wrapper adds `role="tooltip"` and points the trigger's `aria-describedby` at it while open, so screen readers still get the description. `children` is now typed `ReactElement`.
 - **Tests:** jsdom needed a `PointerEvent` shim (in `test/setup.ts`). The Dialog focus-wrap test now waits one tick, because Base UI wraps focus through a focus-guard element.
 
-## PR 4 — Themes to 6 + density
+## PR 4 — Themes to 6 + density ✅
 
 | Theme | Identity | Type | Radius | Surfaces | Default density |
 |---|---|---|---|---|---|
@@ -135,6 +135,40 @@ Fonts, radii and motion are shared across themes.
 - Add a `forced-colors: active` block in base styles, using system colors and keeping focus rings visible.
 - Add the theme switch reveal (see [motion.md](motion.md)).
 - Add a theme and density toolbar in Storybook, plus a "Theme matrix" story that shows one composition in all 12 theme × mode combinations side by side.
+
+**What shipped**
+- **Theme contract:** `ThemeSource` now also sets:
+  - `type` (sans, display, mono)
+  - `shape` (radii plus `pill`, border width, focus-ring width)
+  - `surfaces` (`glass` | `opaque` | `flat`)
+  - `density`
+  - `contrast` (`AA` | `AAA`)
+  - `links` (`plain` | `underline`)
+
+  These emit as per-theme `--ds-*` tokens. The old shared font and radius tokens are gone.
+- **Themes:** `paper`, `graphite` and `contrast` are added. `terminal` becomes flat, with a solid primary fill, mono display face, 2–4px radii and compact default density. Forelume and Midnight colors are byte-identical to PR 2.
+- **Surfaces:** `opaque` and `flat` themes get solid surfaces, flat page and card backgrounds, and no blur. `opaque` has subtle shadows, and `flat` has no shadows at all.
+- **Contrast level:** the `contrast` theme is solved to AAA: 7:1 text, and 4.5:1 for non-text including solid borders. `contrast.test.ts` checks each theme at its own level, with 234 checks in total.
+- **Density:** `DENSITY_TOKENS` cover control heights, inline padding and table cell padding. They map to Tailwind as `min-h-control-*`, `px-inset-*`, `py-cell-y` and `py-head-y`.
+  - Resolution order: the theme's default, then `[data-density]`.
+  - `ThemeProvider` exposes `density`, `densityPreference` and `setDensity("comfortable" | "compact" | "theme")`.
+  - `ThemeScript` applies a stored choice before first paint.
+- **Utilities:**
+  - `rounded-pill` replaces `rounded-full` on buttons, badges and tabs. Spinner keeps `rounded-full`.
+  - The bare `border` width reads `--ds-border-width` (via `--default-border-width`).
+  - `backdrop-blur-surface` and `backdrop-blur-overlay` replace fixed blurs.
+- **Scoped themes:** selectors match any element (`[data-theme="x"]`), not only `:root`, so a subtree can carry its own theme and mode.
+- **Accessibility:**
+  - A `forced-colors` block restores focus outlines and marks active tabs, highlighted options and selected rows with system colors.
+  - Focus width reads `--ds-focus-width`.
+  - Inline links (`a:not([data-slot])`) follow `--ds-link-decoration`.
+- **Theme switch reveal:** `setTheme`, `setMode` and `toggleMode` run inside a View Transition, with a circular reveal from the focused control. It's instant without View Transitions or under reduced motion.
+- **Storybook:** a density toolbar and **Overview/Theme matrix**.
+- **Fixes:** `theme/theme-test.tsx` never matched Vitest's `*.test.tsx` pattern, so the ThemeProvider tests never ran. It's renamed to `theme.test.tsx`, and the tests now run, plus a new density test.
+
+**Deliberate differences**
+- **Fonts:** Fraunces, JetBrains Mono, Geist and Sora are named in the stacks but not loaded. Loading them is part of PR 6's "Consuming" README. Until then, each theme falls back to the next font in its stack.
+- **`fg-on-brand` test:** it now checks only the brand gradient stops, the primary button fill. That's the only place on-brand text sits, and solid themes repeat one color across the stops.
 
 ## PR 5 — Component expansion
 

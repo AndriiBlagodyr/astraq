@@ -6,7 +6,7 @@ import { useFieldControl } from "../form-field/field-context";
 
 /** Shared by every text-like control so they read as one family. */
 export const controlClassName = cn(
-  "min-h-11 w-full rounded-md border border-border-strong bg-surface-muted px-4 text-sm text-foreground shadow-sm",
+  "min-h-control-md w-full rounded-md border border-border-strong bg-surface-muted px-inset-sm text-sm text-foreground shadow-sm",
   "transition-[border-color,box-shadow,background-color] duration-(--ds-motion-fast) ease-out",
   // focus-ring is the brand color tuned for contrast per mode, so hover reads in light mode too.
   "placeholder:text-muted hover:border-focus-ring/50",

@@ -2,6 +2,8 @@ import {
   COLOR_MODE_STORAGE_KEY,
   DEFAULT_COLOR_MODE,
   DEFAULT_THEME,
+  DENSITIES,
+  DENSITY_STORAGE_KEY,
   THEME_NAMES,
   THEME_STORAGE_KEY,
 } from "./registry";
@@ -15,6 +17,7 @@ const themeScript = `
   try {
     var savedMode = localStorage.getItem(${JSON.stringify(COLOR_MODE_STORAGE_KEY)});
     var savedTheme = localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
+    var savedDensity = localStorage.getItem(${JSON.stringify(DENSITY_STORAGE_KEY)});
     var mode = savedMode === "light" || savedMode === "dark"
       ? savedMode
       : (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
@@ -22,6 +25,8 @@ const themeScript = `
     root.dataset.mode = mode;
     root.dataset.theme = theme;
     root.style.colorScheme = mode;
+    // No stored density: leave the attribute off so the theme's default applies.
+    if (${JSON.stringify(DENSITIES)}.indexOf(savedDensity) >= 0) root.dataset.density = savedDensity;
   } catch (error) {
     root.dataset.mode = ${JSON.stringify(DEFAULT_COLOR_MODE)};
     root.dataset.theme = ${JSON.stringify(DEFAULT_THEME)};

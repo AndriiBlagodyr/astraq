@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { contrastRatio, parseColor, worstContrast } from "./contrast";
 import {
-  NON_TEXT_MIN,
-  TEXT_MIN,
+  CONTRAST_MINIMUMS,
   TONE_TINTS,
   backgroundsFor,
   resolveTheme,
@@ -13,9 +12,12 @@ import { THEME_SOURCES } from "./themes";
 /**
  * The token build solves colors for contrast; this re-checks the resolved
  * output independently, so a change to a seed, curve, or solver can't ship a
- * pair below WCAG 2.2 AA.
+ * pair below the theme's WCAG 2.2 level (AA, or AAA for `contrast`).
  */
 describe.each(THEME_SOURCES.map(resolveTheme))("$source.name theme", (theme) => {
+  const { text: TEXT_MIN, nonText: NON_TEXT_MIN } =
+    CONTRAST_MINIMUMS[theme.source.contrast];
+
   describe.each(MODES)("%s mode", (mode) => {
     const { tokens, surfaceGradient } = theme.modes[mode];
     const backgrounds = backgroundsFor(tokens, surfaceGradient);
@@ -36,14 +38,12 @@ describe.each(THEME_SOURCES.map(resolveTheme))("$source.name theme", (theme) => 
       },
     );
 
-    it("fg-on-brand is readable on the brand fill and every gradient stop", () => {
+    // The brand gradient is the primary button fill: the one place on-brand
+    // text sits (solid themes repeat one color across the stops).
+    it("fg-on-brand is readable on every brand gradient stop", () => {
       const text = parseColor(tokens["fg-on-brand"]);
-      const fills = [
-        tokens.brand,
-        ...theme.source.brand.gradient.map((stop) => stop.color),
-      ];
-      for (const fill of fills) {
-        expect(contrastRatio(text, parseColor(fill))).toBeGreaterThanOrEqual(TEXT_MIN);
+      for (const { color } of theme.source.brand.gradient) {
+        expect(contrastRatio(text, parseColor(color))).toBeGreaterThanOrEqual(TEXT_MIN);
       }
     });
 
@@ -54,5 +54,14 @@ describe.each(THEME_SOURCES.map(resolveTheme))("$source.name theme", (theme) => 
     it.each([1, 2, 3, 4, 5, 6, 7, 8] as const)("chart-%i is distinguishable from surfaces", (n) => {
       expect(worstContrast(tokens[`chart-${n}`], onBackgrounds(NON_TEXT_MIN))).toBeGreaterThanOrEqual(NON_TEXT_MIN);
     });
+
+    if (theme.source.contrast === "AAA") {
+      it.each(["border-subtle", "border-default", "border-strong"] as const)(
+        "%s is a visible edge on every surface",
+        (token) => {
+          expect(worstContrast(tokens[token], onBackgrounds(NON_TEXT_MIN))).toBeGreaterThanOrEqual(NON_TEXT_MIN);
+        },
+      );
+    }
   });
 });

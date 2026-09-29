@@ -40,7 +40,7 @@ export function DialogContent({
       <DialogPrimitive.Backdrop
         data-slot="dialog-overlay"
         className={cn(
-          "fixed inset-0 z-50 bg-overlay backdrop-blur-sm",
+          "fixed inset-0 z-50 bg-overlay backdrop-blur-overlay",
           "transition-opacity duration-(--ds-motion-base) ease-out",
           "data-starting-style:opacity-0 data-ending-style:opacity-0",
           exitTiming,
