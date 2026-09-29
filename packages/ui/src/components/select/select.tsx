@@ -4,15 +4,31 @@ import type { ComponentProps } from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../../lib/cn";
-import { useFieldControl } from "../form-field/field-context";
-import { controlClassName } from "../input/input";
+import { listbox } from "../../lib/listbox";
+import { useFieldRequired } from "../field/field-context";
+import { controlVariants, type ControlSize } from "../input/input";
 
 // Keyboard: Space/Enter/ArrowDown open; arrows move, typing jumps to a match,
 // Enter selects, Escape closes and returns focus. Provided by Base UI.
 //
 // Pass `items` (a value -> label map or `{ value, label }[]`) so the trigger
 // shows the selected item's label. Without it, the raw value is shown.
-export const Select = SelectPrimitive.Root;
+//
+// Inside a Field, FieldLabel names the trigger and FieldDescription /
+// FieldError describe it. For typing to filter, use Combobox instead.
+export function Select<Value, Multiple extends boolean | undefined = false>({
+  required,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const fieldRequired = useFieldRequired();
+  return (
+    <SelectPrimitive.Root<Value, Multiple>
+      required={required ?? fieldRequired}
+      {...props}
+    />
+  );
+}
+
 export const SelectGroup = SelectPrimitive.Group;
 
 export type SelectTriggerProps = Omit<
@@ -21,36 +37,30 @@ export type SelectTriggerProps = Omit<
 > & {
   className?: string;
   placeholder?: string;
+  size?: ControlSize;
+  /** Marks the control invalid outside a Field. Inside one, the Field decides. */
   invalid?: boolean;
 };
 
 export function SelectTrigger({
   className,
   placeholder,
+  size,
   invalid,
   ...props
 }: SelectTriggerProps) {
-  const field = useFieldControl();
-  const isInvalid = invalid ?? field?.invalid;
-  const describedBy =
-    [field?.descriptionId, props["aria-describedby"]]
-      .filter(Boolean)
-      .join(" ") || undefined;
-
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
-      id={field?.controlId}
-      aria-invalid={isInvalid || undefined}
+      aria-invalid={invalid || undefined}
       className={cn(
-        controlClassName,
+        controlVariants({ size }),
         "group/select inline-flex cursor-pointer items-center justify-between gap-3 text-left",
         "data-placeholder:text-muted data-popup-open:border-focus-ring",
         "data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:border-border-strong",
         className,
       )}
       {...props}
-      aria-describedby={describedBy}
     >
       <SelectPrimitive.Value className="truncate" placeholder={placeholder} />
       <SelectPrimitive.Icon
@@ -85,19 +95,11 @@ export function SelectContent({
         alignItemWithTrigger={false}
         sideOffset={6}
         collisionPadding={8}
-        className="z-50 outline-none"
+        className={listbox.positioner}
       >
         <SelectPrimitive.Popup
           data-slot="select-content"
-          className={cn(
-            "relative min-w-(--anchor-width) origin-(--transform-origin) overflow-hidden rounded-md border border-border-strong bg-surface-strong shadow-soft outline-none",
-            // Enter slides away from the trigger; exit fades in place.
-            "transition-[opacity,translate] duration-(--ds-motion-base) ease-out",
-            "data-starting-style:opacity-0 data-ending-style:opacity-0",
-            "data-starting-style:data-[side=bottom]:-translate-y-1.5 data-starting-style:data-[side=top]:translate-y-1.5",
-            "data-ending-style:duration-(--ds-motion-fast) data-ending-style:ease-in",
-            className,
-          )}
+          className={cn(listbox.popup, className)}
           {...props}
         >
           <SelectPrimitive.ScrollUpArrow
@@ -128,19 +130,12 @@ export function SelectItem({ className, children, ...props }: SelectItemProps) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
-      className={cn(
-        "relative flex min-h-control-sm cursor-pointer items-center rounded-sm py-2 pr-9 pl-3 text-sm text-secondary outline-none select-none",
-        "transition-colors duration-(--ds-motion-fast)",
-        "data-highlighted:bg-brand/10 data-highlighted:text-foreground",
-        "data-selected:font-semibold data-selected:text-foreground",
-        "data-disabled:pointer-events-none data-disabled:opacity-45",
-        className,
-      )}
+      className={cn(listbox.item, className)}
       {...props}
     >
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-      <SelectPrimitive.ItemIndicator className="absolute right-3 inline-flex">
-        <Check aria-hidden="true" className="size-4 text-brand-fg" />
+      <SelectPrimitive.ItemIndicator className={listbox.itemIndicator}>
+        <Check aria-hidden="true" className="size-4" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
   );
@@ -156,10 +151,7 @@ export function SelectLabel({ className, ...props }: SelectLabelProps) {
   return (
     <SelectPrimitive.GroupLabel
       data-slot="select-label"
-      className={cn(
-        "px-3 pt-2 pb-1 text-xs font-semibold tracking-widest text-muted uppercase",
-        className,
-      )}
+      className={cn(listbox.groupLabel, className)}
       {...props}
     />
   );
@@ -174,7 +166,7 @@ export function SelectSeparator({ className, ...props }: SelectSeparatorProps) {
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
+      className={cn(listbox.separator, className)}
       {...props}
     />
   );

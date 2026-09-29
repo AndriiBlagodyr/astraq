@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { FormField } from "../form-field";
+import { FormField } from "../field";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "./select";
 
 describe("Select", () => {
@@ -8,7 +8,7 @@ describe("Select", () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();
     render(
-      <FormField htmlFor="direction" label="Direction" hint="Trigger side">
+      <FormField label="Direction" description="Trigger side">
         <Select
           items={{ above: "Moves above", below: "Moves below" }}
           defaultValue="above"

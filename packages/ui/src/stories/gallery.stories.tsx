@@ -92,20 +92,18 @@ export const FormsAndSelection: Story = {
       </CardHeader>
       <div className="grid gap-5">
         <FormField
-          htmlFor="symbol"
           label="Symbol"
-          hint="US equities and crypto pairs are supported."
+          description="US equities and crypto pairs are supported."
         >
           <Input id="symbol" placeholder="AAPL" />
         </FormField>
         <FormField
-          htmlFor="price"
           label="Target price"
           error="Enter a price greater than zero."
         >
           <Input id="price" inputMode="decimal" defaultValue="0" invalid />
         </FormField>
-        <FormField htmlFor="direction" label="Direction">
+        <FormField label="Direction">
           <Select
             items={{ above: "Moves above", below: "Moves below" }}
             defaultValue="above"

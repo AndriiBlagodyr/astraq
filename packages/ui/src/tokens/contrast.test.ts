@@ -51,6 +51,19 @@ describe.each(THEME_SOURCES.map(resolveTheme))("$source.name theme", (theme) => 
       expect(worstContrast(tokens["focus-ring"], onBackgrounds(NON_TEXT_MIN))).toBeGreaterThanOrEqual(NON_TEXT_MIN);
     });
 
+    it.each(["bg-checked", "border-control"] as const)(
+      "%s marks a control against every surface",
+      (token) => {
+        expect(worstContrast(tokens[token], onBackgrounds(NON_TEXT_MIN))).toBeGreaterThanOrEqual(NON_TEXT_MIN);
+      },
+    );
+
+    it("fg-on-checked (checkmarks, thumbs) is visible on bg-checked", () => {
+      expect(
+        contrastRatio(parseColor(tokens["fg-on-checked"]), parseColor(tokens["bg-checked"])),
+      ).toBeGreaterThanOrEqual(NON_TEXT_MIN);
+    });
+
     it.each([1, 2, 3, 4, 5, 6, 7, 8] as const)("chart-%i is distinguishable from surfaces", (n) => {
       expect(worstContrast(tokens[`chart-${n}`], onBackgrounds(NON_TEXT_MIN))).toBeGreaterThanOrEqual(NON_TEXT_MIN);
     });

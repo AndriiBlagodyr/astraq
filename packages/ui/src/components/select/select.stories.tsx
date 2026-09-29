@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StateGrid, pseudoStates } from "../../stories/state-grid";
-import { FormField } from "../form-field";
+import { FormField } from "../field";
 import {
   Select,
   SelectContent,
@@ -40,12 +40,18 @@ const intervals = {
   "1w": "1 week",
 };
 
-function DirectionSelect(props: { invalid?: boolean; disabled?: boolean; label?: string }) {
+function DirectionSelect(props: {
+  invalid?: boolean;
+  disabled?: boolean;
+  label?: string;
+  size?: "sm" | "md" | "lg";
+}) {
   return (
     <Select items={directions} defaultValue="above" disabled={props.disabled}>
       <SelectTrigger
         aria-label={props.label ?? "Direction"}
         invalid={props.invalid}
+        size={props.size}
         className="w-56"
       />
       <SelectContent>
@@ -73,10 +79,20 @@ export const States: Story = {
   ),
 };
 
+export const Sizes: Story = {
+  render: () => (
+    <div className="grid gap-3">
+      <DirectionSelect label="Small" size="sm" />
+      <DirectionSelect label="Medium" size="md" />
+      <DirectionSelect label="Large" size="lg" />
+    </div>
+  ),
+};
+
 export const GroupedInField: Story = {
   render: () => (
     <div className="max-w-sm">
-      <FormField htmlFor="interval" label="Interval" hint="Bars used for signals.">
+      <FormField label="Interval" description="Bars used for signals.">
         <Select items={intervals}>
           <SelectTrigger placeholder="Choose an interval" />
           <SelectContent>

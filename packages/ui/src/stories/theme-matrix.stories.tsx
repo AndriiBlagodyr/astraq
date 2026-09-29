@@ -6,9 +6,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Checkbox,
   COLOR_MODES,
   FormField,
   Input,
+  SegmentedControl,
+  SegmentedControlItem,
+  Switch,
   Table,
   TableWrap,
   Tabs,
@@ -38,7 +42,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 function Sample({ theme, mode }: { theme: ThemeName; mode: ColorMode }) {
-  const id = `${theme}-${mode}`;
   return (
     <div
       data-theme={theme}
@@ -67,9 +70,26 @@ function Sample({ theme, mode }: { theme: ThemeName; mode: ColorMode }) {
         <Badge tone="negative">-1.12%</Badge>
         <Badge tone="warning">Closed</Badge>
       </div>
-      <FormField htmlFor={`${id}-qty`} label="Quantity" hint="Whole shares only.">
+      <FormField label="Quantity" description="Whole shares only.">
         <Input defaultValue="10" inputMode="numeric" />
       </FormField>
+      <div className="flex flex-wrap items-center gap-4 text-sm">
+        <label className="flex items-center gap-2">
+          <Checkbox defaultChecked />
+          Extended hours
+        </label>
+        <label className="flex items-center gap-2">
+          <Checkbox />
+          Dividends
+        </label>
+        <Switch defaultChecked aria-label={`Live data, ${theme} ${mode}`} />
+        <Switch aria-label={`Alerts, ${theme} ${mode}`} />
+        <SegmentedControl aria-label={`Timeframe, ${theme} ${mode}`} defaultValue="1M" size="sm">
+          <SegmentedControlItem value="1D">1D</SegmentedControlItem>
+          <SegmentedControlItem value="1M">1M</SegmentedControlItem>
+          <SegmentedControlItem value="1Y">1Y</SegmentedControlItem>
+        </SegmentedControl>
+      </div>
       <Tabs defaultValue="overview">
         <TabsList aria-label={`Sections, ${theme} ${mode}`}>
           <TabsTrigger value="overview">Overview</TabsTrigger>

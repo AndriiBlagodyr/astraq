@@ -1,6 +1,6 @@
 # Design System v2 — Implementation Plan
 
-Implements [ADR 0002](decisions/0002-design-system-base-ui-and-token-architecture.md). The work is split into 7 PRs. Each PR must leave `pnpm lint typecheck test:unit build-storybook` green and must not visually break `apps/web`.
+Implements [ADR 0002](decisions/0002-design-system-base-ui-and-token-architecture.md). The work is split into 7 PRs. PR 5 ships as four PRs, one per tier (5a–5d). Each PR must leave `pnpm lint typecheck test:unit build-storybook` green and must not visually break `apps/web`.
 
 ## Target structure
 
@@ -45,7 +45,7 @@ packages/ui/
 - **No outer margins.** Layout is the parent's job.
 - **Consistent props:** sizes are `sm | md | lg` and read density tokens. Every component uses the same prop names for intent: `variant`, `size`, `tone`.
 - **States in stories:** default, hover, focus-visible, active, disabled, invalid (`aria-invalid`), loading, and read-only where relevant. Every state must appear in stories.
-- **Motion:** follow the rules in [motion.md](motion.md): tokens only, transitions over keyframes, exits faster than entries, reduced motion respected.
+- **Motion:** follow the rules in [motion-and-delight-plan.md](motion-and-delight-plan.md): tokens only, transitions over keyframes, exits faster than entries, reduced motion respected.
 - **Server Components by default. Add `"use client"` only to files that need it; display components stay RSC-safe.
 - **Tests: minimal for now.** Check keyboard and ARIA behavior by hand in Storybook, and give every variant a story. Only add an automated test for rules that break silently and are hard to spot by eye, such as token contrast.
 
@@ -133,7 +133,7 @@ Fonts, radii and motion are shared across themes.
 
 - Add `data-density` (`comfortable` | `compact`). Control heights, paddings, and table row heights read density tokens.
 - Add a `forced-colors: active` block in base styles, using system colors and keeping focus rings visible.
-- Add the theme switch reveal (see [motion.md](motion.md)).
+- Add the theme switch reveal (see [motion-and-delight-plan.md](motion-and-delight-plan.md)).
 - Add a theme and density toolbar in Storybook, plus a "Theme matrix" story that shows one composition in all 12 theme × mode combinations side by side.
 
 **What shipped**
@@ -172,12 +172,41 @@ Fonts, radii and motion are shared across themes.
 
 ## PR 5 — Component expansion
 
-Build components in tiers, each wrapping Base UI unless noted. Motion requirements for `Skeleton`, `Toast`, `Drawer`, `EmptyState`, plus the new spring presets and `AnimatedNumber`, are in [motion.md](motion.md).
+Build components in tiers, each wrapping Base UI unless noted. Motion requirements for `Skeleton`, `Toast`, `Drawer`, `EmptyState`, plus the new spring presets and `AnimatedNumber`, are in [motion-and-delight-plan.md](motion-and-delight-plan.md).
 
-- **Tier A (forms):** Field (label, description, error wiring), Input, Textarea, Checkbox, CheckboxGroup, RadioGroup, Switch, Select (restyled), Combobox, Autocomplete, NumberField, Slider, Toggle, ToggleGroup, Form. **SegmentedControl is hand-built** (ADR 0002 §6).
-- **Tier B (overlays and feedback):** Popover, Menu, ContextMenu, AlertDialog, Drawer (Dialog variant), Toast, PreviewCard, Progress, Meter, Skeleton, Spinner.
-- **Tier C (display):** AnimatedNumber, Avatar, Separator, ScrollArea, Kbd, Accordion, Collapsible, Toolbar, EmptyState, Stat (generic label/value/delta; no market semantics).
-- **Tier D (data):** the Table primitive restyled with density and sticky headers, a DataTable recipe (TanStack Table + Virtual, supporting sort, column visibility, and row selection), and DateRangePicker (React Aria, wrapped).
+Each tier is its own PR, and the next starts after the previous one merges:
+
+- **PR 5a — Tier A (forms) ✅:** Field (label, description, error wiring), Input, Textarea, Checkbox, CheckboxGroup, RadioGroup, Switch, Select (restyled), Combobox, Autocomplete, NumberField, Slider, Toggle, ToggleGroup, Form. **SegmentedControl is hand-built** (ADR 0002 §6).
+- **PR 5b — Tier B (overlays and feedback):** Popover, Menu, ContextMenu, AlertDialog, Drawer (Dialog variant), Toast, PreviewCard, Progress, Meter, Skeleton, Spinner.
+- **PR 5c — Tier C (display):** AnimatedNumber and the spring presets, Avatar, Separator, ScrollArea, Kbd, Accordion, Collapsible, Toolbar, EmptyState, Stat (generic label/value/delta; no market semantics).
+- **PR 5d — Tier D (data):** the Table primitive restyled with density and sticky headers, a DataTable recipe (TanStack Table + Virtual, supporting sort, column visibility, and row selection), and DateRangePicker (React Aria, wrapped).
+
+### PR 5a — what shipped
+
+- **Field on Base UI:** `Field`, `FieldLabel`, `FieldDescription`, `FieldError`, `FieldItem`, `FieldValidity`, `Fieldset`/`FieldsetLegend`, and `Form`, all wrapping Base UI.
+  - Base UI links label, control, description and error for every control in the package, including Select, Combobox, NumberField and Slider. It sets `aria-invalid` and `data-invalid` from the field's validity.
+  - `FormField` stays as the one-element shorthand, rebuilt on these parts.
+  - `Field required` is ours: Base UI has no field-level required. A small context carries it to the label's asterisk and to each control's `required`.
+- **Controls:** Input moves onto Base UI `Input`. Textarea renders `Field.Control` as a `<textarea>`, with optional `autoResize` (`field-sizing`).
+  - Checkbox has indeterminate and `parent` select-all. CheckboxGroup, RadioGroup/Radio, Switch.
+  - Combobox has single, grouped, and `multiple` with removable chips (`ComboboxChipsInput`). Autocomplete allows free text with suggestions.
+  - NumberField has steppers and Intl `format`. Slider handles single, range, and vertical, with `SliderLabel` and `SliderValue`. Toggle has `ghost | outline` variants and ToggleGroup handles single or multiple.
+- **Shared styles:** `controlVariants({ size })` gives every text-like control `sm | md | lg` on density tokens. `controlClassName` stays as the `md` alias. Select, Combobox and Autocomplete share one listbox look from `lib/listbox.ts`, and Select was refactored onto it.
+- **SegmentedControl (hand-built):** WAI-ARIA radio group with a roving tabindex. Arrow keys move and check, wrapping and skipping disabled segments. Left and Right flip in RTL, and Home/End jump to the ends. Segments are equal width, so the indicator slides with `translate` only, and never on first paint.
+- **New tokens:**
+  - `bg-checked` fills checked checkboxes, radios, switches and sliders. `border-control` draws their unchecked edges. Both are solved to the non-text bar on every surface. Before this, only the fill and hairline showed state, and neither was guaranteed 3:1.
+  - `fg-on-checked` is whichever ink reads best on `bg-checked`.
+  - `contrast.test.ts` checks all three, for 270 checks in total.
+- **Accessibility:**
+  - forced-colors rules for checked, pressed and highlighted states, radio dots, switch thumbs and slider fills.
+  - Listbox popups blur what's behind them on glass themes (`backdrop-blur-overlay`, 0px on solid themes).
+- **Tests:** one new file, `segmented-control.test.tsx`, covers the hand-built keyboard pattern. The Field and Select tests were updated to the new API.
+
+**Deliberate differences**
+- **FormField API:** `htmlFor` is gone, because Base UI generates and links ids. `hint` is renamed `description` to match the parts. The description now stays visible when an error shows. `useFieldControl` is removed; the Base UI field context replaces it. Nothing in `apps/web` used them.
+- **Checkbox corners:** they use half the theme's `radius-sm`, so forelume's 12px radius doesn't turn checkboxes into circles.
+- **SegmentedControl and Form:** it isn't a Base UI control, so a FieldLabel can't point at it, and `onFormSubmit` doesn't include its value. It submits through `name` in native `FormData`.
+- **Spring presets:** moved to 5c with `AnimatedNumber`, their first consumer.
 
 ## PR 6 — Distribution
 

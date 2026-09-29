@@ -10,6 +10,7 @@
 import { alpha, hexToOklch, oklchToHex } from "./color";
 import {
   composite,
+  contrastRatio,
   ensureContrast,
   parseColor,
   type ContrastCheck,
@@ -184,6 +185,17 @@ function resolveMode(theme: ThemeSource, mode: Mode) {
     ),
   );
 
+  // Checked checkbox, radio, and switch fills. The fill is the state, so it
+  // must stand out from every surface like any other non-text UI color, and
+  // the checkmark or thumb on it takes whichever ink contrasts more.
+  const checked = solveNonText(dark ? brand.base : brand.strong);
+  const onChecked = ["#ffffff", step(n, dark ? 1 : 12)].reduce((best, ink) =>
+    contrastRatio(parseColor(ink), parseColor(checked)) >
+    contrastRatio(parseColor(best), parseColor(checked))
+      ? ink
+      : best,
+  );
+
   const gradient = (stops: ThemeSource["brand"]["gradient"]) =>
     stops.map((stop) => `${stop.color} ${stop.at}%`).join(", ");
 
@@ -194,13 +206,18 @@ function resolveMode(theme: ThemeSource, mode: Mode) {
     "bg-raised": s.raised,
     "bg-sunken": s.sunken,
     "bg-overlay": s.overlay,
+    "bg-checked": checked,
     "fg-default": solveText(step(n, 12)),
     "fg-muted": solveText(step(n, 11)),
     "fg-subtle": solveText(step(n, dark ? 10 : 9)),
     "fg-on-brand": brand.onBrand,
+    "fg-on-checked": onChecked,
     "border-subtle": borders.subtle,
     "border-default": borders.default,
     "border-strong": borders.strong,
+    // Unchecked checkbox, radio, and switch edges: the only thing that shows
+    // the control is there, so solid and solved (hairlines stay translucent).
+    "border-control": solveNonText(step(n, dark ? 8 : 9)),
     "focus-ring": solveNonText(dark ? brand.base : brand.strong),
     "focus-halo": alpha(dark ? brand.base : brand.strong, dark ? 0.42 : 0.34),
     brand: brand.base,
