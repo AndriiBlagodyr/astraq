@@ -18,7 +18,10 @@ export function Switch({ className, required, ...props }: SwitchProps) {
       data-slot="switch"
       required={required ?? (fieldRequired || undefined)}
       className={cn(
-        "group/switch relative inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-pill border border-border-control bg-surface-muted p-0.5",
+        "group/switch relative inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-pill border border-border-control bg-surface-muted",
+        // The thumb sits 4px from every outer edge whatever the theme's border
+        // width, so its 16px travel (translate-x-4) lands symmetric.
+        "px-[calc(0.25rem-var(--ds-border-width))]",
         "transition-[background-color,border-color] duration-(--ds-motion-fast) ease-out",
         "hover:border-focus-ring",
         "data-checked:border-checked data-checked:bg-checked",

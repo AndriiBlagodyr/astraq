@@ -42,6 +42,10 @@
   --color-positive-fg: var(--ds-positive-fg);
   --color-negative-fg: var(--ds-negative-fg);
   --color-warning-fg: var(--ds-warning-fg);
+  /* Checkbox, radio, switch, slider: checked fill, its ink, unchecked edge. */
+  --color-checked: var(--ds-bg-checked);
+  --color-on-checked: var(--ds-fg-on-checked);
+  --color-border-control: var(--ds-border-control);
   --color-focus: var(--ds-focus-halo);
   --color-focus-ring: var(--ds-focus-ring);
   --color-chart-1: var(--ds-chart-1);
@@ -217,10 +221,47 @@
   /* Selected and highlighted states. */
   [data-slot="tabs-trigger"][data-active],
   [data-slot="select-item"][data-highlighted],
-  [data-slot="table-row"][data-selected] {
+  [data-slot="combobox-item"][data-highlighted],
+  [data-slot="autocomplete-item"][data-highlighted],
+  [data-slot="table-row"][data-selected],
+  [data-slot="toggle"][data-pressed],
+  [data-slot="segmented-control-item"][data-checked] {
     forced-color-adjust: none;
     background: Highlight;
     color: HighlightText;
+  }
+
+  /* Checked controls: the fill is the state, and forced colors drop fills. */
+  [data-slot="checkbox"][data-checked],
+  [data-slot="checkbox"][data-indeterminate],
+  [data-slot="radio"][data-checked],
+  [data-slot="switch"][data-checked] {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  [data-slot="radio-indicator"],
+  [data-slot="switch-thumb"][data-checked] {
+    forced-color-adjust: none;
+    background: HighlightText;
+  }
+
+  [data-slot="switch-thumb"] {
+    forced-color-adjust: none;
+    background: ButtonText;
+  }
+
+  [data-slot="slider-indicator"] {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  [data-slot="slider-thumb"] {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: Canvas;
   }
 
   /* Buttons with transparent borders (primary, ghost) still need an edge. */

@@ -21,7 +21,10 @@ export const controlVariants = cva(
     "focus-visible:border-focus-ring focus-visible:shadow-[0_0_0_3px_var(--ds-focus-halo)] focus-visible:outline-none",
     "aria-invalid:border-negative aria-invalid:hover:border-negative aria-invalid:focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--ds-negative)_30%,transparent)]",
     "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-strong",
-    "read-only:bg-transparent read-only:hover:border-border-strong",
+    // `:read-only` matches every non-editable element (buttons, divs), so it's
+    // scoped to text inputs; groups and triggers carry Base UI's data-readonly.
+    "[&:is(input,textarea):read-only]:bg-transparent [&:is(input,textarea):read-only]:hover:border-border-strong",
+    "data-readonly:bg-transparent data-readonly:hover:border-border-strong",
   ],
   {
     variants: {
