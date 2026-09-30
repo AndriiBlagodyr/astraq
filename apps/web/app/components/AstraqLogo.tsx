@@ -11,17 +11,17 @@ type AstraqLogoProps = {
 };
 
 /**
- * Astraq mark — a constellation "A" with three vertex stars, a glowing apex,
- * and rising candles inside the frame. Themed via CSS variables so it adapts
- * cleanly to both dark and light schemes.
+ * Forelume mark — "light ahead". A price history runs inside a lens ring to a
+ * glowing "now" node, then escapes through the ring's opening as a forecast
+ * cone that carries a spark: the predicted target. Colors come from the
+ * `--ds-brand-*` tokens, so the mark follows every theme and color mode.
  */
 export function AstraqLogo({ className, decorative = false }: AstraqLogoProps) {
   const reactId = useId().replace(/:/g, "");
   const titleId = `${reactId}-title`;
-  const strokeId = `${reactId}-stroke`;
-  const candleId = `${reactId}-candle`;
+  const ringId = `${reactId}-ring`;
+  const coneId = `${reactId}-cone`;
   const haloId = `${reactId}-halo`;
-  const glowId = `${reactId}-glow`;
 
   const rootClassName = [styles.logo, className].filter(Boolean).join(" ");
   const a11yProps = decorative
@@ -29,114 +29,91 @@ export function AstraqLogo({ className, decorative = false }: AstraqLogoProps) {
     : { role: "img" as const, "aria-labelledby": titleId };
 
   return (
-    <svg viewBox="0 0 48 48" className={rootClassName} {...a11yProps}>
+    <svg
+      viewBox="0 0 48 48"
+      fill="none"
+      className={rootClassName}
+      {...a11yProps}
+    >
       {!decorative ? <title id={titleId}>Forelume</title> : null}
 
       <defs>
         <linearGradient
-          id={strokeId}
+          id={ringId}
           x1="6"
-          y1="44"
-          x2="42"
+          y1="42"
+          x2="30"
           y2="6"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0" stopColor="var(--logo-stop-1)" />
-          <stop offset="0.55" stopColor="var(--logo-stop-2)" />
-          <stop offset="1" stopColor="var(--logo-stop-3)" />
+          <stop offset="0" stopColor="var(--logo-deep)" />
+          <stop offset="1" stopColor="var(--logo-primary)" />
         </linearGradient>
 
-        <linearGradient id={candleId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="var(--logo-stop-3)" />
-          <stop offset="1" stopColor="var(--logo-stop-1)" />
+        {/* Forecast confidence: bright at "now", fading into the future. */}
+        <linearGradient
+          id={coneId}
+          x1="24"
+          y1="22"
+          x2="46"
+          y2="17"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0" stopColor="var(--logo-primary)" stopOpacity="0.7" />
+          <stop offset="0.6" stopColor="var(--logo-spark)" stopOpacity="0.38" />
+          <stop offset="1" stopColor="var(--logo-spark)" stopOpacity="0" />
         </linearGradient>
 
         <radialGradient id={haloId} cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" stopColor="var(--logo-halo)" stopOpacity="0.7" />
-          <stop offset="1" stopColor="var(--logo-halo)" stopOpacity="0" />
+          <stop offset="0" stopColor="var(--logo-primary)" stopOpacity="0.6" />
+          <stop offset="1" stopColor="var(--logo-primary)" stopOpacity="0" />
         </radialGradient>
-
-        <filter id={glowId} x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="0.6" />
-        </filter>
       </defs>
 
-      <circle
-        cx="24"
-        cy="9"
-        r="11"
-        fill={`url(#${haloId})`}
-        className={styles.halo}
+      {/* Lens ring, open to the right: the future side. */}
+      <path
+        d="M 34.93 15.25 A 17 17 0 1 0 34.93 34.75"
+        stroke={`url(#${ringId})`}
+        strokeWidth="2.6"
+        strokeLinecap="round"
       />
 
       <path
-        d="M 6 41 Q 24 53 42 41"
-        fill="none"
-        stroke="var(--logo-orbit)"
-        strokeWidth="1"
-        strokeDasharray="1.6 3"
+        d="M 24 22 L 45 9 L 45 25 Z"
+        fill={`url(#${coneId})`}
+        className={styles.cone}
+      />
+      <path
+        d="M 24 22 L 40.5 13.8"
+        stroke="var(--logo-primary)"
+        strokeWidth="1.4"
         strokeLinecap="round"
-        className={styles.orbit}
+        strokeDasharray="1.4 2.6"
+        className={styles.forecast}
       />
 
-      <g className={styles.candles}>
-        <rect
-          x="18.5"
-          y="33"
-          width="1.8"
-          height="6"
-          rx="0.6"
-          fill={`url(#${candleId})`}
-          className={styles.candleA}
-        />
-        <rect
-          x="23.1"
-          y="30"
-          width="1.8"
-          height="9"
-          rx="0.6"
-          fill={`url(#${candleId})`}
-          className={styles.candleB}
-        />
-        <rect
-          x="27.7"
-          y="26"
-          width="1.8"
-          height="13"
-          rx="0.6"
-          fill={`url(#${candleId})`}
-          className={styles.candleC}
-        />
+      <path
+        d="M 9 32 L 14 26 L 18 29.5 L 24 22"
+        stroke="var(--logo-primary)"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        pathLength={1}
+        className={styles.history}
+      />
+
+      <g className={styles.now}>
+        <circle cx="24" cy="22" r="6" fill={`url(#${haloId})`} />
+        <circle cx="24" cy="22" r="2.9" fill="var(--logo-core)" />
+        <circle cx="24" cy="22" r="1.3" fill="var(--logo-core-inner)" />
       </g>
 
-      <g className={styles.frame} filter={`url(#${glowId})`}>
-        <path
-          d="M 8 41 L 24 7 L 40 41"
-          fill="none"
-          stroke={`url(#${strokeId})`}
-          strokeWidth="3.2"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-        <path
-          d="M 15.6 27 L 32.4 27"
-          fill="none"
-          stroke={`url(#${strokeId})`}
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          opacity="0.9"
-        />
-      </g>
-
-      <g className={styles.stars}>
-        <circle cx="8" cy="41" r="1.8" fill="var(--logo-star)" />
-        <circle cx="40" cy="41" r="1.8" fill="var(--logo-star)" />
-      </g>
-
-      <g className={styles.apex}>
-        <circle cx="24" cy="7" r="3.6" fill="var(--logo-halo)" opacity="0.35" />
-        <circle cx="24" cy="7" r="2.2" fill="var(--logo-apex)" />
-      </g>
+      {/* The lume: a four-point spark at the forecast target. */}
+      <path
+        d="M 41 8.6 Q 41.7 12.8 45.4 13.5 Q 41.7 14.2 41 18.4 Q 40.3 14.2 36.6 13.5 Q 40.3 12.8 41 8.6 Z"
+        fill="var(--logo-spark)"
+        className={styles.spark}
+      />
     </svg>
   );
 }

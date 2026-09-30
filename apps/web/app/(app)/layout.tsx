@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { buttonVariants } from "@astraq/ui";
 import { AppNavigation } from "@/app/components/AppNavigation";
+import { AstraqLogo } from "@/app/components/AstraqLogo";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import styles from "./layout.module.css";
 
@@ -11,14 +11,7 @@ export default function ProductLayout({ children }: { children: ReactNode }) {
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <Link href="/" className={styles.brand}>
-          <Image
-            src="/icon.svg"
-            alt=""
-            aria-hidden="true"
-            width={38}
-            height={38}
-            className={styles.brandIcon}
-          />
+          <AstraqLogo decorative className={styles.brandIcon} />
           <div>
             <p className={styles.brandTitle}>Forelume</p>
             <p className={styles.brandSubtitle}>

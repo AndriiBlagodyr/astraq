@@ -9,7 +9,7 @@ export type FeedbackProps = Omit<ComponentProps<"div">, "title"> & {
 };
 
 // Icons pair with color so tone never relies on color alone (WCAG 1.4.1).
-const feedbackTone = {
+export const feedbackTone = {
   info: { container: "border-brand/25 bg-brand/8", icon: "text-brand-fg", Icon: Info },
   success: {
     container: "border-positive/25 bg-positive/8",
