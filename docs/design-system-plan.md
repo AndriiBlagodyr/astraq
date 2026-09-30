@@ -208,6 +208,13 @@ Each tier is its own PR, and the next starts after the previous one merges:
 - **SegmentedControl and Form:** it isn't a Base UI control, so a FieldLabel can't point at it, and `onFormSubmit` doesn't include its value. It submits through `name` in native `FormData`.
 - **Spring presets:** moved to 5c with `AnimatedNumber`, their first consumer.
 
+**Fixed after 5a** (found by an axe + computed-style pass over the built Storybook in Chrome):
+- **Checked tokens weren't mapped:** `bg-checked`, `border-control` and `fg-on-checked` existed as `--ds-*` variables but not in the `@theme inline` block, so `bg-checked`, `border-border-control` and `text-on-checked` produced no CSS. Checked checkboxes, radios, switches and slider fills had no fill. The forced-colors rules for those states were also missing. Both are now in `styles/index.css`.
+- **`read-only:` on non-inputs:** `:read-only` matches every non-editable element, so the Select trigger (a button) and the Combobox, Autocomplete and NumberField groups (divs) were always transparent, with no hover border. `controlVariants` now scopes it to `input`/`textarea` and uses `data-readonly` for the rest.
+- **Switch thumb:** it was off-center by 2px when checked in themes with 1px borders. Padding now subtracts `--ds-border-width`, so the thumb sits 4px from every edge.
+- **CheckboxGroup in a required Field:** each box inherited `required`, which demands every box is checked. The group now stops the Field's `required` from reaching its boxes.
+- **Loading Button (PR 1):** `invisible` removed the label from the accessibility tree, so axe flagged `button-name`. It now hides the label with a transparent color and zero opacity instead.
+
 ## PR 6 — Distribution
 
 1. `tsdown.config.ts`:

@@ -85,8 +85,12 @@ export function Button({
       aria-disabled={blocked || undefined}
       onClick={handleClick}
     >
-      {/* `contents` keeps children in the flex layout; `invisible` preserves width while loading. */}
-      <span className={cn("contents", loading && "invisible")}>{children}</span>
+      {/* `contents` keeps children in the flex layout. Loading hides them by
+          color and opacity, not `invisible`: width holds and, unlike
+          visibility, the text still names the button for screen readers. */}
+      <span className={cn("contents", loading && "text-transparent [&_*]:opacity-0")}>
+        {children}
+      </span>
       {loading ? <Spinner className="absolute inset-0 m-auto" /> : null}
     </button>
   );
