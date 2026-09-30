@@ -215,6 +215,41 @@ Each tier is its own PR, and the next starts after the previous one merges:
 - **CheckboxGroup in a required Field:** each box inherited `required`, which demands every box is checked. The group now stops the Field's `required` from reaching its boxes.
 - **Loading Button (PR 1):** `invisible` removed the label from the accessibility tree, so axe flagged `button-name`. It now hides the label with a transparent color and zero opacity instead.
 
+### PR 5b — what shipped
+
+- **Overlays:**
+  - `Popover` (with `PopoverTitle` / `PopoverDescription`, optional `arrow`). It's a labelled `dialog`, and focus moves into it.
+  - `Menu`, with items, link items, checkbox and radio items, groups and labels, separators, `MenuShortcut` hints, and submenus (`MenuSub`, `MenuSubTrigger`, `MenuSubContent`). `MenuItem tone="danger"` marks destructive actions. `inset` lines plain items up with checkbox and radio items.
+  - `ContextMenu` reuses the Menu item parts, as Base UI does. It adds only `ContextMenuTrigger` and `ContextMenuContent`.
+  - `PreviewCard`, a hover and focus preview for links. It's never announced, so it can only repeat what's on the linked page.
+- **Modals:**
+  - `AlertDialog` (`role="alertdialog"`). The backdrop doesn't dismiss it, it has no close icon, and `description` is required. Put Cancel first, so it takes initial focus.
+  - `Drawer` (`side`: `right | left | bottom`) on Base UI's Drawer, not a restyled Dialog: it gets drag-to-dismiss, backdrop fade tied to the drag, and flick-speed exit timing. Side panels have a close icon; the bottom sheet has a drag handle instead.
+- **Feedback:**
+  - `ToastProvider` + `useToastManager` / `createToastManager`. `type` is the tone (the same icons and colors as `Feedback`), `actionProps` makes an undo button, and `priority: "high"` announces failures right away. Toasts stack, fan out on hover or focus, pause while hovered, and dismiss with a swipe right or down. F6 moves focus into the stack.
+  - `Progress` (determinate, or indeterminate with `value={null}`) and `Meter`, sharing one bar style. `tone` is up to the caller.
+  - `Skeleton` and `SkeletonText`. They're RSC-safe, hidden from assistive tech, and their shimmer is removed under reduced motion.
+  - `Spinner` gains `size` (`sm | md | lg`); `md` is the old look.
+- **Shared styles:**
+  - `lib/popup.ts` holds the anchored-popup surface, the enter/exit motion (it slides away from the anchor on any side), and arrow placement. `lib/popup-arrow.tsx` is the arrow SVG.
+  - `lib/overlay.ts` holds the modal backdrop, card, title, description and footer.
+  - Dialog and Tooltip now use these too, with the same rendered classes as before.
+- **Motion:** everything runs on motion tokens, including the Drawer and Toast recipes, whose Base UI examples hardcode 450–500ms. So reduced motion makes overlays instant. The two loaders keep moving under reduced motion because they're the only sign of activity: the indeterminate Progress runs at half speed, and Spinner is unchanged. They're the only new keyframes (`ds-shimmer`, `ds-progress-sweep`).
+- **Accessibility:**
+  - forced-colors rules for highlighted menu items (including their icons and shortcut hints), open submenu triggers, menu separators, progress and meter fills, and skeleton outlines.
+  - Progress and Meter fills use `bg-checked` and the `*-fg` tone colors. Those are solved to 3:1 on every surface, unlike the raw brand hue: cyan on a light surface is too faint.
+
+**Deliberate differences**
+- **Drawer:** it's built on Base UI's Drawer, not the "Dialog variant" this plan named. The Drawer primitive shipped in Base UI 1.x and supplies the drag-to-dismiss from the motion plan.
+- **Toast API:** there's no wrapper over Base UI's manager. `add`, `update`, `close` and `promise` are used as-is, and `type` carries the tone. A second, parallel API would only rename options.
+- **Menu sizing:** items use `min-h-control-sm`, so compact density tightens menus with the rest of the controls.
+- **Tailwind sources:** `styles/index.css` now scans `lib/` as well. Classes that exist only in `lib/*.ts` (all of `popup.ts` and `overlay.ts`) were otherwise never generated.
+
+**Checked by hand** in Chrome against Storybook, in the default theme plus Paper, Midnight, Terminal and High contrast, light and dark:
+- **Keyboard:** Popover, Menu (arrows, submenus, End, Escape), ContextMenu (right-click at the pointer, Shift+F10), AlertDialog (backdrop ignored, Cancel focused), Drawer (focus trap, Escape, drag to dismiss), Toast (pause on hover, F6, undo), PreviewCard (opens on hover and focus). Focus returns to the trigger every time.
+- **axe:** no component-level violations. The only findings are page-level rules (no `main`, no `h1`) that come from the bare story iframe.
+- **Reduced motion and forced colors:** both emulated in Chrome.
+
 ## PR 6 — Distribution
 
 1. `tsdown.config.ts`:

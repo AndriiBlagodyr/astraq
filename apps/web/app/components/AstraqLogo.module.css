@@ -1,163 +1,105 @@
+/* Mode-adjusted brand tokens: `*-fg` variants stay legible on light surfaces. */
 .logo {
-  --logo-stop-1: #6ef2ff;
-  --logo-stop-2: #7d91ff;
-  --logo-stop-3: #f4c96d;
-  --logo-halo: #6ef2ff;
-  --logo-orbit: rgba(124, 244, 255, 0.32);
-  --logo-star: #c3d0ea;
-  --logo-apex: #ffffff;
-  --logo-shadow: 0 8px 24px rgba(110, 242, 255, 0.18);
+  --logo-primary: var(--ds-brand-fg);
+  --logo-deep: var(--ds-brand-strong-fg);
+  --logo-spark: var(--ds-brand-warm);
+  --logo-core: var(--ds-fg-default);
+  --logo-core-inner: var(--logo-primary);
+  --logo-shadow: color-mix(in oklab, var(--ds-brand) 28%, transparent);
 
   width: 100%;
   height: auto;
   display: block;
-  filter: drop-shadow(var(--logo-shadow));
   overflow: visible;
+  filter: drop-shadow(0 6px 18px var(--logo-shadow));
 }
 
+/* Warm accents are pale by design; deepen the spark so it holds on paper-white. */
 :global(:root[data-mode="light"]) .logo {
-  --logo-stop-1: #0ca9b7;
-  --logo-stop-2: #4464e8;
-  --logo-stop-3: #c8881a;
-  --logo-halo: #4464e8;
-  --logo-orbit: rgba(68, 100, 232, 0.28);
-  --logo-star: #4e6483;
-  --logo-apex: #0f2038;
-  --logo-shadow: 0 8px 22px rgba(68, 100, 232, 0.18);
+  --logo-spark: color-mix(in oklch, var(--ds-brand-warm) 78%, #000000);
+  --logo-core: var(--logo-primary);
+  --logo-core-inner: #ffffff;
+  --logo-shadow: color-mix(in oklab, var(--ds-brand-strong) 18%, transparent);
 }
 
-.halo {
-  transform-origin: 24px 9px;
+.history {
+  stroke-dasharray: 1;
+  animation: history-draw 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.forecast {
+  animation: forecast-flow 2.4s linear infinite;
+}
+
+.cone {
+  animation: cone-breathe 4.8s ease-in-out infinite;
+}
+
+.now {
+  transform-origin: 24px 22px;
   transform-box: view-box;
-  animation: logo-halo 4.4s ease-in-out infinite;
+  animation: now-pulse 2.8s ease-in-out infinite;
 }
 
-.frame {
-  animation: logo-glow 6s ease-in-out infinite;
-}
-
-.candles {
-  transform-origin: 24px 39px;
+.spark {
+  transform-origin: 41px 13.5px;
   transform-box: view-box;
+  animation: spark-twinkle 3.6s ease-in-out infinite;
 }
 
-.candleA,
-.candleB,
-.candleC {
-  transform-origin: center bottom;
-  transform-box: fill-box;
-}
-
-.candleA {
-  animation: candle-rise 3.2s ease-in-out infinite;
-}
-
-.candleB {
-  animation: candle-rise 3.2s ease-in-out infinite 0.18s;
-}
-
-.candleC {
-  animation: candle-rise 3.2s ease-in-out infinite 0.36s;
-}
-
-.stars circle {
-  animation: star-twinkle 3.6s ease-in-out infinite;
-}
-
-.stars circle:nth-of-type(2) {
-  animation-delay: 1.4s;
-}
-
-.apex {
-  transform-origin: 24px 7px;
-  transform-box: view-box;
-  animation: apex-pulse 2.8s ease-in-out infinite;
-}
-
-.orbit {
-  animation: orbit-dash 4.2s linear infinite;
-}
-
-@keyframes logo-halo {
-  0%,
-  100% {
-    opacity: 0.7;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
-}
-
-@keyframes logo-glow {
-  0%,
-  100% {
-    opacity: 0.96;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes candle-rise {
-  0%,
-  100% {
-    transform: scaleY(1);
-    opacity: 0.85;
-  }
-  50% {
-    transform: scaleY(1.08);
-    opacity: 1;
-  }
-}
-
-@keyframes star-twinkle {
-  0%,
-  100% {
-    opacity: 0.65;
-    transform: scale(1);
-    transform-box: fill-box;
-    transform-origin: center;
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.15);
-    transform-box: fill-box;
-    transform-origin: center;
-  }
-}
-
-@keyframes apex-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.95;
-  }
-  50% {
-    transform: scale(1.18);
-    opacity: 1;
-  }
-}
-
-@keyframes orbit-dash {
+@keyframes history-draw {
   from {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: 1;
   }
   to {
-    stroke-dashoffset: -18;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes forecast-flow {
+  to {
+    stroke-dashoffset: -8;
+  }
+}
+
+@keyframes cone-breathe {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes now-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes spark-twinkle {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(0.9) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) rotate(12deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .halo,
-  .frame,
-  .candleA,
-  .candleB,
-  .candleC,
-  .stars circle,
-  .apex,
-  .orbit {
+  .history,
+  .forecast,
+  .cone,
+  .now,
+  .spark {
     animation: none;
   }
 }

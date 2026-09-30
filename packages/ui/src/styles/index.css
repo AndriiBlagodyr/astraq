@@ -7,6 +7,7 @@
  */
 @source "../components/**/*.{ts,tsx}";
 @source "../theme/**/*.{ts,tsx}";
+@source "../lib/**/*.{ts,tsx}";
 
 /*
  * Tailwind utilities -> semantic tokens. Utility names are the component API
@@ -225,7 +226,9 @@
   [data-slot="autocomplete-item"][data-highlighted],
   [data-slot="table-row"][data-selected],
   [data-slot="toggle"][data-pressed],
-  [data-slot="segmented-control-item"][data-checked] {
+  [data-slot="segmented-control-item"][data-checked],
+  [data-slot^="menu-"][data-highlighted],
+  [data-slot="menu-sub-trigger"][data-popup-open] {
     forced-color-adjust: none;
     background: Highlight;
     color: HighlightText;
@@ -251,6 +254,29 @@
   [data-slot="switch-thumb"] {
     forced-color-adjust: none;
     background: ButtonText;
+  }
+
+  /* Icons and shortcut hints inside a highlighted menu item follow its ink. */
+  [data-slot^="menu-"][data-highlighted] :is(svg, kbd) {
+    color: HighlightText;
+  }
+
+  /* Menu separators are 1px backgrounds; draw them as a system rule. */
+  [data-slot="menu-separator"] {
+    forced-color-adjust: none;
+    background: GrayText;
+  }
+
+  /* Progress and meter fills are backgrounds, which forced colors drop. */
+  [data-slot="progress-indicator"],
+  [data-slot="meter-indicator"] {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  /* Skeletons are tinted boxes; keep their shape as an outline. */
+  [data-slot="skeleton"] {
+    border: 1px solid GrayText;
   }
 
   [data-slot="slider-indicator"] {
@@ -284,4 +310,24 @@
 :root[data-theme-reveal]::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+}
+
+/*
+ * Continuous loaders (Skeleton shimmer, indeterminate Progress). Overlays use
+ * transitions instead; only indefinite activity needs keyframes.
+ */
+@keyframes ds-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* The indicator is 2/5 of the track: -100% to 250% crosses it edge to edge. */
+@keyframes ds-progress-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
 }

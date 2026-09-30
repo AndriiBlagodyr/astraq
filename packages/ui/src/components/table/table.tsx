@@ -9,7 +9,7 @@ export function TableWrap({
     <div
       data-slot="table-wrap"
       className={cn(
-        "overflow-x-auto rounded-xl border border-border bg-surface p-5 shadow-soft",
+        "overflow-x-auto rounded-xl border border-border bg-surface py-2 shadow-soft",
         className,
       )}
       {...props}
@@ -62,7 +62,7 @@ export function Th({
       data-slot="table-head"
       scope={scope}
       className={cn(
-        "border-b border-border-subtle py-head-y pr-5 text-xs font-semibold tracking-widest text-muted uppercase last:pr-0",
+        "border-b border-border-subtle px-inset-md py-head-y text-xs font-semibold tracking-widest text-muted uppercase",
         className,
       )}
       {...props}
@@ -75,7 +75,7 @@ export function Td({ className, ...props }: ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "border-b border-border-subtle py-cell-y pr-5 text-secondary last:pr-0 [tr:last-child_&]:border-b-0",
+        "border-b border-border-subtle px-inset-md py-cell-y text-secondary [tr:last-child_&]:border-b-0",
         className,
       )}
       {...props}
