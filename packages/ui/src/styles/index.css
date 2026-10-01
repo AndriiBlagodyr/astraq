@@ -226,6 +226,7 @@
   [data-slot="autocomplete-item"][data-highlighted],
   [data-slot="table-row"][data-selected],
   [data-slot="toggle"][data-pressed],
+  [data-slot="toolbar-button"][data-pressed],
   [data-slot="segmented-control-item"][data-checked],
   [data-slot^="menu-"][data-highlighted],
   [data-slot="menu-sub-trigger"][data-popup-open] {
@@ -277,6 +278,18 @@
   /* Skeletons are tinted boxes; keep their shape as an outline. */
   [data-slot="skeleton"] {
     border: 1px solid GrayText;
+  }
+
+  /* Separators and scroll thumbs are backgrounds, which forced colors drop. */
+  [data-slot="separator"],
+  [data-slot="toolbar-separator"] {
+    forced-color-adjust: none;
+    background: GrayText;
+  }
+
+  [data-slot="scroll-area-thumb"] {
+    forced-color-adjust: none;
+    background: ButtonText;
   }
 
   [data-slot="slider-indicator"] {
