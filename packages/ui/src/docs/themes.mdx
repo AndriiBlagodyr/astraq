@@ -1,0 +1,42 @@
+import { Meta, Unstyled } from "@storybook/addon-docs/blocks";
+import { ThemeGallery } from "./blocks";
+
+<Meta title="Docs/Themes" />
+
+# Themes
+
+A theme sets an identity: color, typography, radius, density and surface treatment. Light and dark are a separate switch, so every theme defines a full palette for both. That makes 12 combinations, and every one is solved for contrast.
+
+## What a theme sets
+
+Each theme is a `ThemeSource` in `src/tokens/themes/<name>.ts`:
+
+- **`neutral`:** The hue and chroma that tint every gray: backgrounds, surfaces, borders, text and shadows.
+- **`brand`:** Base, strong and warm accents, the primary button gradient, and the text on it (`onBrand`).
+- **`status`:** Positive, negative and warning seeds.
+- **`type`:** Sans, display and mono font stacks.
+- **`shape`:** Five radii, the border width and the focus ring width.
+- **`surfaces`:** `glass` (translucent and blurred, with gradients and glow), `opaque` (solid fills, subtle shadows) or `flat` (no shadows; edges come from hairlines).
+- **`density`:** `comfortable` or `compact`, used when the user hasn't picked one.
+- **`contrast`:** `AA` (4.5:1 text, 3:1 non-text) or `AAA` (7:1 and 4.5:1).
+- **`links`:** `plain` (underline on hover) or `underline` (always).
+
+## The six themes
+
+<Unstyled>
+  <ThemeGallery />
+</Unstyled>
+
+## Switching themes in an app
+
+`ThemeScript` goes in `<head>` and sets `data-theme` and `data-mode` before first paint, from storage or the system color scheme. `ThemeProvider` reads and changes them afterwards. `useTheme()` returns the current theme, mode and density, and their setters. When the browser supports view transitions, a theme change is revealed as a growing circle. With reduced motion, it switches at once.
+
+## Adding a theme
+
+1. Copy a theme in `src/tokens/themes/` close to the one you want, and change its seeds.
+2. Add it to `THEME_SOURCES` in `themes/index.ts`. The order there is the order apps and Storybook list themes in.
+3. Run `pnpm --filter @astraq/ui tokens`.
+4. Run `pnpm --filter @astraq/ui test:unit`. The contrast test checks the new theme in both modes.
+5. Check **Overview/Theme matrix** and the **States** stories in both modes.
+
+The provider, the head script, this Storybook and the apps all read the generated registry, so nothing else needs to change. Never edit `tokens/index.css` or `tokens/generated/*` by hand. `tokens:check` runs in every build and fails when they are out of date.

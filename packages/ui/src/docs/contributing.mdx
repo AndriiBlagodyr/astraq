@@ -1,0 +1,48 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Docs/Contributing" />
+
+# Contributing
+
+## Adding a component
+
+1. Create `src/components/<name>/` with `<name>.tsx`, `<name>.stories.tsx` and `index.ts`.
+2. Export it from the folder's `index.ts` and from `src/index.ts`. The folder automatically becomes the `@astraq/ui/<name>` entry, because the build picks up every `components/*/index.ts`.
+3. Build behavior on Base UI. Use React Aria only for date and time fields, calendars and range pickers, wrapped so none of its types appear in the public API. Use TanStack Table and TanStack Virtual for data-grid recipes.
+4. Add a changeset: `pnpm changeset`.
+5. Before opening the PR, run `pnpm lint typecheck test:unit build-storybook`.
+
+Trading patterns (order tickets, the order book, PnL cells) and app shells belong in `apps/web`, not here.
+
+## Component checklist
+
+Every component must meet these.
+
+### API
+
+- **Refs:** `ref` is a normal prop (React 19). No `forwardRef`.
+- **Variants:** use CVA and export the variants as `xVariants`, so an app can style a link as a button.
+- **Prop names:** sizes are `sm | md | lg`. Intent props are always `variant`, `size` and `tone`.
+- **Composition:** use Base UI's `render` prop, not `asChild`.
+- **Client code:** files are Server Components by default. Add `"use client"` only to files that need hooks or browser APIs, so display components stay RSC-safe. The build fails if a directive is lost.
+
+### Styling
+
+- **Hooks:** every rendered part gets `data-slot="<name>"`. `className` is merged last with `cn()`.
+- **No outer margins.** Layout is the parent's job.
+- **Tokens only.** No raw colors. The `astraq-ui/no-raw-color` lint rule enforces this. `color-mix()` over `var(--ds-*)` is fine.
+- **Tone colors:** colored text and icons use the `*-fg` tokens (`text-negative-fg`). The base tone tokens (`bg-negative/12`, `border-negative/35`) are for fills and borders only.
+- **Shape and size:** use `rounded-sm` to `rounded-xl` or `rounded-pill`. Use `rounded-full` only for true circles. Controls and cells use density sizing (`min-h-control-md`, `px-inset-md`, `py-cell-y`), so themes and `data-density` can restyle them.
+
+### States and behavior
+
+- **Interaction states:** style every state that applies: hover, `focus-visible`, active, disabled (`disabled` and `aria-disabled`), invalid (`aria-invalid`), loading and read-only.
+- **Focus:** keep the global `:focus-visible` ring, or replace it with one that is just as visible. Never remove it without a replacement.
+- **Forced colors:** if a state shows only as a fill or a shadow, add a rule to the forced-colors block in `styles/index.css`.
+- **Keyboard:** follow the WAI-ARIA pattern for the role, and check it by hand in Storybook.
+- **Motion:** follow `docs/motion-and-delight-plan.md`. Use tokens only, transitions instead of keyframes, and make exits faster than entries. Transform only under `motion-safe`. Durations come from `--ds-motion-*`, which drop to `0ms` under reduced motion.
+
+### Stories and tests
+
+- **Stories:** give every variant a story, plus a `States` story that shows every state.
+- **Tests:** keep them few for now. Check keyboard and ARIA behavior by hand (see **Accessibility**). Add an automated test only for a rule that breaks silently and is hard to spot by eye, such as token contrast.

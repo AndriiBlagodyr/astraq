@@ -1,0 +1,52 @@
+import { Meta, Unstyled } from "@storybook/addon-docs/blocks";
+import { ColorSwatches, DensityTable, MotionTable, ThemeTokenTable } from "./blocks";
+
+<Meta title="Docs/Tokens" />
+
+# Tokens
+
+Everything on this page comes from the build's outputs: colors and shape from `src/tokens/generated/tokens.json`, and utility names from the Tailwind mapping in `src/styles/index.css`. Run `pnpm --filter @astraq/ui tokens` after editing a theme, and this page updates.
+
+There are three layers:
+
+- **Primitives:** a 12-step neutral scale and a 12-step brand scale per theme and mode, generated in OKLCH. They appear only in `tokens.json`, not in CSS, so a component can't use them.
+- **Semantic tokens (`--ds-*`):** what a color is for, such as `bg-surface`, `fg-muted` or `border-control`. Components and apps use only these.
+- **Utilities:** Tailwind names for the semantic tokens. `*-surface` works with any color utility: `bg-surface`, `text-surface`, `border-surface`.
+
+## Color
+
+Pick a theme and mode. Each swatch shows the token, its resolved value, and its utility name. Translucent surfaces are drawn over the canvas, as they are in use.
+
+<Unstyled>
+  <ColorSwatches />
+</Unstyled>
+
+### Rules
+
+- Colored text and icons use the `*-fg` tokens (`text-negative-fg`). The base tone tokens (`bg-negative/12`, `border-negative/35`) are for fills and borders only, because they are too pale to read as text in light mode.
+- `bg-checked`, `fg-on-checked` and `border-control` are solved for checked controls (checkbox, radio, switch, slider). They clear the non-text bar on every surface.
+- Charts use `chart-1` to `chart-8` in order, with `chart-grid` and `chart-axis` for the frame. The chart components live in `apps/web`.
+
+## Type and shape
+
+These change with the theme, not with the mode. Radii map to `rounded-sm` to `rounded-xl` and `rounded-pill`. `rounded-full` stays a true circle, for spinners and avatars. The width of every bare `border` utility comes from `--ds-border-width`.
+
+<Unstyled>
+  <ThemeTokenTable />
+</Unstyled>
+
+## Density
+
+Control heights, inline padding and table cell padding follow `data-density`, or the theme's default when the attribute is missing.
+
+<Unstyled>
+  <DensityTable />
+</Unstyled>
+
+## Motion
+
+The same for every theme. With `prefers-reduced-motion: reduce`, all three durations become `0ms`, so every transition built on them stops at once. The rules are in `docs/motion-and-delight-plan.md`.
+
+<Unstyled>
+  <MotionTable />
+</Unstyled>

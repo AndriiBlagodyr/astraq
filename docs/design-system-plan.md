@@ -93,7 +93,7 @@ Fonts, radii and motion are shared across themes.
 - **Deferred tokens:** `bg-inverse`, `fg-disabled`, `info`, and hover/active tone steps have no consumer yet. Add them when a component needs them.
 - **`fg-subtle` bar:** it must reach 4.5:1, not 3:1, because hints and table headers use it. Light-mode `fg-subtle` darkened from `#7f93b0` (~3:1) to `#596c88`.
 - **Midnight gradient:** the middle stop moved from `#725cff` to `#7562fe`, because button text only reached 4.44:1 on it.
-- **Legacy names:** pre-PR 2 `--ds-*` names remain as aliases in the generated CSS, for `apps/web`. Remove them in PR 7.
+- **Legacy names:** pre-PR 2 `--ds-*` names remain as aliases in the generated CSS, for `apps/web`. Removed in PR 7.
 
 **Learning focus:** color science (OKLCH vs. sRGB), perceptual scales, codegen, testing design constraints.
 
@@ -344,11 +344,27 @@ Each tier is its own PR, and the next starts after the previous one merges:
 - **App CSS lost story-only utilities.** The old `@source` globs scanned `*.stories.tsx`, tests and comments, so classes such as `h-10` or `max-w-md` that only stories use ended up in `apps/web`'s CSS. Compiling `global.css` against `src/` and against `dist/` shows the only differences are those classes, plus `collapse`, `visible` and `h-96`, which come from comment words. No component class was lost.
 - **Custom themes stay in the package.** Themes are solved for contrast at build time and generate the registry, so the README sends custom themes through `src/tokens/themes/`. There is no runtime registration API.
 
-## PR 7 — Docs and cleanup
+## PR 7 — Docs and cleanup ✅
 
 1. Storybook docs pages: Introduction, Tokens (live swatches from `tokens.json`), Themes, Accessibility, Contributing (the component checklist above).
 2. A lint rule that fails if `components/**` contains a hex, `rgb(`, `oklch(`, or `--p-*` reference.
 3. Delete the transitional aliases in `styles/index.css` once the `layout.module.css` migration (Phase 0 follow-up) is complete.
+
+### PR 7 — what shipped
+
+- **Docs pages:** `@storybook/addon-docs` and five MDX pages in `src/docs/`, sorted first in the sidebar. Their blocks (`src/docs/blocks.tsx`) read the build's own files, so the pages can't drift from what ships:
+  - **Tokens:** color swatches for any theme and mode, from `tokens.json`, with the utility name parsed from the `@theme` mapping in `styles/index.css`. Also type and shape per theme, density values and motion tokens.
+  - **Themes:** what each `ThemeSource` field controls, a card per theme with its seeds and a sample in both modes, and how to add a theme.
+  - **Accessibility:** automatic checks, built-in behavior (focus, forced colors, reduced motion, keyboard), the manual checklist, and a contrast report. The report runs the resolver in the browser and shows the lowest ratio per group for each of the 12 theme × mode pairs.
+  - **Contributing:** how to add a component, and the checklist. The README's checklist moved here, and the README links to the pages.
+- **Lint rule:** `astraq-ui/no-raw-color`, hand-written in `eslint-rules/no-raw-color.mjs`, runs on `src/components/**` and checks strings, template literals and JSX text. A `RuleTester` file keeps each pattern matching, because a broken regex would pass everything and nothing would report it.
+- **Aliases:** the pre-PR 2 `--ds-*` aliases are gone from the generated CSS; nothing read them. The CSS-module aliases moved from the package's `styles/index.css` to `apps/web/app/legacy-aliases.css`.
+
+**Deliberate differences**
+- **Aliases moved, not deleted.** The `layout.module.css` migration isn't done: about 1,600 lines of CSS modules still read the old names. Deleting them would break `apps/web`, and the migration is Phase 0 app work, not package work. So they moved to the app, and the package no longer carries app-specific names. Delete `legacy-aliases.css` when the migration finishes.
+- **The rule also rejects Tailwind palette classes** (`bg-red-500`, `text-white`) and other color functions (`hsl(`, `oklab(`, ...). They ignore the theme in the same way. `color-mix()` over `var(--ds-*)` is allowed.
+- **Stories and tests are exempt** from the rule. They may hold fixtures, such as the inline SVG in the Avatar story.
+- **Docs pages pick their own theme.** Storybook's toolbar applies to stories through a decorator, and MDX pages don't run it. The Tokens page has its own theme and mode switch, built from SegmentedControl.
 
 ## Out of scope
 
