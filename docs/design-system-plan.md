@@ -170,16 +170,16 @@ Fonts, radii and motion are shared across themes.
 - **Fonts:** Fraunces, JetBrains Mono, Geist and Sora are named in the stacks but not loaded. Loading them is part of PR 6's "Consuming" README. Until then, each theme falls back to the next font in its stack.
 - **`fg-on-brand` test:** it now checks only the brand gradient stops, the primary button fill. That's the only place on-brand text sits, and solid themes repeat one color across the stops.
 
-## PR 5 — Component expansion
+## PR 5 — Component expansion ✅
 
 Build components in tiers, each wrapping Base UI unless noted. Motion requirements for `Skeleton`, `Toast`, `Drawer`, `EmptyState`, plus the new spring presets and `AnimatedNumber`, are in [motion-and-delight-plan.md](motion-and-delight-plan.md).
 
 Each tier is its own PR, and the next starts after the previous one merges:
 
 - **PR 5a — Tier A (forms) ✅:** Field (label, description, error wiring), Input, Textarea, Checkbox, CheckboxGroup, RadioGroup, Switch, Select (restyled), Combobox, Autocomplete, NumberField, Slider, Toggle, ToggleGroup, Form. **SegmentedControl is hand-built** (ADR 0002 §6).
-- **PR 5b — Tier B (overlays and feedback):** Popover, Menu, ContextMenu, AlertDialog, Drawer (Dialog variant), Toast, PreviewCard, Progress, Meter, Skeleton, Spinner.
-- **PR 5c — Tier C (display):** AnimatedNumber and the spring presets, Avatar, Separator, ScrollArea, Kbd, Accordion, Collapsible, Toolbar, EmptyState, Stat (generic label/value/delta; no market semantics).
-- **PR 5d — Tier D (data):** the Table primitive restyled with density and sticky headers, a DataTable recipe (TanStack Table + Virtual, supporting sort, column visibility, and row selection), and DateRangePicker (React Aria, wrapped).
+- **PR 5b — Tier B (overlays and feedback) ✅:** Popover, Menu, ContextMenu, AlertDialog, Drawer (Dialog variant), Toast, PreviewCard, Progress, Meter, Skeleton, Spinner.
+- **PR 5c — Tier C (display) ✅:** AnimatedNumber and the spring presets, Avatar, Separator, ScrollArea, Kbd, Accordion, Collapsible, Toolbar, EmptyState, Stat (generic label/value/delta; no market semantics).
+- **PR 5d — Tier D (data) ✅:** the Table primitive restyled with density and sticky headers, a DataTable recipe (TanStack Table + Virtual, supporting sort, column visibility, and row selection), and DateRangePicker (React Aria, wrapped).
 
 ### PR 5a — what shipped
 
@@ -278,6 +278,42 @@ Each tier is its own PR, and the next starts after the previous one merges:
 - **Accordion keyboard:** triggers are plain Tab stops. The APG accordion pattern dropped arrow-key roving focus, and Base UI 1.8 follows it (`loopFocus` and `orientation` are deprecated).
 - **`bouncySubtle` uses `bounce: 0.25`:** at 0.15 the overshoot was 0.6%, which isn't visible. 0.25 gives about 3%.
 - **EmptyState entry:** a CSS `@starting-style` fade (`starting:opacity-0`), not a keyframe, so it stays RSC-safe and reads the tokens.
+
+### PR 5d — what shipped
+
+- **Table, restyled:** still plain HTML parts and RSC-safe. New parts are `Thead`, `Tbody`, `Tfoot`, `TableCaption` and `TableSortButton`.
+  - **Density:** padding already read the density tokens. `data-density` on the `TableWrap` now tightens one table on its own.
+  - **Sticky headers:** `TableWrap scroll` makes the wrap the scroll container and a Tab stop. `Table sticky` pins the header row to it, on an opaque fill that blurs what scrolls under it on glass themes.
+  - **Borders:** the table uses `border-separate` with no spacing. Collapsed borders belong to the table, so a stuck header cell would lose its rule.
+  - **Alignment:** `Th` and `Td` take `align` (`start | center | end`), so numbers line up on the right.
+  - **Sorting:** `Th sort` sets `aria-sort`. `TableSortButton` is the control inside it and fills the cell; it shows the direction and, for multi-column sorts, the sort order.
+- **DataTable (a recipe on TanStack Table v9 + TanStack Virtual):**
+  - `useDataTable({ data, columns, ... })` builds the model: sorting, row selection and column visibility. Each slice is internal unless you pass its value and its change handler.
+  - `DataTable` renders it as a virtualized table with a sticky header. Spacer rows above and below the rendered rows keep native table layout. `aria-rowcount` and `aria-rowindex` give screen readers each row's true position.
+  - `DataTableColumnsMenu` is a Menu of checkbox items for hideable columns. It stays open while you toggle.
+  - `createDataTableColumnHelper<T>()` gives typed columns. `meta.align` aligns a column, and `meta.label` names it in the menu.
+  - Only the features used are registered, along with four built-in sort functions. So `sortFn: "auto"` and `"datetime"` resolve, and the rest of TanStack Table stays out of the bundle.
+  - **Selection:** `enableRowSelection` (or a per-row function) adds a checkbox column. Shift+click or Shift+Space on a row's box selects a range, and the header box goes to mixed.
+  - **Sorting:** Shift+click on a header adds a column to the sort.
+  - 50,000 rows sort in about 0.3s with 16 rows in the DOM.
+- **DateRangePicker (React Aria, wrapped):** two date fields and a range calendar in a popover.
+  - Dates go in and out as `YYYY-MM-DD` strings, so no React Aria or `@internationalized/date` type is in the public API.
+  - `min`, `max` and `isDateUnavailable` limit the calendar and validate typed dates. `required`, `invalid` and `error` handle validation; without `error`, React Aria's built-in message shows.
+  - `startName` and `endName` submit the dates in native `FormData`.
+  - `presets` lists quick ranges beside the calendar. The active one is `aria-pressed`, and picking one closes the popover.
+  - It shares the control surface (`controlVariants`, `listbox.inputGroup`) and the popup surface with the Base UI controls.
+  - The ends of the range use the solved `bg-checked` fill, and the days between get a brand tint.
+- **Accessibility:**
+  - forced-colors rules for the calendar range: the band becomes `Highlight`, and its ends are outlined.
+  - axe is clean on every new story in the default theme, Paper light and High contrast. It caught two problems, both fixed: hovered rows failing contrast in High contrast (see Row hover below), and scrolling wraps that keyboard users couldn't reach.
+- **Tests:** one new file, `data-table.test.tsx`, for the failure described under "Deliberate differences" below. Without the fix, sorting does nothing and nothing reports an error.
+
+**Deliberate differences**
+- **Recipe, not grid:** DataTable renders a `<table>`, not `role="grid"`. Tab moves through its sort buttons and checkboxes. Arrow-key cell navigation would only make sense for editable cells, which aren't planned.
+- **TanStack Table v9, not v8:** v9 is the current major, and the plan didn't name a version. In v9, `useTable` spreads its options over each feature's defaults, so an option passed as `undefined` erases that default; `onSortingChange: undefined` leaves sorting without an updater. `useDataTable` passes only the options the caller set.
+- **DateRangePicker isn't a Field:** React Aria wires its own label, description and error. So it takes them as props, styled like `FieldLabel`, `FieldDescription` and `FieldError`, and it can't sit inside a Base UI `Field`.
+- **Row hover:** the tint is now `foreground/5` instead of `border-subtle`. In the High contrast theme the border token is mid-grey, and text on a hovered row measured 3.31:1, below 4.5:1. This changes the hover tint in `apps/web` slightly.
+- **Calendar months:** it shows one month. Two side by side would crowd the popover once presets sit next to it, and with Page Up/Down, crossing months is one key press.
 
 ## PR 6 — Distribution
 

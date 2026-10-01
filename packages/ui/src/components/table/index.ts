@@ -1,1 +1,19 @@
-export { Table, TableWrap, Td, Th, Tr, type TrProps } from "./table";
+export {
+  Table,
+  TableCaption,
+  TableSortButton,
+  TableWrap,
+  Tbody,
+  Td,
+  Tfoot,
+  Th,
+  Thead,
+  Tr,
+  type TableAlign,
+  type TableProps,
+  type TableSortButtonProps,
+  type TableWrapProps,
+  type TdProps,
+  type ThProps,
+  type TrProps,
+} from "./table";

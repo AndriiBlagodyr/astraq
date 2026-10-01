@@ -292,6 +292,23 @@
     background: ButtonText;
   }
 
+  /* Calendar range: the band is a tint, the ends a fill; both are dropped. */
+  [data-slot="calendar-cell"][data-selected] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  [data-slot="calendar-cell"][data-selected] > span {
+    background: transparent;
+    color: HighlightText;
+  }
+
+  [data-slot="calendar-cell"]:is([data-selection-start], [data-selection-end]) > span {
+    outline: 2px solid HighlightText;
+    outline-offset: -2px;
+  }
+
   [data-slot="slider-indicator"] {
     forced-color-adjust: none;
     background: Highlight;
