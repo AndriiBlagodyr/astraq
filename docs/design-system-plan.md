@@ -250,6 +250,35 @@ Each tier is its own PR, and the next starts after the previous one merges:
 - **axe:** no component-level violations. The only findings are page-level rules (no `main`, no `h1`) that come from the bare story iframe.
 - **Reduced motion and forced colors:** both emulated in Chrome.
 
+### PR 5c — what shipped
+
+- **Spring presets (`motion/springs.ts`):** `springs.snappy`, `springs.gentle` and `springs.bouncySubtle`. Each is a plain `{ type: "spring", visualDuration, bounce }` object in the `motion` library's shape, with `visualDuration` read from the motion tokens (fast, slow, base). The package still has no animation-library dependency.
+  - **Hand-built layer:** `springEasing(preset)` solves the damped harmonic oscillator, using `motion`'s visualDuration + bounce mapping so CSS and JS springs match. It samples the curve into a CSS `linear()` easing plus the duration it needs to settle.
+  - `springs.test.ts` checks that every curve starts at 0 and settles at 1, that `bounce: 0` never overshoots, and that `bouncySubtle` does. A sign or bound error would only show up as a subtly wrong feel.
+- **AnimatedNumber:** formats with `Intl.NumberFormat` (`format`, `locales`). Each Latin digit is a 0–9 strip that slides with `translate` on the preset's `linear()` easing. Columns are keyed from the right, so the ones digit stays the ones digit as the number grows.
+  - `tabular-nums` keeps widths stable, and an invisible copy of the digit keeps each column's baseline, via `overflow: clip`, which doesn't reset the baseline the way `hidden` does.
+  - Screen readers get the formatted value once; it isn't a live region. `motion-reduce:transition-none` makes it instant.
+  - No state and no `"use client"`: CSS transitions do the rolling, so it's RSC-safe.
+- **Display components:**
+  - `Avatar` (`sm | md | lg`, image plus fallback)
+  - `Separator`
+  - `ScrollArea`, with overlay scrollbars that show while hovering or scrolling. An edge that has more content past it fades, using a mask driven by Base UI's `--scroll-area-overflow-*` distances. The mask would clip the viewport's focus ring, so the root draws it.
+  - `Kbd` / `KbdGroup` (a `kbd` of `kbd`s is the HTML for a combination)
+  - `Accordion`, `Collapsible`
+  - `Toolbar` (buttons share `toggleVariants`, so `render={<Toggle />}` lines up)
+  - `EmptyState`
+  - `Stat`
+- **Stat semantics:** `trend` (the arrow) and `tone` (the color) are separate props, because the component can't know whether up is good; a falling drawdown is good news. It renders a flat `<dl>` grid, since a `div` inside a `dl` may only wrap dt+dd groups.
+- **Accessibility:**
+  - forced-colors rules for separators, toolbar separators, scroll thumbs, and pressed toolbar toggles.
+  - An axe pass over the built stories in Chrome is clean. It caught `aria-label` on `kbd`, which is prohibited on elements without a role; symbol keys use `sr-only` text instead.
+
+**Deliberate differences**
+- **Disclosure motion:** Accordion and Collapsible panels don't animate height (motion rule 4). The content fades and settles 4px into place, and closing is instant. Base UI's examples transition `height` on `--accordion-panel-height`.
+- **Accordion keyboard:** triggers are plain Tab stops. The APG accordion pattern dropped arrow-key roving focus, and Base UI 1.8 follows it (`loopFocus` and `orientation` are deprecated).
+- **`bouncySubtle` uses `bounce: 0.25`:** at 0.15 the overshoot was 0.6%, which isn't visible. 0.25 gives about 3%.
+- **EmptyState entry:** a CSS `@starting-style` fade (`starting:opacity-0`), not a keyframe, so it stays RSC-safe and reads the tokens.
+
 ## PR 6 — Distribution
 
 1. `tsdown.config.ts`:
