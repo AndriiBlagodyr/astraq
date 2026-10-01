@@ -315,7 +315,7 @@ Each tier is its own PR, and the next starts after the previous one merges:
 - **Row hover:** the tint is now `foreground/5` instead of `border-subtle`. In the High contrast theme the border token is mid-grey, and text on a hovered row measured 3.31:1, below 4.5:1. This changes the hover tint in `apps/web` slightly.
 - **Calendar months:** it shows one month. Two side by side would crowd the popover once presets sit next to it, and with Page Up/Down, crossing months is one key press.
 
-## PR 6 — Distribution
+## PR 6 — Distribution ✅
 
 1. `tsdown.config.ts`:
    - output ESM with `.d.ts`;
@@ -326,6 +326,23 @@ Each tier is its own PR, and the next starts after the previous one merges:
 3. Remove `transpilePackages` from `apps/web` if it's no longer needed.
 4. Add Changesets at the repo root, then the first changeset: `0.2.0`.
 5. Write a "Consuming @astraq/ui" section in the README covering the CSS import, the `@source` line, font loading, ThemeScript in `<head>`, and how to add a custom theme.
+
+### PR 6 — what shipped
+
+- **Build:** `tsdown` (0.23, Rolldown) writes unbundled ESM with `.d.ts` and source maps to `dist/`. Each source file becomes its own output file, so every one of the 40 `"use client"` files keeps its directive. A bundled chunk would hoist the directive or drop it.
+- **Entries:** the root, one per component folder (`@astraq/ui/<folder>`), plus `theme`, `motion` and `cn`. `exports` lists them by hand, with a `./*` pattern for the components. `sideEffects: ["*.css"]`, `files: ["dist"]`.
+- **CSS:** `scripts/postbuild.ts` runs as tsdown's `onSuccess`, so it also runs after each rebuild in watch mode. It writes:
+  - `dist/tokens.css`: a copy of the generated variables.
+  - `dist/styles.css`: the Tailwind entry, with its `@source` globs rewritten from `src/**/*.{ts,tsx}` to `dist/**/*.js`.
+- **Directive check:** the same script fails the build if a `"use client"` file in `src/` lost its directive in `dist/`. It replaces Rolldown's `MODULE_LEVEL_DIRECTIVE` warning, which is turned off because it fires on every client file even though unbundled output keeps them.
+- **apps/web:** `transpilePackages` is gone, and Next reads the built ESM. Turbo's `dev` and `typecheck` now depend on `^build`. `pnpm dev:web` runs `turbo dev --filter=web...`, so the package watcher starts with the app. `pnpm test:unit:web` builds the package first.
+- **Changesets:** `@changesets/cli` 3 at the root, with `privatePackages.version` on and the apps ignored. The first changeset moves `@astraq/ui` to `0.2.0`. `pnpm changeset` adds one, and `pnpm version-packages` applies them.
+- **README:** a "Consuming @astraq/ui" section covers entries, the CSS import and `@source`, `tokens.css`, font loading, `ThemeScript` in `<head>`, and custom themes.
+
+**Deliberate differences**
+- **`styles.css` is uncompiled source, not built CSS.** The plan's "full: Tailwind plus the mapping" is kept as a Tailwind entry that the app compiles. Shipping compiled utilities would give the app two Tailwind layers with conflicting order, and the app's own classes still need its own Tailwind. That's also why `tailwindcss` 4 is now a peer dependency.
+- **App CSS lost story-only utilities.** The old `@source` globs scanned `*.stories.tsx`, tests and comments, so classes such as `h-10` or `max-w-md` that only stories use ended up in `apps/web`'s CSS. Compiling `global.css` against `src/` and against `dist/` shows the only differences are those classes, plus `collapse`, `visible` and `h-96`, which come from comment words. No component class was lost.
+- **Custom themes stay in the package.** Themes are solved for contrast at build time and generate the registry, so the README sends custom themes through `src/tokens/themes/`. There is no runtime registration API.
 
 ## PR 7 — Docs and cleanup
 

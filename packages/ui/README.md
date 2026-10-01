@@ -12,6 +12,8 @@ Astraq's semantic design tokens and accessible React components.
 ## Commands
 
 ```bash
+pnpm --filter @astraq/ui build        # dist/: ESM, .d.ts, styles.css, tokens.css
+pnpm --filter @astraq/ui dev          # the same build, in watch mode
 pnpm --filter @astraq/ui storybook
 pnpm --filter @astraq/ui test:unit
 pnpm --filter @astraq/ui typecheck
@@ -90,12 +92,65 @@ Every component must:
 - **Stories:** have a `States` story that shows every state.
 - **Client code:** add `"use client"` only when the file needs hooks or browser APIs.
 
-## Consuming
+## Consuming @astraq/ui
 
-```css
-/* app/globals.css */
-@import "@astraq/ui/styles.css";
-@source "./"; /* the package scans only itself; declare your own sources */
+Apps import the built package from `dist/`, not `src/`. Build it first: `pnpm build` and `pnpm dev` run it for you through turbo, `pnpm dev:web` starts the package watcher next to the app, and `pnpm --filter @astraq/ui build` builds it on its own. Storybook and the package's own tests read `src/` and don't need a build.
+
+### JavaScript
+
+```tsx
+import { Button, Dialog, ThemeProvider } from "@astraq/ui"; // everything
+import { DataTable, useDataTable } from "@astraq/ui/data-table"; // one component
+import { ThemeScript, useTheme } from "@astraq/ui/theme";
+import { springs } from "@astraq/ui/motion";
+import { cn } from "@astraq/ui/cn";
 ```
 
-Render `<ThemeScript />` in `<head>` to apply the stored theme, mode and density before first paint. Then wrap the app in `ThemeProvider` and `TooltipProvider`.
+Every component folder is its own entry, named after the folder. The output is unbundled ESM, so every file that starts with `"use client"` still does in `dist/`. Display components stay Server Components, and a bundler only pulls in the files an app imports. `react`, `react-dom` and `tailwindcss` are peer dependencies.
+
+### CSS
+
+```css
+/* app/global.css */
+@import "@astraq/ui/styles.css";
+
+/* The package scans only its own files for classes. Declare your app's. */
+@source "./";
+@source "../lib";
+```
+
+`styles.css` is a Tailwind v4 entry, not compiled CSS. It imports Tailwind and the theme tokens, maps tokens to utilities (`bg-surface`, `text-muted`, `h-control-md`, ...), and adds the base layer and forced-colors rules. The app's Tailwind compiles it together with the app's own classes, so the app gets one set of utilities. Its `@source` lines point at the package's `dist/*.js`, so you only list your own folders.
+
+Apps without Tailwind import `@astraq/ui/tokens.css` instead. It contains only the `--ds-*` variables for every theme, mode and density, and no utilities. The components need the utilities, so this is for apps that style their own markup with the tokens.
+
+### Fonts
+
+The package names font families but doesn't load them. Each theme's `--ds-font-sans`, `--ds-font-display` and `--ds-font-mono` list a family first, then fallbacks: Geist, Sora, Fraunces and JetBrains Mono. Load the ones your themes use under those exact family names, with `@font-face` rules or a font provider's stylesheet. If a family isn't loaded, the browser uses the next one in the list, and nothing breaks.
+
+### Theme, mode and density
+
+Render `ThemeScript` in `<head>`. It runs before first paint and sets `data-theme` and `data-mode` on `<html>` from storage, or from the system color scheme when the mode is `system`. It sets `data-density` only when one is stored; otherwise the theme's default density applies. So the first frame is already themed. Then wrap the app in `ThemeProvider`, which reads and changes the same attributes, and `TooltipProvider`.
+
+```tsx
+// app/layout.tsx
+import { ThemeScript } from "@astraq/ui/theme";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" data-theme="forelume" data-mode="dark" suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
+      <body>
+        <Providers>{children}</Providers> {/* "use client": ThemeProvider + TooltipProvider */}
+      </body>
+    </html>
+  );
+}
+```
+
+`suppressHydrationWarning` is needed because the script changes `<html>` attributes before React hydrates.
+
+### Custom themes
+
+Themes are compiled into the package. The token build solves each theme's text, focus and chart colors against WCAG contrast. It also writes the registry that `ThemeProvider`, `ThemeScript` and the `ThemeName` type read. So a custom theme is added in this package, not in the app: follow [To add a theme](#tokens-and-themes) above, then rebuild. Setting `--ds-*` variables on your own `[data-theme]` selector skips the contrast check, and the provider falls back to the default theme for a name it doesn't know.

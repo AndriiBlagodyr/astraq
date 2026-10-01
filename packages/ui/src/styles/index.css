@@ -3,7 +3,7 @@
 
 /*
  * The package scans only its own source. Consumers declare their own
- * `@source` for app code (see apps/web/app/globals.css).
+ * `@source` for app code (see apps/web/app/global.css).
  */
 @source "../components/**/*.{ts,tsx}";
 @source "../theme/**/*.{ts,tsx}";
