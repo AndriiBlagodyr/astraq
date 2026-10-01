@@ -20,13 +20,16 @@ import {
   SelectTrigger,
   Table,
   TableWrap,
+  Tbody,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
   Td,
   Th,
+  Thead,
   Tooltip,
+  Tr,
 } from "../index";
 
 const meta = {
@@ -168,29 +171,29 @@ export const DataTable: Story = {
   render: () => (
     <TableWrap>
       <Table>
-        <thead>
-          <tr>
+        <Thead>
+          <Tr>
             <Th>Symbol</Th>
-            <Th>Price</Th>
-            <Th>Change</Th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
+            <Th align="end">Price</Th>
+            <Th align="end">Change</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          <Tr>
             <Td>AAPL</Td>
-            <Td>$214.05</Td>
-            <Td>
+            <Td align="end">$214.05</Td>
+            <Td align="end">
               <Badge tone="positive">+2.84%</Badge>
             </Td>
-          </tr>
-          <tr>
+          </Tr>
+          <Tr>
             <Td>NVDA</Td>
-            <Td>$181.32</Td>
-            <Td>
+            <Td align="end">$181.32</Td>
+            <Td align="end">
               <Badge tone="negative">-1.12%</Badge>
             </Td>
-          </tr>
-        </tbody>
+          </Tr>
+        </Tbody>
       </Table>
     </TableWrap>
   ),

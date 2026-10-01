@@ -13,6 +13,8 @@ export * from "./components/checkbox-group";
 export * from "./components/collapsible";
 export * from "./components/combobox";
 export * from "./components/context-menu";
+export * from "./components/data-table";
+export * from "./components/date-range-picker";
 export * from "./components/dialog";
 export * from "./components/drawer";
 export * from "./components/empty-state";
