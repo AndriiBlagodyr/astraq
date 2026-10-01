@@ -4,7 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["storybook-static/**"] },
+  { ignores: ["storybook-static/**", "dist/**"] },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {

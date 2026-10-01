@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.18.3",
   "scripts": {
     "dev": "turbo dev",
-    "dev:web": "pnpm --filter web dev",
+    "dev:web": "turbo dev --filter=web...",
     "dev:api": "pnpm --filter @astraq/api dev",
     "dev:storybook": "pnpm --filter @astraq/ui storybook",
     "build": "turbo build",
@@ -14,14 +14,17 @@
     "test": "pnpm test:unit",
     "test:unit": "pnpm test:unit:ui && pnpm test:unit:web && pnpm test:unit:api && pnpm test:unit:ml",
     "test:unit:ui": "pnpm --filter @astraq/ui test:unit",
-    "test:unit:web": "pnpm --filter web test:unit",
+    "test:unit:web": "pnpm --filter @astraq/ui build && pnpm --filter web test:unit",
     "test:unit:api": "pnpm --filter @astraq/api test:unit",
     "test:unit:ml": "uv run --directory services/ml pytest",
     "test:e2e": "pnpm test:e2e:web",
     "test:e2e:web": "pnpm --filter web test:e2e",
-    "storybook:build": "pnpm --filter @astraq/ui build-storybook"
+    "storybook:build": "pnpm --filter @astraq/ui build-storybook",
+    "changeset": "changeset",
+    "version-packages": "changeset version"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "turbo": "^2.10.12"
   }
 }

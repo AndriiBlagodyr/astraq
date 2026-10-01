@@ -3,16 +3,42 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "files": [
+    "dist"
+  ],
   "exports": {
-    ".": "./src/index.ts",
-    "./styles.css": "./src/styles/index.css",
-    "./tokens.css": "./src/tokens/index.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./theme": {
+      "types": "./dist/theme/index.d.ts",
+      "import": "./dist/theme/index.js"
+    },
+    "./motion": {
+      "types": "./dist/motion/index.d.ts",
+      "import": "./dist/motion/index.js"
+    },
+    "./cn": {
+      "types": "./dist/lib/cn.d.ts",
+      "import": "./dist/lib/cn.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./tokens.css": "./dist/tokens.css",
+    "./*": {
+      "types": "./dist/components/*/index.d.ts",
+      "import": "./dist/components/*/index.js"
+    }
   },
   "scripts": {
-    "build": "tsx scripts/build-tokens.ts --check && tsc --noEmit",
+    "build": "tsx scripts/build-tokens.ts --check && tsdown",
+    "dev": "tsdown --watch",
     "tokens": "tsx scripts/build-tokens.ts",
     "tokens:check": "tsx scripts/build-tokens.ts --check",
-    "lint": "eslint src scripts .storybook",
+    "lint": "eslint src scripts .storybook tsdown.config.ts",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
     "storybook": "storybook dev -p 6006",
@@ -20,7 +46,8 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -52,6 +79,7 @@
     "storybook": "^10.5.10",
     "storybook-addon-pseudo-states": "10.5.10",
     "tailwindcss": "^4.3.3",
+    "tsdown": "^0.23.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.68.0",
