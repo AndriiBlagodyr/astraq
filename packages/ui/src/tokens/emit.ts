@@ -8,7 +8,6 @@ import {
   COLOR_TOKENS,
   DENSITIES,
   DENSITY_VALUES,
-  LEGACY_ALIASES,
   MODES,
   SHARED_TOKENS,
   THEME_TOKENS,
@@ -100,13 +99,6 @@ ${themeBlocks.join("\n\n")}
 ${densityBlocks.join("\n\n")}
 
 ${modeBlocks.join("\n\n")}
-
-/* Pre-PR 2 names for apps/web. Remove in PR 7. */
-:root {
-${Object.entries(LEGACY_ALIASES)
-  .map(([legacy, token]) => `  --ds-${legacy}: var(--ds-${token});`)
-  .join("\n")}
-}
 `;
 }
 

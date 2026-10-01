@@ -1,0 +1,59 @@
+/*
+ * Old token names that the CSS modules (layout.module.css, page.module.css,
+ * ...) still read. They map onto @astraq/ui's --ds-* tokens. Delete this file
+ * once those routes are rebuilt from @astraq/ui components (the Phase 0
+ * follow-up in ROADMAP.md). New code uses Tailwind utilities or --ds-* directly.
+ */
+ :root {
+  --font-sans: var(--ds-font-sans);
+  --font-display: var(--ds-font-display);
+  --font-mono: var(--ds-font-mono);
+  --radius-sm: var(--ds-radius-sm);
+  --radius-md: var(--ds-radius-md);
+  --radius-lg: var(--ds-radius-lg);
+  --radius-xl: var(--ds-radius-xl);
+  --gradient-brand: var(--ds-gradient-brand);
+  --gradient-page: var(--ds-gradient-page);
+  --gradient-auth-panel: var(--ds-gradient-surface);
+  --gradient-surface-elevated: var(--ds-gradient-surface);
+  --gradient-panel-highlight: var(--ds-gradient-surface);
+  --color-brand-contrast: var(--ds-fg-on-brand);
+  --color-bg-canvas: var(--ds-bg-canvas);
+  --color-bg-elevated: var(--ds-bg-subtle);
+  --color-surface: var(--ds-bg-surface);
+  --color-surface-strong: var(--ds-bg-raised);
+  --color-surface-glass: var(--ds-gradient-surface);
+  --color-button-secondary: var(--ds-bg-sunken);
+  --color-overlay-surface: var(--ds-bg-overlay);
+  --color-overlay-border: var(--ds-border-default);
+  --color-input-surface: var(--ds-bg-sunken);
+  --color-border-subtle: var(--ds-border-default);
+  --color-border-strong: var(--ds-border-strong);
+  --color-text-primary: var(--ds-fg-default);
+  --color-text-secondary: var(--ds-fg-muted);
+  --color-text-muted: var(--ds-fg-subtle);
+  --color-accent-cyan: var(--ds-brand);
+  --color-accent-blue: var(--ds-brand-strong-fg);
+  --color-accent-gold: var(--ds-brand-warm);
+  --color-success: var(--ds-positive-fg);
+  --color-danger: var(--ds-negative-fg);
+  --color-warning: var(--ds-warning-fg);
+  --color-focus-ring: var(--ds-focus-halo);
+  --color-table-row: var(--ds-border-subtle);
+  --color-tag-bg: color-mix(in srgb, var(--ds-brand-strong) 9%, transparent);
+  --color-tag-border: color-mix(
+    in srgb,
+    var(--ds-brand-strong) 18%,
+    transparent
+  );
+  --color-pill-bg: color-mix(in srgb, var(--ds-brand) 9%, transparent);
+  --color-pill-border: color-mix(in srgb, var(--ds-brand) 18%, transparent);
+  --color-panel-glow: color-mix(
+    in srgb,
+    var(--ds-brand-strong) 25%,
+    transparent
+  );
+  --shadow-soft: var(--ds-shadow-soft);
+  --shadow-brand: var(--ds-shadow-brand);
+  --shadow-focus: 0 0 0 4px color-mix(in srgb, var(--ds-focus-halo) 40%, transparent);
+}

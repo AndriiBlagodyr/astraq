@@ -1,0 +1,30 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Docs/Introduction" />
+
+# @astraq/ui
+
+Astraq's design system: semantic tokens, six themes, and accessible React components on [Base UI](https://base-ui.com). It holds the shared building blocks. Trading patterns (order tickets, the order book, PnL cells) and app shells stay in `apps/web`.
+
+## How it fits together
+
+1. **Themes are seeds.** Each theme in `src/tokens/themes/*.ts` gives a few colors plus type, shape, surface style, default density and a WCAG level.
+2. **The build solves the rest.** `scripts/build-tokens.ts` turns the seeds into every semantic token (`--ds-bg-*`, `--ds-fg-*`, `--ds-border-*`, brand, status, charts, effects) for light and dark. It moves text, focus and chart colors until they pass the theme's contrast level on every surface. It writes `tokens/index.css`, `tokens.json` (W3C DTCG) and the runtime theme registry.
+3. **Tailwind maps tokens to utilities.** `styles/index.css` turns `--ds-bg-surface` into `bg-surface`, `--ds-control-md` into `h-control-md`, and so on. Components use these utilities and never a raw color.
+4. **Three attributes pick the look.** `data-theme` picks the identity, `data-mode` picks light or dark, and `data-density` (`comfortable` | `compact`) overrides the theme's sizing. Any element can set them, so one subtree can use a different theme.
+
+## Using this Storybook
+
+- The toolbar switches **theme**, **mode** and **density** for every story.
+- **Overview/Theme matrix** shows one composition in all 12 theme × mode combinations. **Overview/Gallery** shows every component together.
+- Each component has a **States** story with hover, focus-visible, active, disabled, invalid and loading, where they apply. The pseudo-states toolbar forces `:hover`, `:focus-visible` and `:active`.
+- The **Accessibility** panel runs axe on every story. A violation fails the story's test run.
+
+## Pages
+
+- **Tokens:** every semantic token, read live from `tokens.json`.
+- **Themes:** the six themes, their seeds, and how to add one.
+- **Accessibility:** what is checked automatically, what is checked by hand, and the contrast results.
+- **Contributing:** the checklist every component must meet.
+
+To use the package in an app, read "Consuming @astraq/ui" in `packages/ui/README.md`. It covers the entry points, the CSS import, fonts and `ThemeScript`.

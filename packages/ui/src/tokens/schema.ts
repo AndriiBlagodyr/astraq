@@ -203,22 +203,3 @@ export const SHARED_TOKENS = {
   "ease-in": "cubic-bezier(0.55, 0, 1, 0.45)",
 } as const;
 
-/**
- * Pre-PR 2 names, kept as aliases so apps/web keeps working during the
- * migration. Delete in PR 7 (docs/design-system-plan.md).
- */
-export const LEGACY_ALIASES: Record<string, ColorToken | EffectToken> = {
-  background: "bg-canvas",
-  "background-elevated": "bg-subtle",
-  surface: "bg-surface",
-  "surface-strong": "bg-raised",
-  "surface-muted": "bg-sunken",
-  overlay: "bg-overlay",
-  foreground: "fg-default",
-  "foreground-secondary": "fg-muted",
-  "foreground-muted": "fg-subtle",
-  "brand-contrast": "fg-on-brand",
-  border: "border-default",
-  row: "border-subtle",
-  focus: "focus-halo",
-};

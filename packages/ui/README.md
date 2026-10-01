@@ -20,7 +20,7 @@ pnpm --filter @astraq/ui typecheck
 pnpm --filter @astraq/ui build-storybook
 ```
 
-Storybook's toolbar switches every registered theme, mode and density. **Overview/Theme matrix** shows one composition in every theme × mode. Use the pseudo-states toolbar (or the `States` stories) to review hover, focus, and active states.
+Storybook opens on the **Docs** pages (see below). Its toolbar switches every registered theme, mode and density. **Overview/Theme matrix** shows one composition in every theme × mode. Use the pseudo-states toolbar (or the `States` stories) to review hover, focus, and active states.
 
 ## Structure
 
@@ -31,6 +31,7 @@ src/
 ├── tokens/              # semantic CSS variables per theme and mode
 ├── styles/              # Tailwind entry, token mapping, base layer, forced-colors
 ├── stories/             # cross-component compositions and story helpers
+├── docs/                # Storybook docs pages (MDX) and the blocks they render
 └── lib/                 # cn(), WithClassName, shared listbox styles
 ```
 
@@ -77,20 +78,17 @@ Wrap a control in `Field` (or the `FormField` shorthand) and Base UI wires the r
 
 Every Field part (`FieldLabel`, `FieldItem`, ...) must sit inside a `Field`. SegmentedControl is hand-built rather than a Base UI control. Name it with `aria-label` / `aria-labelledby`. It submits through `name` in native `FormData`, so read `FormData` in `onSubmit` if you need its value.
 
-## Component checklist
+## Docs and contributing
 
-Every component must:
+Storybook's **Docs** pages (`src/docs/*.mdx`) are the reference:
 
-- **Styling hooks:** render `data-slot="<name>"`, merge `className` last with `cn()`, and set no outer margins.
-- **Styling source:** read semantic tokens only. No raw colors.
-- **Shape and size:** use `rounded-sm…xl` or `rounded-pill` (never `rounded-full`, except true circles), and density sizing for controls and cells (`min-h-control-md`, `px-inset-md`, `py-cell-y`), so themes and `data-density` can restyle them.
-- **Tone colors:** colored text and icons use the `*-fg` tokens (`text-negative-fg`). Base tone tokens (`bg-negative/12`, `border-negative/35`) are for fills and borders only, because they're too pale to read as text in light mode.
-- **Interaction states:** style every state that applies: hover, `focus-visible`, active, disabled (`disabled` and `aria-disabled`), invalid (`aria-invalid`), loading, read-only.
-- **Focus:** keep the global `:focus-visible` ring, or replace it with an equally visible one. Never remove focus without replacing it.
-- **Motion:** follow [docs/motion-and-delight-plan.md](../../docs/motion-and-delight-plan.md). Only transform when `motion-safe`. Durations come from `--ds-motion-*`, which drop to 0ms under reduced motion.
-- **Keyboard:** support the WAI-ARIA pattern for its role, and check it by hand in Storybook. New tests aren't required for now.
-- **Stories:** have a `States` story that shows every state.
-- **Client code:** add `"use client"` only when the file needs hooks or browser APIs.
+- **Introduction:** how themes, the token build and Tailwind fit together.
+- **Tokens:** every semantic token, read live from `tokens.json`, plus type, shape, density and motion.
+- **Themes:** the six themes, what a theme's seeds control, and how to add one.
+- **Accessibility:** what is checked automatically, what is checked by hand, and the contrast results for each theme and mode.
+- **Contributing:** how to add a component, and the checklist every component must meet.
+
+`pnpm lint` runs `astraq-ui/no-raw-color` (`eslint-rules/no-raw-color.mjs`) on `src/components/**`. It rejects hex colors, color functions such as `rgb()` and `oklch()`, `--p-*` primitives, and Tailwind palette classes such as `bg-red-500`. Stories and tests are exempt, so they can hold fixtures.
 
 ## Consuming @astraq/ui
 

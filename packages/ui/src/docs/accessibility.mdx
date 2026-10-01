@@ -1,0 +1,41 @@
+import { Meta, Unstyled } from "@storybook/addon-docs/blocks";
+import { ContrastReport } from "./blocks";
+
+<Meta title="Docs/Accessibility" />
+
+# Accessibility
+
+The target is WCAG 2.2 AA in every theme, and AAA in High contrast. Some checks run automatically and fail the build. The rest are checked by hand in Storybook for each component.
+
+## Checked automatically
+
+- **Color contrast, at build time.** The token build solves text, focus, control and chart colors against every surface they can sit on. That includes translucent surfaces flattened over the canvas, inputs inside cards, and the tone tints behind colored text. `tokens/contrast.test.ts` checks the results again on their own, so a change to a seed, curve or solver can't ship a pair below the minimum.
+- **axe, on every story.** The Accessibility addon runs axe in each story, with `a11y.test: "error"`. A violation fails the story's test run.
+- **No raw colors in components.** The `astraq-ui/no-raw-color` lint rule rejects hex values, `rgb()`, `oklch()` and other color functions, `--p-*` primitives, and Tailwind palette classes such as `bg-red-500` in `src/components/**`. A raw color can pass in one theme and fail in the other eleven combinations.
+
+### Contrast results
+
+The lowest ratio each group reaches on any surface, computed from the theme sources with the same resolver the build uses. Green means it meets the theme's minimum, shown as text / non-text.
+
+<Unstyled>
+  <ContrastReport />
+</Unstyled>
+
+## Built into every component
+
+- **Focus.** One `:focus-visible` outline for every interactive element: `--ds-focus-width` wide, in `--ds-focus-ring`, which is solved to be visible on every surface. It shows for keyboard focus only. A component may replace it with something equally visible, but never remove it.
+- **Forced colors.** In Windows High Contrast the browser replaces author colors with system colors. That erases states shown only by a fill or a shadow. `styles/index.css` puts those back with system colors: selected and highlighted items, checked controls, progress and meter fills, separators, the calendar range, and button edges.
+- **Reduced motion.** The `--ds-motion-*` durations become `0ms`. Movement uses `motion-safe:` only. The Skeleton shimmer stops. Spinners and indeterminate Progress slow down but keep moving, because a frozen loader looks stuck.
+- **Keyboard.** Every composite control follows its WAI-ARIA pattern. Most come from Base UI, and the date fields from React Aria. SegmentedControl is built by hand and follows the radio group pattern: one tab stop, arrow keys to move and check.
+- **Names and descriptions.** `Field` connects a label, a description and errors to its control through `aria-describedby`. Icon-only buttons need an `aria-label`.
+
+## Checked by hand
+
+For each new or changed component, in Storybook:
+
+1. Tab through the **States** story. Every interactive part is reachable, and its focus is visible.
+2. Use the component with the keyboard alone, following its WAI-ARIA pattern (arrows, Home/End, Escape, Enter/Space).
+3. Switch to **High contrast** and to light mode. Check that states still read.
+4. Turn on reduced motion in the OS. Check that nothing moves and nothing is lost.
+5. Check that the Accessibility panel shows no violations.
+6. Where it matters, try a screen reader (NVDA or VoiceOver). Names, roles and state changes should be announced.

@@ -1,0 +1,8 @@
+/*
+ * Tailwind's preflight removes list markers, and Storybook's docs styles
+ * only put bullets back. Restore numbers on the MDX pages' ordered lists;
+ * blocks inside <Unstyled> keep their own styles.
+ */
+ .sbdocs-content ol:not(.sb-unstyled ol) {
+  list-style: decimal;
+}

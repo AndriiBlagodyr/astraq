@@ -154,9 +154,10 @@ Base UI primitives, a generated token pipeline, 6 themes, density, and an extrac
 - PR 3 (Base UI migration) — done
 - PR 4 (6 themes + density) — done
 - PR 5a (form components, hand-built SegmentedControl) — done
-- PR 5b (overlays and feedback: Popover, Menu, ContextMenu, AlertDialog, Drawer, Toast, PreviewCard, Progress, Meter, Skeleton, Spinner sizes) — in review
-- PR 5c, 5d, 6, 7 (display, data, distribution, docs) — next
-Follow-up folded into Phase 0: app pages still style themselves with `layout.module.css` — migrate the surviving routes to `packages/ui` compositions.
+- PR 5b (overlays and feedback: Popover, Menu, ContextMenu, AlertDialog, Drawer, Toast, PreviewCard, Progress, Meter, Skeleton, Spinner sizes) — done
+- PR 5c, 5d, 6 (display, data, distribution) — done
+- PR 7 (Storybook docs pages, raw-color lint rule, alias cleanup) — in review
+Follow-up folded into Phase 0: app pages still style themselves with `layout.module.css` — migrate the surviving routes to `packages/ui` compositions, then delete `apps/web/app/legacy-aliases.css`.
 
 ---
 

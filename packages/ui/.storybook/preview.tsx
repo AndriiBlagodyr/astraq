@@ -9,6 +9,7 @@ import {
   isThemeName,
 } from "../src";
 import "../src/styles/index.css";
+import "./docs.css";
 
 const withTheme: Decorator = (Story, context) => {
   const mode = context.globals.mode === "light" ? "light" : "dark";
@@ -77,6 +78,16 @@ const preview: Preview = {
   },
   parameters: {
     controls: { expanded: true },
+    options: {
+      storySort: {
+        order: [
+          "Docs",
+          ["Introduction", "Tokens", "Themes", "Accessibility", "Contributing"],
+          "Overview",
+          "Components",
+        ],
+      },
+    },
     a11y: {
       test: "error",
     },

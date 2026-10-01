@@ -97,4 +97,4 @@ We considered making the theme the only switch, with light or dark built into ea
 - Migrating Radix to Base UI changes state selectors (`data-[state=open]` → Base UI's boolean attributes such as `data-open`) and `asChild` → `render`. `apps/web` has no direct Radix usage, so the blast radius is the package.
 - Consumers must load fonts themselves (e.g. `next/font`); the package only declares font stacks.
 - A build step now sits between package source and the app. Turbo already orders `^build`.
-- The transitional aliases in `styles/index.css` are deleted once the `layout.module.css` migration (the Phase 0 follow-up) is finished.
+- The transitional aliases, now in `apps/web/app/legacy-aliases.css` (moved out of the package in PR 7), are deleted once the `layout.module.css` migration (the Phase 0 follow-up) is finished.
