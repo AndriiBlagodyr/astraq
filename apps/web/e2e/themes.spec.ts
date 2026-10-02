@@ -6,8 +6,8 @@ test.describe("design system themes", () => {
   }) => {
     await page.goto("/");
     await page.evaluate(() => {
-      localStorage.setItem("forelume-color-mode", "dark");
-      localStorage.setItem("forelume-theme", "forelume");
+      localStorage.setItem("astraq-color-mode", "dark");
+      localStorage.setItem("astraq-theme", "forelume");
     });
     await page.reload();
 

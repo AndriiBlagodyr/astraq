@@ -90,13 +90,13 @@ describe("ThemeProvider", () => {
     await user.click(screen.getByRole("button", { name: "Use terminal" }));
     expect(screen.getByText("terminal:light:light")).toBeVisible();
     expect(document.documentElement.dataset.theme).toBe("terminal");
-    expect(localStorage.getItem("forelume-theme")).toBe("terminal");
+    expect(localStorage.getItem("astraq-theme")).toBe("terminal");
   });
 
   it("follows the OS color scheme while the preference is system", async () => {
     const user = userEvent.setup();
     const setScheme = mockColorScheme("dark");
-    localStorage.setItem("forelume-color-mode", "light");
+    localStorage.setItem("astraq-color-mode", "light");
     document.documentElement.dataset.mode = "light";
 
     render(
@@ -140,7 +140,7 @@ describe("density", () => {
     await user.click(screen.getByRole("button", { name: "Use comfortable" }));
     expect(screen.getByText("density comfortable:comfortable")).toBeVisible();
     expect(root.dataset.density).toBe("comfortable");
-    expect(localStorage.getItem("forelume-density")).toBe("comfortable");
+    expect(localStorage.getItem("astraq-density")).toBe("comfortable");
 
     await user.click(screen.getByRole("button", { name: "Use theme density" }));
     expect(screen.getByText("density compact:theme")).toBeVisible();
