@@ -1,4 +1,4 @@
-# services/ml — Astraq ML Service
+# services/ml — Forelume ML Service
 
 - Python 3.12 (pinned in `.python-version`), FastAPI, uvicorn. Package managed with `uv` (`uv.lock`, `uv sync --group dev`).
 - Style: ruff (lint + format), mypy (strict on `app/`), pytest + hypothesis.

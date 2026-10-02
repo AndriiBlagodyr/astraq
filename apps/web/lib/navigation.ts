@@ -1,45 +1,7 @@
-export const marketingNavigation = [
-  { href: "/", label: "Home" },
-  { href: "/market-data", label: "Market Data" },
-  { href: "/stocks", label: "Stocks" },
-  { href: "/predictions", label: "Predictions" },
-  { href: "/experiments", label: "Experiments" },
-] as const;
-
-export const marketingAuthActions = [
-  { href: "/login", label: "Sign in" },
-  { href: "/register", label: "Create account" },
-] as const;
-
-export const appNavigationSections = [
-  {
-    label: "Markets",
-    items: [
-      { href: "/market-data", label: "Market Data" },
-      { href: "/stocks", label: "Stocks" },
-      { href: "/watchlists", label: "Watchlists" },
-    ],
-  },
-  {
-    label: "Trading",
-    items: [
-      { href: "/portfolio", label: "Portfolio" },
-      { href: "/strategies", label: "Strategies" },
-      { href: "/backtests", label: "Backtests" },
-    ],
-  },
-  {
-    label: "Research",
-    items: [
-      { href: "/predictions", label: "Predictions" },
-      { href: "/experiments", label: "Experiments" },
-    ],
-  },
-  {
-    label: "Account",
-    items: [
-      { href: "/account", label: "Account" },
-      { href: "/status", label: "Roadmap status" },
-    ],
-  },
+// The sidebar grows with the roadmap: an item appears in the phase that gives
+// it real data (docs/ui-plan.md § Navigation). Groups (Markets, Trading,
+// Research) return once they have an item.
+export const appNavigation = [
+  { href: "/", label: "Today" },
+  { href: "/status", label: "Status" },
 ] as const;

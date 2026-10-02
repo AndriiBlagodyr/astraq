@@ -1,5 +1,5 @@
 ---
-description: Python style for Astraq ML service
+description: Python style for Forelume ML service
 globs: services/ml/**/*.py
 alwaysApply: false
 ---

@@ -6,17 +6,14 @@ export default function NotFound() {
     <main className={styles.wrap}>
       <div className={styles.panel}>
         <p className={styles.eyebrow}>404</p>
-        <h1 className={styles.title}>Route not found</h1>
+        <h1 className={styles.title}>Page not found</h1>
         <p className={styles.text}>
-          The page you requested is outside the current Forelume route map. Use the production shell routes to
-          continue exploring the app setup.
+          This page doesn&apos;t exist. Forelume adds pages as each one gets real data, so an old link may
+          point to one that was removed.
         </p>
         <div className={styles.actions}>
           <Link href="/" className={styles.primary}>
-            Back to home
-          </Link>
-          <Link href="/stocks" className={styles.secondary}>
-            Open stocks
+            Back to Today
           </Link>
         </div>
       </div>

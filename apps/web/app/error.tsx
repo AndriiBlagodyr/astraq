@@ -18,17 +18,16 @@ export default function Error({ error, reset }: ErrorProps) {
     <main className={styles.wrap}>
       <div className={styles.panel}>
         <p className={styles.eyebrow}>Application error</p>
-        <h1 className={styles.title}>Something interrupted the current view</h1>
+        <h1 className={styles.title}>Something went wrong</h1>
         <p className={styles.text}>
-          The route shell is in place, but this screen hit an unexpected error. You can retry the segment or
-          return to the dashboard.
+          This page hit an unexpected error. Try again, or check whether a service is down.
         </p>
         <div className={styles.actions}>
           <button type="button" onClick={() => reset()} className={styles.primary}>
             Try again
           </button>
-          <Link href="/stocks" className={styles.secondary}>
-            Stocks
+          <Link href="/status" className={styles.secondary}>
+            Status
           </Link>
         </div>
       </div>

@@ -1,11 +1,11 @@
-# Astraq Roadmap
+# Forelume Roadmap
 
 > **Status (2026-10-02)** — Design system v2 is done; Phase 0 (close the foundation) is next. Rewritten roadmap, see [Revision log](#revision-log).
 > **Actually working today:** NestJS skeleton (Pino, request ids, Zod env, error filter, health), `@astraq/ui` 0.2.0 (Base UI components, generated tokens, 6 themes × light/dark, density, built ESM) + Storybook with docs pages, Turborepo, `uv`-managed `services/ml` stub.
 > **Not yet real:** any database, any web → api call, any chart, CI, local infra, deployment. Most `apps/web` routes are descriptive placeholders.
 > **Rule for this block:** it describes what runs, not what is planned. Update it in the same PR that changes reality.
 
-Astraq has two jobs at once:
+Forelume has two jobs at once:
 
 1. Turn a frontend-heavy background into real fullstack depth — Node.js, Python, SQL, data modeling, infrastructure.
 2. Become a personal market-research tool you actually use — not a sandbox of disconnected experiments.
@@ -27,7 +27,7 @@ The first meaningful release lets you:
 - backtest them with bias guards you can trust
 - paper trade the same rules and see accurate portfolio PnL
 
-**The wedge** — what makes Astraq worth opening instead of TradingView: *honesty*. Backtests and paper trading share one fill model, results always show a buy-and-hold benchmark, and look-ahead or survivorship shortcuts are impossible by construction rather than by discipline. That is also where the deepest engineering learning lives.
+**The wedge** — what makes Forelume worth opening instead of TradingView: *honesty*. Backtests and paper trading share one fill model, results always show a buy-and-hold benchmark, and look-ahead or survivorship shortcuts are impossible by construction rather than by discipline. That is also where the deepest engineering learning lives.
 
 If a task doesn't move the core loop forward or clearly deepen a core engineering skill, question it.
 
@@ -169,7 +169,7 @@ Follow-ups folded into Phase 0: app pages still style themselves with `layout.mo
 **Goal:** make the repo honest, reproducible, and verified by CI before anything else is built on it.
 
 1. **Hygiene:** untrack `apps/api/tsconfig.build.tsbuildinfo`, `apps/web/test-results/`, and `services/ml/*.egg-info/`; ignore `*.tsbuildinfo`. Align `requires-python` with the pinned 3.12.
-2. **Delete placeholder routes** in `apps/web`. Keep marketing, auth screens, `/status`, and one app shell. Routes come back in the phase that fills them. The full list, the home page rewrite, and the Forelume → Astraq rename are in [docs/ui-plan.md § Phase 0 cleanup](docs/ui-plan.md#phase-0-cleanup).
+2. **Delete placeholder routes** in `apps/web`. Keep the home page, auth screens, `/status`, and one app shell. Routes come back in the phase that fills them. The full list, the home page rewrite, and the brand rules are in [docs/ui-plan.md § Phase 0 cleanup](docs/ui-plan.md#phase-0-cleanup) — done.
 3. **Local infra** in `infra/docker/compose.yml`: Postgres 16 + TimescaleDB, Redis 7. (Mongo and Mailhog join in the phases that use them.) Root scripts `pnpm infra:up` / `infra:down`.
 4. **Env validation everywhere:** `pydantic-settings` in `services/ml`; add `CORS_ORIGINS`, `DATABASE_URL`, `REDIS_URL` to the API schema. Replace `app.enableCors()` with an allowlist.
 5. **CI** (GitHub Actions): install, lint, typecheck, unit tests for all Node packages and `services/ml`, with Turborepo and `uv` caching. Add ruff + mypy to the ML job now — cheap while the codebase is tiny. Run `pnpm --filter @astraq/ui tokens:check`, so stale generated token files fail CI.
@@ -244,7 +244,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 - reuse of a rotated refresh token revokes the whole family (integration-tested)
 - users cannot read or modify another user's watchlist (tested at API level)
 - ADR 0005: "Refresh-token rotation and reuse-detection design"
-- **product check:** I keep my real watchlist in Astraq and stay logged in on my phone
+- **product check:** I keep my real watchlist in Forelume and stay logged in on my phone
 
 **Kill/pivot trigger:** if the auth core isn't stable after three weeks, ship without "log out everywhere" and fine-grained rate limits. Rotation and reuse detection are non-negotiable.
 
@@ -347,7 +347,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 ## Phase 6 — Analysis dashboard and research journal · ~3 weeks
 
-**Goal:** make Astraq the tab you open every morning.
+**Goal:** make Forelume the tab you open every morning.
 
 1. **Symbol page upgrade:** multi-pane layout with synced crosshairs, indicator overlays (EMA/SMA/Bollinger), RSI/MACD panes, markers for your fills and strategy signals.
 2. **Analysis views:** watchlist performance table, relative performance comparison, drawdown chart, returns distribution, seasonality heatmap (`d3`).
@@ -363,7 +363,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 - core pages are usable at phone and desktop widths
 - symbol page interaction stays under 100 ms on 10 years of daily bars (measured)
 - ADR 0012: "Chart composition: lightweight-charts panes vs d3 views"
-- **product check:** Astraq replaced one daily habit (finviz, TradingView lite, a spreadsheet)
+- **product check:** Forelume replaced one daily habit (finviz, TradingView lite, a spreadsheet)
 
 **Kill/pivot trigger:** if sourcing news is harder than displaying it, ship charts and the journal without news.
 
@@ -419,7 +419,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 ## Phase 9 — Realtime and alerts · ~3–4 weeks
 
-**Goal:** make Astraq feel alive without making it fragile.
+**Goal:** make Forelume feel alive without making it fragile.
 
 1. **`services/ingest`** (Python): Alpaca websocket (IEX) for watched symbols → Redis Streams, with reconnects, heartbeats, and gap backfill.
 2. Intraday bars (1-minute hypertable + continuous aggregates). Paper-trading fills move to latest-trade price during the session.
@@ -442,7 +442,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 ## Phase 10 — Operate: observability, performance, reliability · ~3 weeks
 
-**Goal:** run Astraq like a small production system. There's real traffic by now, so the dashboards mean something.
+**Goal:** run Forelume like a small production system. There's real traffic by now, so the dashboards mean something.
 
 1. OpenTelemetry across web, api, ml workers, and ingest; metrics to Prometheus + Grafana (or Grafana Cloud's free tier).
 2. Dashboards: API latency, queue depth, job failures, ingestion lag, data freshness, model serve time.

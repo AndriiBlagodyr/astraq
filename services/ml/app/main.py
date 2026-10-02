@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 
-
-app = FastAPI(title="Astraq ML Service")
+app = FastAPI(title="Forelume ML Service")
 
 
 @app.get("/health")

@@ -1,7 +1,7 @@
 import { useId } from "react";
-import styles from "./AstraqLogo.module.css";
+import styles from "./ForelumeLogo.module.css";
 
-type AstraqLogoProps = {
+type ForelumeLogoProps = {
   className?: string;
   /**
    * When true, marks the SVG as decorative (aria-hidden) and skips the
@@ -16,7 +16,7 @@ type AstraqLogoProps = {
  * cone that carries a spark: the predicted target. Colors come from the
  * `--ds-brand-*` tokens, so the mark follows every theme and color mode.
  */
-export function AstraqLogo({ className, decorative = false }: AstraqLogoProps) {
+export function ForelumeLogo({ className, decorative = false }: ForelumeLogoProps) {
   const reactId = useId().replace(/:/g, "");
   const titleId = `${reactId}-title`;
   const ringId = `${reactId}-ring`;

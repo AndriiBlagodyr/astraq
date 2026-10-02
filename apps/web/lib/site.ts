@@ -1,8 +1,9 @@
+import { env } from "./env";
+
 export const siteConfig = {
   name: "Forelume",
   shortName: "Forelume",
   description:
-    "Forelume is a full-stack and machine learning learning lab for market data, stock visualizations, and per-symbol prediction experiments.",
-  tagline: "Build the stack, learn the stack, and test market ideas with custom charts and prediction workflows.",
-  url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+    "Forelume is a personal market research lab: charts, watchlists, honest backtests, and paper trading on one fill model.",
+  url: env.NEXT_PUBLIC_APP_URL,
 } as const;

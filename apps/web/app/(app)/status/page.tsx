@@ -1,125 +1,84 @@
-import Link from "next/link";
+import { connection } from "next/server";
 import {
   Badge,
   Card,
   Table,
+  TableCaption,
   TableWrap,
+  Tbody,
   Td,
   Th,
-  buttonVariants,
-  type BadgeProps,
+  Thead,
+  Tr,
 } from "@astraq/ui";
-import styles from "../layout.module.css";
+import { checkServices } from "@/lib/health";
 
 export const metadata = {
-  title: "Roadmap status",
+  title: "Status",
 };
 
-const phases = [
-  {
-    id: "0",
-    label: "Monorepo and developer foundation",
-    state: "Baseline complete",
-  },
-  { id: "1", label: "API foundation and contracts", state: "In progress" },
-  { id: "1.5", label: "Design system foundation", state: "Next" },
-  { id: "2", label: "Data model, MVP core, basic charts", state: "Planned" },
-  { id: "3", label: "Production auth and account security", state: "Planned" },
-  { id: "4", label: "Paper trading MVP and request tracing", state: "Planned" },
-  { id: "5", label: "Market data infrastructure", state: "Planned" },
-  {
-    id: "6",
-    label: "Advanced charting, market analysis, and document data",
-    state: "Planned",
-  },
-  { id: "7", label: "Strategy engine and backtesting v1", state: "Planned" },
-  { id: "8", label: "Python analytics and ML service", state: "Planned" },
-  { id: "9", label: "Realtime, alerts, and services/ingest", state: "Planned" },
-  { id: "10", label: "Observability, testing, performance", state: "Planned" },
-  { id: "11", label: "Deployment and operations", state: "Planned" },
-] as const;
+// Live health of the services behind the app. Data quality joins in Phase 4,
+// SLOs in Phase 10 (docs/ui-plan.md § Status).
+export default async function StatusPage() {
+  // Checked on every request: a cached "up" would defeat the page.
+  await connection();
+  const services = await checkServices();
+  const allUp = services.every((service) => service.status === "up");
+  const checkedAt = new Date().toISOString();
 
-function stateTone(
-  state: (typeof phases)[number]["state"]
-): BadgeProps["tone"] {
-  if (state === "Baseline complete") return "positive";
-  if (state === "In progress") return "warning";
-  if (state === "Next") return "brand";
-  return "neutral";
-}
-
-export default function StatusPage() {
   return (
-    <section className={styles.page}>
-      <div className={styles.hero}>
-        <p className={styles.eyebrow}>Roadmap status</p>
-        <h2 className={styles.title}>Where Forelume is, and what ships next.</h2>
-        <p className={styles.lead}>
-          A live mirror of <code>ROADMAP.md</code>. Phase 1 is in progress, and
-          the focused design system foundation comes before Phase 2 product
-          expansion.
+    <main className="grid gap-5">
+      <Card className="grid gap-3 p-7">
+        <h1 className="m-0 font-display text-3xl font-bold tracking-tight text-foreground">
+          Status
+        </h1>
+        <p className="m-0 flex flex-wrap items-center gap-3 text-secondary">
+          <Badge tone={allUp ? "positive" : "negative"}>
+            {allUp ? "All services up" : "Service problem"}
+          </Badge>
+          <span>
+            Checked at{" "}
+            <time dateTime={checkedAt}>{checkedAt.slice(0, 19).replace("T", " ")} UTC</time>
+          </span>
         </p>
-        <div className={styles.buttonRow}>
-          <Link
-            href="/market-data"
-            className={buttonVariants({ variant: "secondary" })}
-          >
-            Market data
-          </Link>
-          <Link href="/experiments" className={buttonVariants()}>
-            Experiments
-          </Link>
-        </div>
-      </div>
-
-      <div className={styles.statGrid}>
-        <Card className={styles.statCard}>
-          <span className={styles.metricLabel}>Current phase</span>
-          <span className={styles.metricValue}>Phase 1</span>
-          <span className={styles.metricNote}>
-            API foundation and contracts.
-          </span>
-        </Card>
-        <Card className={styles.statCard}>
-          <span className={styles.metricLabel}>Foundation</span>
-          <span className={styles.metricValue}>Phase 0</span>
-          <span className={styles.metricNote}>
-            Baseline complete; deferred gaps are explicitly tracked.
-          </span>
-        </Card>
-        <Card className={styles.statCard}>
-          <span className={styles.metricLabel}>Next milestone</span>
-          <span className={styles.metricValue}>OpenAPI + SDK</span>
-          <span className={styles.metricNote}>
-            First generated API flow consumed by <code>apps/web</code>.
-          </span>
-        </Card>
-      </div>
+      </Card>
 
       <TableWrap>
         <Table>
-          <thead>
-            <tr>
-              <Th>Phase</Th>
-              <Th>Goal</Th>
-              <Th>State</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {phases.map((phase) => (
-              <tr key={phase.id}>
+          <TableCaption className="sr-only">
+            Health checks for the services behind Forelume
+          </TableCaption>
+          <Thead>
+            <Tr>
+              <Th>Service</Th>
+              <Th>Status</Th>
+              <Th>Response</Th>
+              <Th align="end">Latency</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {services.map((service) => (
+              <Tr key={service.name}>
                 <Td>
-                  <code>Phase {phase.id}</code>
+                  <span className="grid gap-0.5">
+                    <span className="text-foreground">{service.name}</span>
+                    <code className="text-xs text-muted">{service.url}</code>
+                  </span>
                 </Td>
-                <Td>{phase.label}</Td>
                 <Td>
-                  <Badge tone={stateTone(phase.state)}>{phase.state}</Badge>
+                  <Badge tone={service.status === "up" ? "positive" : "negative"}>
+                    {service.status === "up" ? "Up" : "Down"}
+                  </Badge>
                 </Td>
-              </tr>
+                <Td>{service.detail}</Td>
+                <Td align="end" className="tabular-nums">
+                  {service.latencyMs === null ? "—" : `${service.latencyMs} ms`}
+                </Td>
+              </Tr>
             ))}
-          </tbody>
+          </Tbody>
         </Table>
       </TableWrap>
-    </section>
+    </main>
   );
 }

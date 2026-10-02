@@ -1,7 +1,7 @@
-# Astraq — Algorithmic Trading Platform
+# Forelume — Algorithmic Trading Platform
 
 ## Mission
-Astraq is a learning-focused algorithmic trading and market analytics platform.
+Forelume is a learning-focused algorithmic trading and market analytics platform.
 Goals the codebase must serve:
 1. Deepen Fullstack skills (Node.js, Python, Next.js 16, Postgres, MongoDB).
 2. Provide a real algo-trading & stock-analysis product (strategies, backtests, paper trading).

@@ -10,7 +10,7 @@ export default function ForgotPasswordPage() {
     <Card className="grid w-[min(27.5rem,100%)] gap-6 p-7">
       <header className="grid gap-2">
         <p className="m-0 text-xs font-semibold tracking-[0.16em] text-brand-strong-fg uppercase">
-          Phase 3 · Auth
+          Phase 7 · Auth
         </p>
         <h1 className="m-0 font-display text-3xl font-bold tracking-tight text-foreground">
           Reset your password
@@ -23,8 +23,8 @@ export default function ForgotPasswordPage() {
       </header>
 
       <Feedback
-        title="Reset form placeholder"
-        description="The final flow will include throttling and a neutral success state that does not reveal whether an account exists."
+        title="Password reset isn't available yet"
+        description="It needs email delivery, which arrives in Phase 7. The flow will be throttled, and its success message won't reveal whether an account exists."
       />
 
       <footer className="flex border-t border-border pt-5">

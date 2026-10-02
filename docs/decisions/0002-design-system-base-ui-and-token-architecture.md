@@ -9,7 +9,7 @@
 ADR 0001 established `packages/ui` with Tailwind, semantic CSS variables, and headless primitives (Radix). The package now needs to grow from ~15 components and 3 themes into a professional design system that:
 
 - ships 6+ themes that differ in identity (color, typography, radius, density, surface treatment), not just accent hue, each in light and dark;
-- stays reusable outside Astraq without a rewrite;
+- stays reusable outside Forelume without a rewrite;
 - is accessible by construction and verified by tests, not by eye.
 
 The current package has limits that block this:
@@ -27,7 +27,7 @@ The current package has limits that block this:
 | Stay on Radix | Viable, avoids migration, but weaker long-term trajectory and no combobox/number field. |
 | **Base UI** | **Chosen.** Active, broad primitive set, `render`-prop composition, shadcn-compatible. Migration cost is small today (4 wrappers). |
 | React Aria Components | Best a11y/i18n, but a verbose API for everyday controls. Kept as a targeted exception (see below). |
-| Ark UI | Framework-agnostic, but a smaller ecosystem; Astraq is React-only. |
+| Ark UI | Framework-agnostic, but a smaller ecosystem; Forelume is React-only. |
 | Styled kits (Radix Themes, Mantine, HeroUI, Chakra) | Rejected: they impose a visual language, which is what ADR 0001 moved away from. |
 
 ## Decision

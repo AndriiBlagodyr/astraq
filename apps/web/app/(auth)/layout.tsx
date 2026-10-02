@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { AstraqLogo } from "@/app/components/AstraqLogo";
+import { ForelumeLogo } from "@/app/components/ForelumeLogo";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import styles from "./layout.module.css";
 
@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <header className={styles.header}>
         <Link href="/" className={styles.brand}>
           <span className={styles.brandIcon} aria-hidden="true">
-            <AstraqLogo decorative className={styles.brandLogo} />
+            <ForelumeLogo decorative className={styles.brandLogo} />
           </span>
           <span className={styles.brandText}>Forelume</span>
         </Link>

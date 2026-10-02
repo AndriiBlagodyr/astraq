@@ -1,6 +1,6 @@
-# Astraq
+# Forelume
 
-Astraq is a learning-focused algorithmic trading and market analysis platform.
+Forelume is a learning-focused algorithmic trading and market analysis platform.
 
 The project has two goals:
 
