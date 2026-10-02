@@ -1,4 +1,4 @@
-# apps/api — Astraq Node.js Backend
+# apps/api — Forelume Node.js Backend
 
 - Framework: NestJS 11. The api is the only writer of domain tables.
 - Layering: `controller -> service -> repository -> db`. No DB calls in controllers.

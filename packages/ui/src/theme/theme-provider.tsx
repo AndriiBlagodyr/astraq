@@ -44,7 +44,7 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
-const THEME_CHANGE_EVENT = "astraq-theme-change";
+const THEME_CHANGE_EVENT = "forelume-theme-change";
 const LIGHT_QUERY = "(prefers-color-scheme: light)";
 const SERVER_SNAPSHOT = `${DEFAULT_COLOR_MODE}:${DEFAULT_THEME}:system:theme`;
 

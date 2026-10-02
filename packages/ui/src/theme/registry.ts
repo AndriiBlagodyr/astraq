@@ -41,9 +41,9 @@ export type Density = (typeof DENSITIES)[number];
 /** What the user chose. `theme` follows the active theme's default density. */
 export type DensityPreference = Density | "theme";
 
-export const COLOR_MODE_STORAGE_KEY = "astraq-color-mode";
-export const THEME_STORAGE_KEY = "astraq-theme";
-export const DENSITY_STORAGE_KEY = "astraq-density";
+export const COLOR_MODE_STORAGE_KEY = "forelume-color-mode";
+export const THEME_STORAGE_KEY = "forelume-theme";
+export const DENSITY_STORAGE_KEY = "forelume-density";
 
 export function themeDensity(theme: ThemeName): Density {
   return THEMES.find((entry) => entry.name === theme)?.density ?? "comfortable";

@@ -3,8 +3,8 @@
  * Copy the string to reuse it anywhere (HTML, Figma "Paste as SVG", docs).
  *
  * `app/icon.ts` serves it as the favicon and PWA icon. Colors are fixed to the
- * Forelume dark palette because browsers render favicons outside the page's
- * theme. The themed, animated mark is `components/AstraqLogo.tsx`; keep the
+ * forelume theme's dark palette because browsers render favicons outside the page's
+ * theme. The themed, animated mark is `components/ForelumeLogo.tsx`; keep the
  * geometry of both in sync.
  */
 export const BRAND_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" fill="none">

@@ -17,10 +17,8 @@ export const metadata: Metadata = {
     "trading",
     "market data",
     "stocks",
-    "visualization",
-    "predictions",
-    "machine learning",
-    "next.js",
+    "backtesting",
+    "paper trading",
   ],
   openGraph: {
     title: siteConfig.name,

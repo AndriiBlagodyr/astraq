@@ -6,8 +6,8 @@ test.describe("design system themes", () => {
   }) => {
     await page.goto("/");
     await page.evaluate(() => {
-      localStorage.setItem("astraq-color-mode", "dark");
-      localStorage.setItem("astraq-theme", "forelume");
+      localStorage.setItem("forelume-color-mode", "dark");
+      localStorage.setItem("forelume-theme", "forelume");
     });
     await page.reload();
 
@@ -34,7 +34,7 @@ test.describe("design system themes", () => {
     );
   });
 
-  test("keeps the marketing shell usable on a mobile viewport", async ({
+  test("keeps the app shell usable on a mobile viewport", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });

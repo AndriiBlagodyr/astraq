@@ -84,7 +84,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
 
 | Phase | Adds |
 |---|---|
-| 0 | No data yet. A short text page: what Astraq is and what's being built. No mock charts or metrics. |
+| 0 | No data yet. A short text page: what Forelume is and what's being built. No mock charts or metrics. |
 | 1 | Symbol search, plus a table of the bootstrapped tickers (~20) with last close, day change, and as-of date, each linking to its chart. |
 | 2 | Watchlist summary: each watchlist's symbols with sparklines and day change. Recently viewed stocks. |
 | 3 | Portfolio card: equity, day PnL, cash, open orders. Market status: open or closed, and the next session from the exchange calendar. |
@@ -93,7 +93,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
 | 6 | Biggest moves across your watchlists, news for watched symbols, and the latest journal notes. Panels can be reordered (drag or keyboard). |
 | 9 | Triggered alerts and live prices with the tick flash. |
 
-**Landing (signed out, Phase 2 onward):** one sentence on what Astraq is, the honesty pitch (one fill model, always a benchmark, no look-ahead by construction), and Sign in. Registration is invite-only, so there's no sign-up push. A real screenshot can replace the text later; never a mock.
+**Landing (signed out, Phase 2 onward):** one sentence on what Forelume is, the honesty pitch (one fill model, always a benchmark, no look-ahead by construction), and Sign in. Registration is invite-only, so there's no sign-up push. A real screenshot can replace the text later; never a mock.
 
 ### Stocks — `/stocks`
 
@@ -210,7 +210,7 @@ Appearance (theme, mode, density) stays in the top-bar theme menu, not Settings,
 
 **For:** whether the system and the data can be trusted right now.
 
-- **Phase 0:** replaces the current hand-written roadmap mirror. Shows API and ML service health (`/health`, then `/health/ready` from Phase 1) and the deployed version.
+- **Phase 0:** live API and ML service health (`/health/ready`, `/health`) with response and latency, checked on every request. `/health/ready` checks the database from Phase 1, and the deployed version is added with the first deployment.
 - **Phase 4:** data quality results (missing sessions, duplicate bars, OHLC sanity, stale symbols), the last end-of-day refresh, and job failures. A link to Bull Board (admin).
 - **Phase 7:** becomes admin-only. `/admin/users` joins it.
 - **Phase 10:** SLO status (candle freshness, API p95, alert delivery time) and links to the dashboards.
@@ -230,14 +230,17 @@ Appearance (theme, mode, density) stays in the top-bar theme menu, not Settings,
 
 ## Phase 0 cleanup
 
-To make the current app match this plan:
+Done. What the current app needed to match this plan:
 
-1. **Delete** `/market-data`, `/experiments`, `/predictions/**`, `/stocks/[symbol]/{compare,custom,tradingview}`, and every route listed above for a later phase (`/watchlists`, `/portfolio/**`, `/strategies/**`, `/backtests/**`, `/account`). They come back in their phase.
-2. **Replace the home page** (`(marketing)/page.tsx`): remove the mock chart, sample backtest, and forecast numbers and the stale phase status, and leave the short Phase 0 text page.
-3. **Rename** "Forelume" to "Astraq" in the app shell, public header and footer, and page copy. Forelume is a theme.
-4. **Navigation:** trim `apps/web/lib/navigation.ts` to Today, Stocks (from Phase 1), and Status. Drop the "Current focus" card from the sidebar.
-5. **Status:** replace the hand-written phase table with real health checks.
-6. **Auth screens:** `/login`, `/register`, and `/forgot-password` stay in Phase 0 as the ROADMAP says, but they aren't linked from the shell until Phase 2 makes them work.
+1. **Deleted** `/market-data`, `/experiments`, `/predictions/**`, `/stocks/**` (including `compare`, `custom`, `tradingview`), and every route listed above for a later phase (`/watchlists`, `/portfolio/**`, `/strategies/**`, `/backtests/**`, `/account`). `/stocks` was a placeholder too; it comes back with real data in Phase 1, the others in their phase.
+2. **One shell.** `/` moved into the app shell as Today, and the `(marketing)` layout and page are gone. Nothing is public-only before Phase 2, so the signed-out landing returns with auth.
+3. **Home page:** the mock chart, sample backtest and forecast numbers, and stale phase status are replaced by the short Phase 0 text page.
+4. **Brand:** the product is **Forelume** everywhere people read it: UI copy, metadata, logo title, and docs. "astraq" survives only as the repo name and the `@astraq/*` package scope. The flagship theme shares the brand's name.
+5. **Navigation:** `apps/web/lib/navigation.ts` is a flat list, Today and Status. The "Current focus" card and the header's Home and Experiments links are gone.
+6. **Status:** the hand-written phase table is replaced by live checks of the API (`/health/ready`) and the ML service (`/health`), with response and latency, rendered per request. The deployed version joins it with the first deployment in Phase 1.
+7. **Env:** `apps/web/lib/env.ts` validates `NEXT_PUBLIC_APP_URL`, `API_URL`, and `ML_URL` with Zod. `instrumentation.ts` imports it at server start, so an invalid value stops the server.
+8. **Auth screens:** `/login`, `/register`, and `/forgot-password` stay, as the ROADMAP says, with their copy updated to the current phases. Nothing links to them until Phase 2 makes them work.
+9. **CSS:** `(app)/layout.module.css` keeps only the shell's classes (374 → 83 lines), and the 815 lines of marketing CSS are deleted with their pages. New pages use Tailwind and `@astraq/ui`.
 
 ## Open questions
 

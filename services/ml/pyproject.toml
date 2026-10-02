@@ -1,7 +1,7 @@
 [project]
-name = "astraq-ml"
+name = "forelume-ml"
 version = "0.1.0"
-description = "FastAPI ML prediction service for Astraq"
+description = "FastAPI ML prediction service for Forelume"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115.0",
