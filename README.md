@@ -24,8 +24,10 @@ astraq/
 │   └── api/         NestJS backend
 ├── services/
 │   └── ml/          Python FastAPI service (uv)
-└── packages/
-    └── ui/          Shared tokens, accessible components, and Storybook
+├── packages/
+│   └── ui/          Shared tokens, accessible components, and Storybook
+└── infra/
+    └── docker/      Local Postgres + TimescaleDB and Redis (compose)
 ```
 
 ## Key documents
@@ -49,15 +51,39 @@ corepack enable
 If `uv` is not available yet:
 
 ```bash
-brew install uv
+brew install uv                 # macOS
+winget install astral-sh.uv     # Windows
 ```
 
 ### Root
 
 ```bash
 pnpm install
+pnpm infra:up
 pnpm dev
 ```
+
+### Local infra
+
+`pnpm infra:up` starts Postgres 16 + TimescaleDB (`localhost:5432`) and Redis 7 (`localhost:6379`) from `infra/docker/compose.yml`, and waits until both are healthy. It needs Docker running. The local database and user are both `forelume` (password `forelume`). To change a port or the credentials, copy `infra/docker/.env.example` to `infra/docker/.env`.
+
+`pnpm infra:down` stops the containers and keeps the data. To wipe it too, run `docker compose -f infra/docker/compose.yml down -v`.
+
+### Environment variables
+
+Every service validates its env at boot and exits with a readable error on a bad value. Outside production every variable has a default that matches `pnpm infra:up`, so local dev needs no `.env`. In production (`NODE_ENV=production` for api, `ENVIRONMENT=production` for ml) the infra URLs have no defaults and must be set.
+
+| Service | Variable | Local default |
+|---|---|---|
+| api | `PORT` | `4000` |
+| api | `LOG_LEVEL` | `info` |
+| api, ml | `DATABASE_URL` | `postgres://forelume:forelume@localhost:5432/forelume` |
+| api, ml | `REDIS_URL` | `redis://localhost:6379` |
+| api | `CORS_ORIGINS` | `http://localhost:3000` (comma-separated origins, no paths) |
+| ml | `LOG_LEVEL` | `info` |
+| web | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` |
+| web | `API_URL` | `http://localhost:4000` |
+| web | `ML_URL` | `http://localhost:8000` |
 
 ### Web
 
@@ -115,6 +141,6 @@ pnpm test:unit:ml
 
 ## Near-term priorities
 
-- Phase 0: repo hygiene, local Docker infra (Postgres + TimescaleDB, Redis), CI, and removing placeholder routes
+- Phase 0: CI, Renovate, and echoing `x-request-id` (hygiene, placeholder-route cleanup, local infra, and env validation are done)
 - Phase 1: walking skeleton — adjusted daily candles from provider to a deployed chart through the generated SDK
 - see [ROADMAP.md](./ROADMAP.md) for the full phased plan

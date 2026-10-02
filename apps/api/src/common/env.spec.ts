@@ -1,9 +1,50 @@
-describe('env validation', () => {
-  it('exports a valid env object with defaults', async () => {
-    const { env } = await import('./env');
+import { parseEnv } from './env';
 
-    expect(env.PORT).toBe(4000);
-    expect(env.NODE_ENV).toBeDefined();
-    expect(['development', 'production', 'test']).toContain(env.NODE_ENV);
+describe('env validation', () => {
+  it('falls back to the local infra defaults outside production', () => {
+    const result = parseEnv({});
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({
+      PORT: 4000,
+      NODE_ENV: 'development',
+      DATABASE_URL: 'postgres://forelume:forelume@localhost:5432/forelume',
+      REDIS_URL: 'redis://localhost:6379',
+      CORS_ORIGINS: ['http://localhost:3000'],
+    });
+  });
+
+  it('splits CORS_ORIGINS into a trimmed list', () => {
+    const result = parseEnv({
+      CORS_ORIGINS: 'https://forelume.app, https://preview.forelume.app',
+    });
+
+    expect(result.data?.CORS_ORIGINS).toEqual([
+      'https://forelume.app',
+      'https://preview.forelume.app',
+    ]);
+  });
+
+  it('rejects an origin with a path, and a non-postgres DATABASE_URL', () => {
+    const result = parseEnv({
+      CORS_ORIGINS: 'https://forelume.app/',
+      DATABASE_URL: 'mysql://localhost/forelume',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path[0])).toEqual(
+      expect.arrayContaining(['CORS_ORIGINS', 'DATABASE_URL']),
+    );
+  });
+
+  it('requires infra URLs and origins in production', () => {
+    const result = parseEnv({ NODE_ENV: 'production' });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path[0]).sort()).toEqual([
+      'CORS_ORIGINS',
+      'DATABASE_URL',
+      'REDIS_URL',
+    ]);
   });
 });

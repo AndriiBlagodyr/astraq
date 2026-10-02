@@ -10,7 +10,9 @@ async function bootstrap() {
 
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new AllExceptionsFilter());
-  app.enableCors();
+  // Only listed origins may call the API from a browser. Any other origin
+  // gets no CORS headers, so the browser blocks the response.
+  app.enableCors({ origin: env.CORS_ORIGINS });
   app.setGlobalPrefix('api', { exclude: ['health/live', 'health/ready'] });
 
   await app.listen(env.PORT);

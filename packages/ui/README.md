@@ -1,6 +1,6 @@
 # @astraq/ui
 
-Astraq's semantic design tokens and accessible React components.
+Forelume's semantic design tokens and accessible React components.
 
 ## Principles
 

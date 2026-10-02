@@ -1,6 +1,7 @@
+from app.settings import settings
 from fastapi import FastAPI
 
-app = FastAPI(title="Forelume ML Service")
+app = FastAPI(title="Forelume ML Service", debug=settings.environment == "development")
 
 
 @app.get("/health")
