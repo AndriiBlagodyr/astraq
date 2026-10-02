@@ -336,7 +336,7 @@ Each tier is its own PR, and the next starts after the previous one merges:
   - `dist/styles.css`: the Tailwind entry, with its `@source` globs rewritten from `src/**/*.{ts,tsx}` to `dist/**/*.js`.
 - **Directive check:** the same script fails the build if a `"use client"` file in `src/` lost its directive in `dist/`. It replaces Rolldown's `MODULE_LEVEL_DIRECTIVE` warning, which is turned off because it fires on every client file even though unbundled output keeps them.
 - **apps/web:** `transpilePackages` is gone, and Next reads the built ESM. Turbo's `dev` and `typecheck` now depend on `^build`. `pnpm dev:web` runs `turbo dev --filter=web...`, so the package watcher starts with the app. `pnpm test:unit:web` builds the package first.
-- **Changesets:** `@changesets/cli` 3 at the root, with `privatePackages.version` on and the apps ignored. The first changeset moves `@astraq/ui` to `0.2.0`. `pnpm changeset` adds one, and `pnpm version-packages` applies them.
+- **Changesets:** `@changesets/cli` 3 at the root, with `privatePackages.version` on and the apps ignored. The first changeset moves `@astraq/ui` to `0.2.0`. `pnpm changeset` adds one, and `pnpm version-packages` applies them. The PR 6 and PR 7 changesets were applied after PR 7: `@astraq/ui` is `0.2.0`, with `packages/ui/CHANGELOG.md`.
 - **README:** a "Consuming @astraq/ui" section covers entries, the CSS import and `@source`, `tokens.css`, font loading, `ThemeScript` in `<head>`, and custom themes.
 
 **Deliberate differences**

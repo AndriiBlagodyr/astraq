@@ -44,7 +44,7 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
-const THEME_CHANGE_EVENT = "forelume-theme-change";
+const THEME_CHANGE_EVENT = "astraq-theme-change";
 const LIGHT_QUERY = "(prefers-color-scheme: light)";
 const SERVER_SNAPSHOT = `${DEFAULT_COLOR_MODE}:${DEFAULT_THEME}:system:theme`;
 
@@ -107,9 +107,9 @@ function motionDuration(token: string) {
 
 /**
  * A user-initiated theme or mode change: the new look grows out of the control
- * that triggered it as a circle (docs/motion.md). Falls back to an instant
- * swap without View Transitions, and when motion tokens are 0ms (reduced
- * motion).
+ * that triggered it as a circle (docs/motion-and-delight-plan.md). Falls back
+ * to an instant swap without View Transitions, and when motion tokens are 0ms
+ * (reduced motion).
  */
 function publishWithReveal(mode: ColorMode, theme: ThemeName) {
   const duration = motionDuration("--ds-motion-slow");

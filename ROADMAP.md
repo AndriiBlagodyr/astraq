@@ -1,7 +1,7 @@
 # Astraq Roadmap
 
-> **Status (2026-09-24)** — Phase 0 (close the foundation) is next. Rewritten roadmap, see [Revision log](#revision-log).
-> **Actually working today:** NestJS skeleton (Pino, request ids, Zod env, error filter, health), `packages/ui` design system + Storybook, Turborepo, `uv`-managed `services/ml` stub.
+> **Status (2026-10-02)** — Design system v2 is done; Phase 0 (close the foundation) is next. Rewritten roadmap, see [Revision log](#revision-log).
+> **Actually working today:** NestJS skeleton (Pino, request ids, Zod env, error filter, health), `@astraq/ui` 0.2.0 (Base UI components, generated tokens, 6 themes × light/dark, density, built ESM) + Storybook with docs pages, Turborepo, `uv`-managed `services/ml` stub.
 > **Not yet real:** any database, any web → api call, any chart, CI, local infra, deployment. Most `apps/web` routes are descriptive placeholders.
 > **Rule for this block:** it describes what runs, not what is planned. Update it in the same PR that changes reality.
 
@@ -134,6 +134,7 @@ astraq/
 - **Security.** Follow [security and secrets](./.cursor/rules/security-and-secrets.mdc). Env validated at boot in every service; fail-closed CORS, auth, and permissions.
 - **Learning over shipping** — when a library exists *and* there's a teaching opportunity, build one layer by hand first (refresh-token rotation, ledger accounting, event-driven backtester). Write down what you'd replace it with in production.
 - **Data licensing.** Provider data is for personal use. No public pages that redistribute raw vendor data; a friend's account (Phase 10) is still private use.
+- **Pages and navigation.** Every route, menu item, and the home page's contents per phase are in [docs/ui-plan.md](docs/ui-plan.md). A phase's web work builds the pages listed there for it.
 - **Motion.** UI motion follows [docs/motion-and-delight-plan.md](docs/motion-and-delight-plan.md). Each phase ships the motion items listed for it there; none are built on placeholder routes.
 - **Finance correctness is a first-class concern**, not a detail: adjusted prices, trading calendars, point-in-time data, decimal money.
 
@@ -145,9 +146,9 @@ astraq/
 
 `packages/ui` with semantic tokens, independent theme identity and light/dark mode, headless primitives, Storybook, and tests. Mantine removed. ADR 0001.
 
-### Design system v2 — in progress
+### Design system v2 — done
 
-Base UI primitives, a generated token pipeline, 6 themes, density, and an extractable `@astraq/ui`. [ADR 0002](docs/decisions/0002-design-system-base-ui-and-token-architecture.md); tracked in [docs/design-system-plan.md](docs/design-system-plan.md) as 7 PRs.
+Base UI primitives, a generated token pipeline, 6 themes, density, and an extractable `@astraq/ui` (`0.2.0`, see `packages/ui/CHANGELOG.md`). [ADR 0002](docs/decisions/0002-design-system-base-ui-and-token-architecture.md); tracked in [docs/design-system-plan.md](docs/design-system-plan.md) as 7 PRs.
 
 - PR 1 (restructure, interaction states) — done
 - PR 2 (hand-built token pipeline, full per-theme palettes, contrast matrix) — done
@@ -157,9 +158,9 @@ Base UI primitives, a generated token pipeline, 6 themes, density, and an extrac
 - PR 5b (overlays and feedback: Popover, Menu, ContextMenu, AlertDialog, Drawer, Toast, PreviewCard, Progress, Meter, Skeleton, Spinner sizes) — done
 - PR 5c, 5d, 6 (display, data, distribution) — done
 - PR 7 (Storybook docs pages, raw-color lint rule, alias cleanup) — done
-- Follow-up: the app's CSS modules read `--ds-*` tokens directly, and the transitional aliases are deleted — in review
+- Follow-up: the app's CSS modules read `--ds-*` tokens directly, and the transitional aliases are deleted — done
 
-Follow-up folded into Phase 0: app pages still style themselves with `layout.module.css` — migrate the surviving routes to `packages/ui` compositions.
+Follow-ups folded into Phase 0: app pages still style themselves with `layout.module.css` — migrate the surviving routes to `packages/ui` compositions. The CI job also runs the token drift check (item 5).
 
 ---
 
@@ -168,10 +169,10 @@ Follow-up folded into Phase 0: app pages still style themselves with `layout.mod
 **Goal:** make the repo honest, reproducible, and verified by CI before anything else is built on it.
 
 1. **Hygiene:** untrack `apps/api/tsconfig.build.tsbuildinfo`, `apps/web/test-results/`, and `services/ml/*.egg-info/`; ignore `*.tsbuildinfo`. Align `requires-python` with the pinned 3.12.
-2. **Delete placeholder routes** in `apps/web`. Keep marketing, auth screens, `/status`, and one app shell. Routes come back in the phase that fills them.
+2. **Delete placeholder routes** in `apps/web`. Keep marketing, auth screens, `/status`, and one app shell. Routes come back in the phase that fills them. The full list, the home page rewrite, and the Forelume → Astraq rename are in [docs/ui-plan.md § Phase 0 cleanup](docs/ui-plan.md#phase-0-cleanup).
 3. **Local infra** in `infra/docker/compose.yml`: Postgres 16 + TimescaleDB, Redis 7. (Mongo and Mailhog join in the phases that use them.) Root scripts `pnpm infra:up` / `infra:down`.
 4. **Env validation everywhere:** `pydantic-settings` in `services/ml`; add `CORS_ORIGINS`, `DATABASE_URL`, `REDIS_URL` to the API schema. Replace `app.enableCors()` with an allowlist.
-5. **CI** (GitHub Actions): install, lint, typecheck, unit tests for all Node packages and `services/ml`, with Turborepo and `uv` caching. Add ruff + mypy to the ML job now — cheap while the codebase is tiny.
+5. **CI** (GitHub Actions): install, lint, typecheck, unit tests for all Node packages and `services/ml`, with Turborepo and `uv` caching. Add ruff + mypy to the ML job now — cheap while the codebase is tiny. Run `pnpm --filter @astraq/ui tokens:check`, so stale generated token files fail CI.
 6. **Renovate** with grouped, weekly updates.
 7. Echo `x-request-id` back in API responses.
 
@@ -262,7 +263,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 3. **Order lifecycle:** `Portfolio`, `Order`, `Fill`, `Lot`, `LedgerEntry`. Place, cancel, fill. **Idempotency keys** on order placement.
 4. **Corporate actions:** applying a split adjusts open lots. Dividends credit cash on the pay date.
 5. **Risk rules:** market-calendar awareness (Alpaca calendar), max order notional, insufficient-cash and short-selling guards.
-6. **Portfolio screens:** holdings, cash, realized/unrealized PnL, equity curve, orders and fills — restore the `/portfolio` routes with real data.
+6. **Portfolio screens:** holdings, cash, realized/unrealized PnL, equity curve, orders and fills — the `/portfolios` routes and the order ticket in [docs/ui-plan.md](docs/ui-plan.md).
 7. **Tracing:** OpenTelemetry in `apps/api` and the web BFF, with a span per order placement and propagation web → api → database. Local Jaeger in compose.
 8. **Backups:** automated nightly Postgres backups on the host — paper trades are now data worth keeping.
 
@@ -495,6 +496,8 @@ Only after the core loop has been in weekly use for a month.
 ---
 
 ## Revision log
+
+**2026-10-02 — design system v2 done.** All 7 plan PRs and the alias follow-up are merged; `@astraq/ui` is versioned `0.2.0`. The token drift check joins the Phase 0 CI item.
 
 **2026-09-24 — full rewrite.** Key changes from the previous plan:
 
