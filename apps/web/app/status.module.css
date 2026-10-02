@@ -8,16 +8,16 @@
 .panel {
   width: min(100%, 620px);
   padding: 28px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface-glass);
+  border: 1px solid var(--ds-border-default);
+  border-radius: var(--ds-radius-xl);
+  background: var(--ds-gradient-surface);
   backdrop-filter: blur(18px);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--ds-shadow-soft);
 }
 
 .eyebrow {
   margin: 0 0 12px;
-  color: var(--color-accent-blue);
+  color: var(--ds-brand-strong-fg);
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 0.74rem;
@@ -25,13 +25,13 @@
 
 .title {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--ds-font-display);
   font-size: clamp(2rem, 4vw, 3rem);
 }
 
 .text {
   margin: 16px 0 0;
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
   line-height: 1.7;
 }
 
@@ -54,21 +54,21 @@
 
 .primary {
   border: 0;
-  color: var(--color-brand-contrast);
-  background: var(--gradient-brand);
+  color: var(--ds-fg-on-brand);
+  background: var(--ds-gradient-brand);
 }
 
 .secondary {
-  border: 1px solid var(--color-border-strong);
-  color: var(--color-text-primary);
-  background: var(--color-button-secondary);
+  border: 1px solid var(--ds-border-strong);
+  color: var(--ds-fg-default);
+  background: var(--ds-bg-sunken);
 }
 
 .spinner {
   width: 48px;
   height: 48px;
-  border: 3px solid var(--color-pill-border);
-  border-top-color: var(--color-accent-cyan);
+  border: 3px solid color-mix(in srgb, var(--ds-brand) 18%, transparent);
+  border-top-color: var(--ds-brand);
   border-radius: 999px;
   animation: spin 0.9s linear infinite;
 }

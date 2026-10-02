@@ -15,18 +15,18 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px 18px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface-glass);
+  border: 1px solid var(--ds-border-default);
+  border-radius: var(--ds-radius-xl);
+  background: var(--ds-gradient-surface);
   backdrop-filter: blur(18px);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--ds-shadow-soft);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
 }
 
 .brandIcon {
@@ -42,7 +42,7 @@
 }
 
 .brandText {
-  font-family: var(--font-display);
+  font-family: var(--ds-font-display);
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -57,7 +57,7 @@
   max-width: 720px;
   margin: 0 auto;
   text-align: center;
-  color: var(--color-text-muted);
+  color: var(--ds-fg-subtle);
   font-size: 0.88rem;
   line-height: 1.6;
 }
@@ -71,10 +71,10 @@
   display: grid;
   gap: 22px;
   padding: 28px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--gradient-auth-panel);
-  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--ds-border-default);
+  border-radius: var(--ds-radius-xl);
+  background: var(--ds-gradient-surface);
+  box-shadow: var(--ds-shadow-soft);
 }
 
 .cardHeader {
@@ -86,22 +86,22 @@
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  color: var(--color-accent-blue);
+  color: var(--ds-brand-strong-fg);
   font-size: 0.74rem;
   font-weight: 600;
 }
 
 .title {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--ds-font-display);
   font-size: clamp(1.6rem, 3vw, 2rem);
   letter-spacing: -0.02em;
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
 }
 
 .lead {
   margin: 0;
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
   line-height: 1.6;
 }
 
@@ -109,9 +109,9 @@
   display: grid;
   gap: 8px;
   padding: 18px;
-  border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-button-secondary);
+  border: 1px dashed var(--ds-border-strong);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-bg-sunken);
 }
 
 .placeholderLabel {
@@ -120,12 +120,12 @@
   letter-spacing: 0.12em;
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: var(--ds-fg-subtle);
 }
 
 .placeholderText {
   margin: 0;
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
   font-size: 0.94rem;
   line-height: 1.5;
 }
@@ -137,7 +137,7 @@
   justify-content: space-between;
   align-items: center;
   padding-top: 6px;
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--ds-border-default);
   margin-top: 4px;
 }
 
@@ -145,12 +145,12 @@
 .linkSecondary {
   font-size: 0.92rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
   transition: color 160ms ease;
 }
 
 .linkSecondary {
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
 }
 
 .linkPrimary:hover,
