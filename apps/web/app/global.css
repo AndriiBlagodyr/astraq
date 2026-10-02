@@ -1,5 +1,4 @@
 @import "@astraq/ui/styles.css";
-@import "./legacy-aliases.css";
 
 /*
  * @astraq/ui only scans its own components for Tailwind classes. The app

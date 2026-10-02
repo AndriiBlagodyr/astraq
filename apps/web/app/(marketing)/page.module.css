@@ -4,7 +4,7 @@
   min-height: calc(100vh - 220px);
 
   --marketing-card-bg: rgba(10, 24, 43, 0.56);
-  --marketing-card-border: var(--color-border-subtle);
+  --marketing-card-border: var(--ds-border-default);
   --marketing-card-hover-border: rgba(149, 176, 255, 0.28);
   --marketing-panel-bg: linear-gradient(180deg, rgba(10, 24, 43, 0.78), rgba(7, 17, 31, 0.92));
   --marketing-summary-bg: linear-gradient(180deg, rgba(10, 24, 43, 0.72), rgba(7, 17, 31, 0.86));
@@ -37,8 +37,8 @@
   --tab-bg: rgba(11, 25, 45, 0.6);
   --tab-active-bg: rgba(110, 242, 255, 0.12);
   --tab-active-border: rgba(110, 242, 255, 0.26);
-  --tab-text: var(--color-text-muted);
-  --tab-active-text: var(--color-text-primary);
+  --tab-text: var(--ds-fg-subtle);
+  --tab-active-text: var(--ds-fg-default);
 }
 
 :global(:root[data-mode="light"]) .page {
@@ -76,8 +76,8 @@
   --tab-bg: rgba(255, 255, 255, 0.7);
   --tab-active-bg: rgba(68, 100, 232, 0.1);
   --tab-active-border: rgba(68, 100, 232, 0.28);
-  --tab-text: var(--color-text-muted);
-  --tab-active-text: var(--color-text-primary);
+  --tab-text: var(--ds-fg-subtle);
+  --tab-active-text: var(--ds-fg-default);
 }
 
 .hero {
@@ -101,7 +101,7 @@
   background: var(--status-pill-bg);
   font-size: 0.78rem;
   letter-spacing: 0.04em;
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
   margin-bottom: 22px;
 }
 
@@ -109,38 +109,38 @@
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: var(--color-accent-cyan);
+  background: var(--ds-brand);
   box-shadow: 0 0 0 4px var(--status-pill-bg), 0 0 12px var(--status-pill-glow);
   animation: status-pulse 2.4s ease-in-out infinite;
 }
 
 .statusVersion {
-  font-family: var(--font-mono);
+  font-family: var(--ds-font-mono);
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
 }
 
 .statusDivider {
-  color: var(--color-text-muted);
+  color: var(--ds-fg-subtle);
 }
 
 .statusPhase {
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
 }
 
 .eyebrow {
   margin: 0 0 18px;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: var(--color-accent-blue);
+  color: var(--ds-brand-strong-fg);
   font-size: 0.74rem;
   font-weight: 600;
 }
 
 .title {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--ds-font-display);
   max-width: 18ch;
   font-size: clamp(2.6rem, 5vw, 5.2rem);
   line-height: 1;
@@ -148,8 +148,8 @@
   text-wrap: pretty;
   background: linear-gradient(
     180deg,
-    var(--color-text-primary) 60%,
-    color-mix(in srgb, var(--color-text-primary) 78%, transparent)
+    var(--ds-fg-default) 60%,
+    color-mix(in srgb, var(--ds-fg-default) 78%, transparent)
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -159,7 +159,7 @@
 .lead {
   margin: 18px 0 0;
   max-width: 64ch;
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
   font-size: 1.04rem;
   line-height: 1.75;
 }
@@ -189,9 +189,9 @@
 }
 
 .actionPrimary {
-  color: var(--color-brand-contrast);
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-brand);
+  color: var(--ds-fg-on-brand);
+  background: var(--ds-gradient-brand);
+  box-shadow: var(--ds-shadow-brand);
   border: 1px solid transparent;
 }
 
@@ -201,7 +201,7 @@
 }
 
 .actionSecondary {
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
   background: var(--secondary-button-bg);
   border: 1px solid var(--secondary-button-border);
   backdrop-filter: blur(8px);
@@ -229,10 +229,10 @@
 .capabilityCard {
   position: relative;
   padding: 20px 20px 22px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--ds-radius-lg);
   border: 1px solid var(--marketing-card-border);
   background: var(--marketing-card-bg);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--ds-shadow-soft);
   overflow: hidden;
   transition:
     border-color 200ms ease,
@@ -267,12 +267,12 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
 }
 
 .capabilityCard p {
   margin: 8px 0 0;
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
   font-size: 0.94rem;
   line-height: 1.6;
 }
@@ -281,10 +281,10 @@
   display: grid;
   gap: 18px;
   padding: 20px;
-  border-radius: calc(var(--radius-lg) + 4px);
+  border-radius: calc(var(--ds-radius-lg) + 4px);
   border: 1px solid var(--marketing-card-border);
   background: var(--marketing-panel-bg);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--ds-shadow-soft);
   align-self: start;
   position: sticky;
   top: 24px;
@@ -305,18 +305,18 @@
 }
 
 .previewSymbol {
-  font-family: var(--font-display);
+  font-family: var(--ds-font-display);
   font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
 }
 
 .previewMeta {
-  font-family: var(--font-mono);
+  font-family: var(--ds-font-mono);
   font-size: 0.78rem;
   letter-spacing: 0.06em;
-  color: var(--color-text-muted);
+  color: var(--ds-fg-subtle);
   text-transform: uppercase;
 }
 
@@ -353,7 +353,7 @@
   position: relative;
   min-height: 230px;
   overflow: hidden;
-  border-radius: calc(var(--radius-lg) - 2px);
+  border-radius: calc(var(--ds-radius-lg) - 2px);
   border: 1px solid var(--chart-frame-border);
   background: var(--chart-surface-bg);
 }
@@ -515,7 +515,7 @@
 
 .metricLabel {
   margin: 0;
-  color: var(--color-text-muted);
+  color: var(--ds-fg-subtle);
   font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -524,13 +524,13 @@
 
 .metricValue {
   margin: 6px 0 0;
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
   font-size: 0.96rem;
   font-weight: 600;
 }
 
 .metricMuted {
-  color: var(--color-text-muted);
+  color: var(--ds-fg-subtle);
   font-weight: 500;
 }
 
@@ -539,15 +539,15 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
   padding: 22px 24px;
-  border-radius: calc(var(--radius-lg) + 4px);
+  border-radius: calc(var(--ds-radius-lg) + 4px);
   border: 1px solid var(--marketing-card-border);
   background: var(--marketing-summary-bg);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--ds-shadow-soft);
 }
 
 .statusBandLabel {
   margin: 0;
-  color: var(--color-text-muted);
+  color: var(--ds-fg-subtle);
   font-size: 0.74rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -558,7 +558,7 @@
   margin: 8px 0 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
   line-height: 1.45;
 }
 

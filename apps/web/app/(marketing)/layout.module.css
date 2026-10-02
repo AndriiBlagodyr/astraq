@@ -11,18 +11,18 @@
   justify-content: space-between;
   gap: 20px;
   padding: 14px 18px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface-glass);
+  border: 1px solid var(--ds-border-default);
+  border-radius: var(--ds-radius-xl);
+  background: var(--ds-gradient-surface);
   backdrop-filter: blur(18px);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--ds-shadow-soft);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
 }
 
 .brandIcon {
@@ -39,7 +39,7 @@
 }
 
 .brandText {
-  font-family: var(--font-display);
+  font-family: var(--ds-font-display);
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -52,13 +52,13 @@
 }
 
 .navLink {
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
   font-size: 0.98rem;
   transition: color 160ms ease;
 }
 
 .navLink:hover {
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
 }
 
 .actions {
@@ -92,20 +92,20 @@
 }
 
 .authLinkSecondary {
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-button-secondary);
+  color: var(--ds-fg-default);
+  border: 1px solid var(--ds-border-strong);
+  background: var(--ds-bg-sunken);
 }
 
 .authLinkSecondary:hover {
-  border-color: var(--color-focus-ring);
+  border-color: var(--ds-focus-halo);
   transform: translateY(-1px);
 }
 
 .authLinkPrimary {
-  color: var(--color-brand-contrast);
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-brand);
+  color: var(--ds-fg-on-brand);
+  background: var(--ds-gradient-brand);
+  box-shadow: var(--ds-shadow-brand);
   border: 1px solid transparent;
 }
 
@@ -117,13 +117,13 @@
   max-width: 1180px;
   margin: 28px auto 0;
   padding: 20px 4px 0;
-  border-top: 1px solid var(--color-border-subtle);
-  color: var(--color-text-muted);
+  border-top: 1px solid var(--ds-border-default);
+  color: var(--ds-fg-subtle);
 }
 
 .footerTitle {
   margin: 0 0 8px;
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
   font-weight: 600;
 }
 

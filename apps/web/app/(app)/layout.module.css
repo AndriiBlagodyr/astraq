@@ -11,10 +11,10 @@
 .card,
 .table,
 .statCard {
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-surface-glass);
+  border: 1px solid var(--ds-border-default);
+  background: var(--ds-gradient-surface);
   backdrop-filter: blur(18px);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--ds-shadow-soft);
 }
 
 .sidebar {
@@ -24,7 +24,7 @@
   display: grid;
   gap: 24px;
   padding: 20px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--ds-radius-xl);
 }
 
 .brand {
@@ -41,30 +41,30 @@
 
 .brandTitle {
   margin: 0;
-  color: var(--color-text-primary);
-  font-family: var(--font-display);
+  color: var(--ds-fg-default);
+  font-family: var(--ds-font-display);
   font-size: 1.08rem;
   font-weight: 700;
 }
 
 .brandSubtitle {
   margin: 4px 0 0;
-  color: var(--color-text-muted);
+  color: var(--ds-fg-subtle);
   font-size: 0.92rem;
 }
 
 .sidebarCard {
   padding: 18px;
-  border-radius: var(--radius-lg);
-  background: var(--gradient-surface-elevated);
-  border: 1px solid var(--color-border-strong);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-gradient-surface);
+  border: 1px solid var(--ds-border-strong);
 }
 
 .sidebarCardLabel,
 .headerEyebrow,
 .eyebrow {
   margin: 0 0 10px;
-  color: var(--color-accent-blue);
+  color: var(--ds-brand-strong-fg);
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 0.74rem;
@@ -74,7 +74,7 @@
 .lead,
 .list,
 .table {
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
 }
 
 .sidebarCardText {
@@ -94,13 +94,13 @@
   justify-content: space-between;
   gap: 16px;
   padding: 18px 22px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--ds-radius-xl);
 }
 
 .headerTitle,
 .title {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--ds-font-display);
 }
 
 .headerTitle {
@@ -129,15 +129,15 @@
 }
 
 .headerLink {
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-button-secondary);
+  color: var(--ds-fg-default);
+  border: 1px solid var(--ds-border-strong);
+  background: var(--ds-bg-sunken);
 }
 
 .headerLinkPrimary,
 .inlineLink {
-  color: var(--color-brand-contrast);
-  background: var(--gradient-brand);
+  color: var(--ds-fg-on-brand);
+  background: var(--ds-gradient-brand);
 }
 
 .page {
@@ -167,15 +167,15 @@
 }
 
 .buttonPrimary {
-  color: var(--color-brand-contrast);
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-brand);
+  color: var(--ds-fg-on-brand);
+  background: var(--ds-gradient-brand);
+  box-shadow: var(--ds-shadow-brand);
 }
 
 .buttonSecondary {
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-button-secondary);
+  color: var(--ds-fg-default);
+  border: 1px solid var(--ds-border-strong);
+  background: var(--ds-bg-sunken);
 }
 
 .buttonPrimary:hover,
@@ -185,10 +185,10 @@
 
 .hero {
   padding: 22px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--gradient-panel-highlight);
-  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--ds-border-default);
+  border-radius: var(--ds-radius-xl);
+  background: var(--ds-gradient-surface);
+  box-shadow: var(--ds-shadow-soft);
 }
 
 .title {
@@ -224,7 +224,7 @@
 .statCard,
 .card,
 .table {
-  border-radius: var(--radius-xl);
+  border-radius: var(--ds-radius-xl);
 }
 
 .statCard {
@@ -233,7 +233,7 @@
 
 .metricLabel {
   display: block;
-  color: var(--color-text-muted);
+  color: var(--ds-fg-subtle);
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-size: 0.76rem;
@@ -244,25 +244,25 @@
   margin-top: 10px;
   font-size: clamp(1.6rem, 2vw, 2.2rem);
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--ds-fg-default);
 }
 
 .metricNote {
   display: block;
   margin-top: 10px;
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
 }
 
 .positive {
-  color: var(--color-success);
+  color: var(--ds-positive-fg);
 }
 
 .negative {
-  color: var(--color-danger);
+  color: var(--ds-negative-fg);
 }
 
 .warning {
-  color: var(--color-warning);
+  color: var(--ds-warning-fg);
 }
 
 .card {
@@ -276,7 +276,7 @@
 
 .card p {
   margin: 0;
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
   line-height: 1.68;
 }
 
@@ -298,12 +298,12 @@
 .table th,
 .table td {
   padding: 14px 0;
-  border-bottom: 1px solid var(--color-table-row);
+  border-bottom: 1px solid var(--ds-border-subtle);
   text-align: left;
 }
 
 .table th {
-  color: var(--color-text-muted);
+  color: var(--ds-fg-subtle);
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -311,7 +311,7 @@
 }
 
 .table td {
-  color: var(--color-text-secondary);
+  color: var(--ds-fg-muted);
 }
 
 .table tr:last-child td {
@@ -324,8 +324,8 @@
   min-height: 28px;
   padding: 0 10px;
   border-radius: 999px;
-  border: 1px solid var(--color-tag-border);
-  background: var(--color-tag-bg);
+  border: 1px solid color-mix(in srgb, var(--ds-brand-strong) 18%, transparent);
+  background: color-mix(in srgb, var(--ds-brand-strong) 9%, transparent);
   color: var(--ds-brand-fg);
   font-size: 0.78rem;
 }
