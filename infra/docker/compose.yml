@@ -1,0 +1,47 @@
+# Local infra for development. Start with `pnpm infra:up`, stop with
+# `pnpm infra:down` (data survives in named volumes; add `-v` to wipe it).
+# Mongo and Mailhog join in the phases that use them (ROADMAP.md).
+#
+# Credentials are local-only defaults, not secrets. Override any of them in
+# infra/docker/.env (gitignored), which compose reads automatically.
+name: forelume
+
+services:
+  postgres:
+    # TimescaleDB on Postgres 16. The image's init script creates the
+    # timescaledb extension in POSTGRES_DB, so hypertables work immediately.
+    image: timescale/timescaledb:2.17.2-pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-forelume}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forelume}
+      POSTGRES_DB: ${POSTGRES_DB:-forelume}
+    ports:
+      # Bound to localhost only: nothing outside this machine reaches it.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    # Append-only file, so queued BullMQ jobs survive a restart.
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:

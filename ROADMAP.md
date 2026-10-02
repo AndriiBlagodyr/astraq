@@ -1,8 +1,8 @@
 # Forelume Roadmap
 
-> **Status (2026-10-02)** — Design system v2 is done; Phase 0 (close the foundation) is next. Rewritten roadmap, see [Revision log](#revision-log).
-> **Actually working today:** NestJS skeleton (Pino, request ids, Zod env, error filter, health), `@astraq/ui` 0.2.0 (Base UI components, generated tokens, 6 themes × light/dark, density, built ESM) + Storybook with docs pages, Turborepo, `uv`-managed `services/ml` stub.
-> **Not yet real:** any database, any web → api call, any chart, CI, local infra, deployment. Most `apps/web` routes are descriptive placeholders.
+> **Status (2026-10-02)** — Design system v2 is done; Phase 0 (close the foundation) is in progress: hygiene, the placeholder-route cleanup, local infra, and env validation are done. Rewritten roadmap, see [Revision log](#revision-log).
+> **Actually working today:** NestJS skeleton (Pino, request ids, Zod env, error filter, health), `@astraq/ui` 0.2.0 (Base UI components, generated tokens, 6 themes × light/dark, density, built ESM) + Storybook with docs pages, Turborepo, `uv`-managed `services/ml` stub. `apps/web` has one app shell with Today (a short text page), `/status` (live API and ML health checks), and auth screens that aren't wired yet; its env is Zod-validated at boot. `pnpm infra:up` runs Postgres 16 + TimescaleDB and Redis 7 locally; nothing connects to them yet.
+> **Not yet real:** any database, any web → api data call (only health checks), any chart, CI, deployment.
 > **Rule for this block:** it describes what runs, not what is planned. Update it in the same PR that changes reality.
 
 Forelume has two jobs at once:
@@ -168,10 +168,10 @@ Follow-ups folded into Phase 0: app pages still style themselves with `layout.mo
 
 **Goal:** make the repo honest, reproducible, and verified by CI before anything else is built on it.
 
-1. **Hygiene:** untrack `apps/api/tsconfig.build.tsbuildinfo`, `apps/web/test-results/`, and `services/ml/*.egg-info/`; ignore `*.tsbuildinfo`. Align `requires-python` with the pinned 3.12.
+1. **Hygiene:** untrack `apps/api/tsconfig.build.tsbuildinfo`, `apps/web/test-results/`, and `services/ml/*.egg-info/`; ignore `*.tsbuildinfo`. Align `requires-python` with the pinned 3.12 — done.
 2. **Delete placeholder routes** in `apps/web`. Keep the home page, auth screens, `/status`, and one app shell. Routes come back in the phase that fills them. The full list, the home page rewrite, and the brand rules are in [docs/ui-plan.md § Phase 0 cleanup](docs/ui-plan.md#phase-0-cleanup) — done.
-3. **Local infra** in `infra/docker/compose.yml`: Postgres 16 + TimescaleDB, Redis 7. (Mongo and Mailhog join in the phases that use them.) Root scripts `pnpm infra:up` / `infra:down`.
-4. **Env validation everywhere:** `pydantic-settings` in `services/ml`; add `CORS_ORIGINS`, `DATABASE_URL`, `REDIS_URL` to the API schema. Replace `app.enableCors()` with an allowlist.
+3. **Local infra** in `infra/docker/compose.yml`: Postgres 16 + TimescaleDB, Redis 7. (Mongo and Mailhog join in the phases that use them.) Root scripts `pnpm infra:up` / `infra:down` — done.
+4. **Env validation everywhere:** `pydantic-settings` in `services/ml`; add `CORS_ORIGINS`, `DATABASE_URL`, `REDIS_URL` to the API schema. Replace `app.enableCors()` with an allowlist — done.
 5. **CI** (GitHub Actions): install, lint, typecheck, unit tests for all Node packages and `services/ml`, with Turborepo and `uv` caching. Add ruff + mypy to the ML job now — cheap while the codebase is tiny. Run `pnpm --filter @astraq/ui tokens:check`, so stale generated token files fail CI.
 6. **Renovate** with grouped, weekly updates.
 7. Echo `x-request-id` back in API responses.

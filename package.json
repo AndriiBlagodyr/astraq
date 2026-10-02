@@ -8,6 +8,8 @@
     "dev:web": "turbo dev --filter=web...",
     "dev:api": "pnpm --filter @astraq/api dev",
     "dev:storybook": "pnpm --filter @astraq/ui storybook",
+    "infra:up": "docker compose -f infra/docker/compose.yml up -d --wait",
+    "infra:down": "docker compose -f infra/docker/compose.yml down",
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",

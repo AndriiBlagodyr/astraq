@@ -9,7 +9,7 @@ alwaysApply: false
 - Pass serializable data into client children.
 
 # Routing
-- Use route groups `(app)` / `(marketing)` for layout separation (already present).
+- Use route groups `(app)` / `(auth)` for layout separation (already present).
 - Route handlers (`app/api/**/route.ts`) should stay thin and avoid business logic.
 
 # Components
