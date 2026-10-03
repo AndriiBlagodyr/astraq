@@ -1,14 +1,7 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-from fastapi.testclient import TestClient
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 from app.main import app
-
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
 

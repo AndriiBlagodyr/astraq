@@ -1,14 +1,8 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
-from pydantic import ValidationError
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 from app.settings import Settings
+from pydantic import ValidationError
 
 
 @pytest.fixture(autouse=True)
