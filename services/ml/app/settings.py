@@ -17,9 +17,7 @@ class Settings(BaseSettings):
     environment: Literal["development", "production", "test"] = "development"
     log_level: Literal["critical", "error", "warning", "info", "debug"] = "info"
     # Read-only market data access (AGENTS.md); the api owns domain writes.
-    database_url: PostgresDsn = PostgresDsn(
-        "postgres://forelume:forelume@localhost:5432/forelume"
-    )
+    database_url: PostgresDsn = PostgresDsn("postgres://forelume:forelume@localhost:5432/forelume")
     # BullMQ queues shared with the api.
     redis_url: RedisDsn = RedisDsn("redis://localhost:6379")
 

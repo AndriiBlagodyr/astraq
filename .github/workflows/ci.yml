@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+# A new push to the same branch cancels the run it replaces.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: Node — lint, typecheck, unit tests
+    runs-on: ubuntu-latest
+    env:
+      # Unit tests run in jsdom; e2e (and its browsers) aren't in CI yet.
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v5
+
+      # Version comes from `packageManager` in the root package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Turborepo's local cache: unchanged packages replay their last result.
+      - uses: actions/cache@v4
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Generated tokens match their source
+        run: pnpm --filter @astraq/ui tokens:check
+
+      - run: pnpm turbo run lint typecheck test:unit
+
+  ml:
+    name: ML — ruff, mypy, pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/ml
+    steps:
+      - uses: actions/checkout@v5
+
+      # Installs Python from services/ml/.python-version on first use.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/ml/uv.lock
+
+      # --locked fails if uv.lock is out of date with pyproject.toml.
+      - run: uv sync --locked
+
+      - run: uv run --frozen ruff check .
+      - run: uv run --frozen ruff format --check .
+      - run: uv run --frozen mypy
+      - run: uv run --frozen pytest
