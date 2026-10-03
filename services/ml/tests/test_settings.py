@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import pytest
-from app.settings import Settings
 from pydantic import ValidationError
+
+from app.settings import Settings
 
 
 @pytest.fixture(autouse=True)
