@@ -4,7 +4,7 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# apps/web — Forelume Frontend
+# apps/web — Veracand Frontend
 
 - Next.js 16 App Router, React 19. RSC by default; add `"use client"` only where needed.
 - UI: Tailwind CSS + semantic CSS-variable tokens from `@astraq/ui`. No CSS-in-JS runtimes.

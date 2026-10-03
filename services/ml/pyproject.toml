@@ -1,7 +1,7 @@
 [project]
-name = "forelume-ml"
+name = "veracand-ml"
 version = "0.1.0"
-description = "FastAPI ML prediction service for Forelume"
+description = "FastAPI ML prediction service for Veracand"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115.0",

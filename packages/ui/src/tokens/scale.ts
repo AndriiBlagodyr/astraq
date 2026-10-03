@@ -17,8 +17,8 @@ export type Scale = readonly string[] & { length: 12 };
 type Curve = { l: readonly number[]; c: readonly number[] };
 
 /**
- * Neutral curves, fitted to the original Forelume palette (hue ~257°). A
- * theme's `chroma` multiplies `c`, so 1 = Forelume's blue tint, 0 = pure gray.
+ * Neutral curves, fitted to the original Veracand palette (hue ~257°). A
+ * theme's `chroma` multiplies `c`, so 1 = Veracand's blue tint, 0 = pure gray.
  */
 const NEUTRAL: Record<Mode, Curve> = {
   dark: {

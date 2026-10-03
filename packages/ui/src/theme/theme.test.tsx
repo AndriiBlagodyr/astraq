@@ -69,7 +69,7 @@ describe("ThemeProvider", () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.dataset.mode = "dark";
-    document.documentElement.dataset.theme = "forelume";
+    document.documentElement.dataset.theme = "veracand";
     delete document.documentElement.dataset.density;
   });
 
@@ -81,22 +81,22 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByText("forelume:dark:system")).toBeVisible();
+    expect(screen.getByText("veracand:dark:system")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Toggle mode" }));
-    expect(screen.getByText("forelume:light:light")).toBeVisible();
+    expect(screen.getByText("veracand:light:light")).toBeVisible();
     expect(document.documentElement.dataset.mode).toBe("light");
 
     await user.click(screen.getByRole("button", { name: "Use terminal" }));
     expect(screen.getByText("terminal:light:light")).toBeVisible();
     expect(document.documentElement.dataset.theme).toBe("terminal");
-    expect(localStorage.getItem("forelume-theme")).toBe("terminal");
+    expect(localStorage.getItem("veracand-theme")).toBe("terminal");
   });
 
   it("follows the OS color scheme while the preference is system", async () => {
     const user = userEvent.setup();
     const setScheme = mockColorScheme("dark");
-    localStorage.setItem("forelume-color-mode", "light");
+    localStorage.setItem("veracand-color-mode", "light");
     document.documentElement.dataset.mode = "light";
 
     render(
@@ -106,16 +106,16 @@ describe("ThemeProvider", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Use system" }));
-    expect(screen.getByText("forelume:dark:system")).toBeVisible();
+    expect(screen.getByText("veracand:dark:system")).toBeVisible();
 
     act(() => setScheme("light"));
-    expect(screen.getByText("forelume:light:system")).toBeVisible();
+    expect(screen.getByText("veracand:light:system")).toBeVisible();
     expect(document.documentElement.dataset.mode).toBe("light");
 
     // An explicit choice stops following the OS.
     await user.click(screen.getByRole("button", { name: "Toggle mode" }));
     act(() => setScheme("light"));
-    expect(screen.getByText("forelume:dark:dark")).toBeVisible();
+    expect(screen.getByText("veracand:dark:dark")).toBeVisible();
   });
 });
 
@@ -140,7 +140,7 @@ describe("density", () => {
     await user.click(screen.getByRole("button", { name: "Use comfortable" }));
     expect(screen.getByText("density comfortable:comfortable")).toBeVisible();
     expect(root.dataset.density).toBe("comfortable");
-    expect(localStorage.getItem("forelume-density")).toBe("comfortable");
+    expect(localStorage.getItem("veracand-density")).toBe("comfortable");
 
     await user.click(screen.getByRole("button", { name: "Use theme density" }));
     expect(screen.getByText("density compact:theme")).toBeVisible();

@@ -1,9 +1,9 @@
 ---
-description: Forelume monorepo context and cross-cutting conventions
+description: Veracand monorepo context and cross-cutting conventions
 alwaysApply: true
 ---
 
-# Forelume Context
+# Veracand Context
 
 - Monorepo with `apps/web` (Next.js), `apps/api` (NestJS), `services/ml` (Python FastAPI + uv), and `packages/ui`.
 - Use `pnpm` workspaces at the repo root. Use `uv` for `services/ml`.

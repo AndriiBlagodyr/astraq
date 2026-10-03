@@ -1,15 +1,17 @@
 /* Mode-adjusted brand tokens: `*-fg` variants stay legible on light surfaces. */
 .logo {
-  --logo-primary: var(--ds-brand-fg);
-  --logo-deep: var(--ds-brand-strong-fg);
+  --logo-path: var(--ds-brand-strong-fg);
+  --logo-candle: var(--ds-brand-fg);
   --logo-spark: var(--ds-brand-warm);
-  --logo-core: var(--ds-fg-default);
-  --logo-core-inner: var(--logo-primary);
   --logo-shadow: color-mix(in oklab, var(--ds-brand) 28%, transparent);
 
-  width: 100%;
-  height: auto;
+  /*
+   * No width or height here: the caller sizes the mark with Tailwind classes.
+   * This module is unlayered, so any size set here would beat those
+   * utilities (which live in @layer utilities).
+   */
   display: block;
+  flex-shrink: 0;
   overflow: visible;
   filter: drop-shadow(0 6px 18px var(--logo-shadow));
 }
@@ -17,37 +19,28 @@
 /* Warm accents are pale by design; deepen the spark so it holds on paper-white. */
 :global(:root[data-mode="light"]) .logo {
   --logo-spark: color-mix(in oklch, var(--ds-brand-warm) 78%, #000000);
-  --logo-core: var(--logo-primary);
-  --logo-core-inner: #ffffff;
   --logo-shadow: color-mix(in oklab, var(--ds-brand-strong) 18%, transparent);
 }
 
-.history {
+/* On load the V draws itself, then the candle rises from its wick. */
+.path {
   stroke-dasharray: 1;
-  animation: history-draw 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: path-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.forecast {
-  animation: forecast-flow 2.4s linear infinite;
-}
-
-.cone {
-  animation: cone-breathe 4.8s ease-in-out infinite;
-}
-
-.now {
-  transform-origin: 24px 22px;
+.candle {
+  transform-origin: 32px 29.5px;
   transform-box: view-box;
-  animation: now-pulse 2.8s ease-in-out infinite;
+  animation: candle-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.65s both;
 }
 
 .spark {
-  transform-origin: 41px 13.5px;
+  transform-origin: 41px 10px;
   transform-box: view-box;
   animation: spark-twinkle 3.6s ease-in-out infinite;
 }
 
-@keyframes history-draw {
+@keyframes path-draw {
   from {
     stroke-dashoffset: 1;
   }
@@ -56,29 +49,14 @@
   }
 }
 
-@keyframes forecast-flow {
+@keyframes candle-rise {
+  from {
+    opacity: 0;
+    transform: scaleY(0.4);
+  }
   to {
-    stroke-dashoffset: -8;
-  }
-}
-
-@keyframes cone-breathe {
-  0%,
-  100% {
-    opacity: 0.8;
-  }
-  50% {
     opacity: 1;
-  }
-}
-
-@keyframes now-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.12);
+    transform: scaleY(1);
   }
 }
 
@@ -95,10 +73,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .history,
-  .forecast,
-  .cone,
-  .now,
+  .path,
+  .candle,
   .spark {
     animation: none;
   }

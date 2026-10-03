@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from app.settings import settings
 
-app = FastAPI(title="Forelume ML Service", debug=settings.environment == "development")
+app = FastAPI(title="Veracand ML Service", debug=settings.environment == "development")
 
 
 @app.get("/health")

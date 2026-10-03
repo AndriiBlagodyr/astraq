@@ -43,6 +43,13 @@ jobs:
       - name: Generated tokens match their source
         run: pnpm --filter @astraq/ui tokens:check
 
+      # Regenerates openapi.json and the SDK types from the code; a diff means
+      # someone changed an endpoint without running `pnpm contract`.
+      - name: Contract matches the code
+        run: |
+          pnpm contract
+          git diff --exit-code -- apps/api/openapi.json packages/sdk/src/schema.ts
+
       - run: pnpm turbo run lint typecheck test:unit
 
   ml:

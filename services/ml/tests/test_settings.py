@@ -23,7 +23,7 @@ def test_defaults_point_at_local_infra() -> None:
 
 
 def test_rejects_a_non_postgres_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("DATABASE_URL", "mysql://localhost/forelume")
+    monkeypatch.setenv("DATABASE_URL", "mysql://localhost/veracand")
 
     with pytest.raises(ValidationError, match="database_url"):
         Settings()
@@ -38,7 +38,7 @@ def test_production_requires_infra_urls(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_production_accepts_explicit_urls(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://reader:secret@db.internal:5432/forelume")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://reader:secret@db.internal:5432/veracand")
     monkeypatch.setenv("REDIS_URL", "rediss://cache.internal:6380")
 
     assert Settings().environment == "production"

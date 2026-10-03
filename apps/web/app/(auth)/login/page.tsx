@@ -13,7 +13,7 @@ export default function LoginPage() {
           Phase 2 · Auth
         </p>
         <h1 className="m-0 font-display text-3xl font-bold tracking-tight text-foreground">
-          Welcome back to Forelume
+          Welcome back to Veracand
         </h1>
         <p className="m-0 leading-7 text-secondary">
           Email + password sign-in. Once Phase 2 ships, this form will exchange
@@ -24,7 +24,7 @@ export default function LoginPage() {
 
       <Feedback
         title="Sign-in isn't available yet"
-        description="Accounts arrive in Phase 2. Until then, nothing in Forelume needs one."
+        description="Accounts arrive in Phase 2. Until then, nothing in Veracand needs one."
       />
 
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">

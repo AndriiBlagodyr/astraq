@@ -1,6 +1,6 @@
 # @astraq/ui
 
-Forelume's semantic design tokens and accessible React components.
+Veracand's semantic design tokens and accessible React components.
 
 ## Principles
 
@@ -135,7 +135,7 @@ import { ThemeScript } from "@astraq/ui/theme";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="forelume" data-mode="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="veracand" data-mode="dark" suppressHydrationWarning>
       <head>
         <ThemeScript />
       </head>

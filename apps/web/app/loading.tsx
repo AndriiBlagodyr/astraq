@@ -1,15 +1,10 @@
-import styles from "./status.module.css";
+import { Spinner } from "@astraq/ui";
+import { StatusPanel } from "@/app/components/StatusPanel";
 
 export default function Loading() {
   return (
-    <main className={styles.wrap}>
-      <div className={styles.panel}>
-        <p className={styles.eyebrow}>Loading</p>
-        <h1 className={styles.title}>Loading Forelume</h1>
-        <div className={styles.actions}>
-          <div className={styles.spinner} aria-hidden="true" />
-        </div>
-      </div>
-    </main>
+    <StatusPanel eyebrow="Loading" title="Loading Veracand">
+      <Spinner size="lg" label="Loading" className="text-brand" />
+    </StatusPanel>
   );
 }

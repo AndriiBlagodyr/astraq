@@ -1,0 +1,31 @@
+{
+  "name": "@astraq/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Typed client for the Veracand API, generated from apps/api/openapi.json.",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "generate": "openapi-typescript ../../apps/api/openapi.json -o src/schema.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0",
+    "tsdown": "^0.23.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -9,7 +9,7 @@
 ADR 0001 established `packages/ui` with Tailwind, semantic CSS variables, and headless primitives (Radix). The package now needs to grow from ~15 components and 3 themes into a professional design system that:
 
 - ships 6+ themes that differ in identity (color, typography, radius, density, surface treatment), not just accent hue, each in light and dark;
-- stays reusable outside Forelume without a rewrite;
+- stays reusable outside Veracand without a rewrite;
 - is accessible by construction and verified by tests, not by eye.
 
 The current package has limits that block this:
@@ -27,7 +27,7 @@ The current package has limits that block this:
 | Stay on Radix | Viable, avoids migration, but weaker long-term trajectory and no combobox/number field. |
 | **Base UI** | **Chosen.** Active, broad primitive set, `render`-prop composition, shadcn-compatible. Migration cost is small today (4 wrappers). |
 | React Aria Components | Best a11y/i18n, but a verbose API for everyday controls. Kept as a targeted exception (see below). |
-| Ark UI | Framework-agnostic, but a smaller ecosystem; Forelume is React-only. |
+| Ark UI | Framework-agnostic, but a smaller ecosystem; Veracand is React-only. |
 | Styled kits (Radix Themes, Mantine, HeroUI, Chakra) | Rejected: they impose a visual language, which is what ADR 0001 moved away from. |
 
 ## Decision
@@ -62,7 +62,7 @@ The current package has limits that block this:
 
 Each axis is an independent `data-*` attribute on `<html>`:
 
-- `data-theme`: identity (`forelume`, `terminal`, `midnight`, `paper`, `graphite`, `contrast`).
+- `data-theme`: identity (`veracand`, `terminal`, `midnight`, `paper`, `graphite`, `contrast`).
 - `data-mode`: `light` | `dark`. The user preference can also be `system`, which resolves at runtime and follows `prefers-color-scheme`.
 - `data-density`: `comfortable` | `compact`. Optional, and a theme may set its own default.
 
@@ -97,4 +97,4 @@ We considered making the theme the only switch, with light or dark built into ea
 - Migrating Radix to Base UI changes state selectors (`data-[state=open]` → Base UI's boolean attributes such as `data-open`) and `asChild` → `render`. `apps/web` has no direct Radix usage, so the blast radius is the package.
 - Consumers must load fonts themselves (e.g. `next/font`); the package only declares font stacks.
 - A build step now sits between package source and the app. Turbo already orders `^build`.
-- The transitional aliases were moved out of the package in PR 7 and deleted in its follow-up. The app's CSS modules read `--ds-*` tokens directly until the `layout.module.css` migration (the Phase 0 follow-up) replaces them.
+- The transitional aliases were moved out of the package in PR 7 and deleted in its follow-up. The Phase 0 follow-up then replaced the app's page CSS modules with `@astraq/ui` compositions.

@@ -17,6 +17,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@astraq/sdk": "workspace:*",
     "@astraq/ui": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@stripe/react-stripe-js": "^6.1.0",

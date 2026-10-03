@@ -1,6 +1,6 @@
 # Motion & Delight — Rules and Requirements
 
-Goal: Forelume should feel **fast, responsive, and alive**, so people enjoy exploring it and want to come back. Motion should explain what is happening, not decorate.
+Goal: Veracand should feel **fast, responsive, and alive**, so people enjoy exploring it and want to come back. Motion should explain what is happening, not decorate.
 
 This extends the design-system plan ([design-system-plan.md](design-system-plan.md), ADR 0002). It sets rules and lists motion requirements. It does not schedule work: each item points to the design-system PR or roadmap phase that builds it. Shared primitives go in `packages/ui`; trading-specific behavior and app shells stay in `apps/web`, as AGENTS.md requires.
 

@@ -12,7 +12,7 @@ export default function TodayPage() {
     <main className="grid gap-5">
       <Card className="grid gap-5 p-7">
         <h1 className="m-0 font-display text-4xl font-bold tracking-tight text-foreground">
-          Forelume
+          Veracand
         </h1>
         <p className="m-0 max-w-2xl leading-7 text-secondary">
           A personal market research lab for US equities. Backtests and paper trading share one fill

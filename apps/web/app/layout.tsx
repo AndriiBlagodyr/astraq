@@ -49,7 +49,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      data-theme="forelume"
+      data-theme="veracand"
       data-mode="dark"
       suppressHydrationWarning
     >

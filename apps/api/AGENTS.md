@@ -1,4 +1,4 @@
-# apps/api — Forelume Node.js Backend
+# apps/api — Veracand Node.js Backend
 
 - Framework: NestJS 11. The api is the only writer of domain tables.
 - Layering: `controller -> service -> repository -> db`. No DB calls in controllers.
@@ -6,5 +6,5 @@
 - Jobs/queues: BullMQ on Redis. Cron via `@nestjs/schedule`.
 - Validation: Zod schemas shared from `packages/shared`; use `nestjs-zod` for DTO binding.
 - Logging: pino with request-id middleware. No `console.log` in production paths.
-- OpenAPI: `@nestjs/swagger` + `nestjs-zod`, emitted at build and committed; SDK regenerated into `packages/sdk` with `openapi-typescript` + `openapi-fetch`. CI fails on drift.
+- OpenAPI: `@nestjs/swagger` + `nestjs-zod`. Every handler declares `@ZodResponse({ status, type })`; controllers add `@ApiProblemResponses()`. `pnpm contract` (root) writes `openapi.json` and regenerates `packages/sdk`; commit both. CI fails on drift. See ADR 0004.
 - Python jobs (backtests, forecasts): enqueue via BullMQ; persist the returned result in the api.

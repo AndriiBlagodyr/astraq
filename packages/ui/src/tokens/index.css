@@ -16,9 +16,9 @@
   }
 }
 
-/* Forelume (default): type, shape, surfaces, comfortable density */
+/* Veracand (default): type, shape, surfaces, comfortable density */
 :root,
-[data-theme="forelume"] {
+[data-theme="veracand"] {
   --ds-font-sans: "Geist", "Avenir Next", "Segoe UI", sans-serif;
   --ds-font-display: "Sora", "Avenir Next", "Segoe UI", sans-serif;
   --ds-font-mono: "SFMono-Regular", "SF Mono", "Consolas", monospace;
@@ -191,9 +191,9 @@
   --ds-head-y: 0.5rem;
 }
 
-/* Forelume · dark (default) */
+/* Veracand · dark (default) */
 :root,
-[data-theme="forelume"]:not([data-mode="light"]) {
+[data-theme="veracand"]:not([data-mode="light"]) {
   color-scheme: dark;
   --ds-bg-canvas: #07111f;
   --ds-bg-subtle: #0a172a;
@@ -241,9 +241,9 @@
   --ds-gradient-surface: radial-gradient(circle at top right, rgba(70, 108, 239, 0.14), transparent 32%), linear-gradient(180deg, rgba(7, 17, 31, 0.9), rgba(13, 29, 52, 0.76));
 }
 
-/* Forelume · light (default) */
+/* Veracand · light (default) */
 [data-mode="light"],
-[data-theme="forelume"][data-mode="light"] {
+[data-theme="veracand"][data-mode="light"] {
   color-scheme: light;
   --ds-bg-canvas: #f3f7fc;
   --ds-bg-subtle: #eaf0f8;

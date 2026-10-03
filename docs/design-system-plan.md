@@ -17,7 +17,7 @@ packages/ui/
 │   │   ├── resolve.ts           # seeds -> semantic tokens per mode
 │   │   ├── emit.ts              # CSS, DTCG JSON, runtime registry
 │   │   ├── themes/
-│   │   │   ├── forelume.ts  terminal.ts  midnight.ts
+│   │   │   ├── veracand.ts  terminal.ts  midnight.ts
 │   │   │   └── paper.ts   graphite.ts  contrast.ts   (PR 4)
 │   │   ├── contrast.test.ts     # every theme × mode × pair
 │   │   ├── index.css            # generated token CSS (committed)
@@ -71,7 +71,7 @@ packages/ui/
 
 **What shipped**
 - **Seeds, not palettes:** each theme in `tokens/themes/*.ts` is a small set of seeds: a neutral hue and chroma, brand colors plus gradient stops, and status colors. `resolve.ts` derives every semantic token for light and dark.
-- **Full palette per theme (option 1):** neutrals come from a hue-tinted OKLCH 12-step scale, so backgrounds, surfaces, borders, text and shadows now differ per theme. The curves are fitted to the original Forelume values, so the default theme looks the same.
+- **Full palette per theme (option 1):** neutrals come from a hue-tinted OKLCH 12-step scale, so backgrounds, surfaces, borders, text and shadows now differ per theme. The curves are fitted to the original Veracand values, so the default theme looks the same.
 - **Contrast by construction:** text, focus-ring and chart colors are solved. Lightness moves until the color passes every surface it can sit on, including translucent surfaces flattened over the canvas and tone tints of 8–24%.
 - **Committed outputs:** `pnpm --filter @astraq/ui tokens` writes `tokens/index.css`, `generated/tokens.json` (DTCG) and `generated/registry.ts`. `build` runs `tokens:check`, which fails when they're stale. That's the drift check to wire into CI once CI exists (Phase 0).
 - **Test:** `contrast.test.ts` replaces `fg-contrast.test.ts`, with 114 checks across 3 themes × 2 modes.
@@ -124,7 +124,7 @@ Fonts, radii and motion are shared across themes.
 
 | Theme | Identity | Type | Radius | Surfaces | Default density |
 |---|---|---|---|---|---|
-| `forelume` | Cyan → indigo → gold; the flagship | Geist / Sora | Large (12–24px) | Glass, gradients | comfortable |
+| `veracand` | Cyan → indigo → gold; the flagship | Geist / Sora | Large (12–24px) | Glass, gradients | comfortable |
 | `terminal` | Phosphor green + amber; Bloomberg-style | Mono display, Geist body | 2–4px | Flat, no blur, hairline borders | compact |
 | `midnight` | Violet + pink; soft, night-trading | Geist / Sora | Large | Soft gradients | comfortable |
 | `paper` | Warm off-white / ink; editorial research reports. Dark = sepia night | Serif display (Fraunces), Geist body | 6px | Opaque, no gradients, hairline rules | comfortable |
@@ -146,7 +146,7 @@ Fonts, radii and motion are shared across themes.
   - `links` (`plain` | `underline`)
 
   These emit as per-theme `--ds-*` tokens. The old shared font and radius tokens are gone.
-- **Themes:** `paper`, `graphite` and `contrast` are added. `terminal` becomes flat, with a solid primary fill, mono display face, 2–4px radii and compact default density. Forelume and Midnight colors are byte-identical to PR 2.
+- **Themes:** `paper`, `graphite` and `contrast` are added. `terminal` becomes flat, with a solid primary fill, mono display face, 2–4px radii and compact default density. Veracand and Midnight colors are byte-identical to PR 2.
 - **Surfaces:** `opaque` and `flat` themes get solid surfaces, flat page and card backgrounds, and no blur. `opaque` has subtle shadows, and `flat` has no shadows at all.
 - **Contrast level:** the `contrast` theme is solved to AAA: 7:1 text, and 4.5:1 for non-text including solid borders. `contrast.test.ts` checks each theme at its own level, with 234 checks in total.
 - **Density:** `DENSITY_TOKENS` cover control heights, inline padding and table cell padding. They map to Tailwind as `min-h-control-*`, `px-inset-*`, `py-cell-y` and `py-head-y`.
@@ -204,7 +204,7 @@ Each tier is its own PR, and the next starts after the previous one merges:
 
 **Deliberate differences**
 - **FormField API:** `htmlFor` is gone, because Base UI generates and links ids. `hint` is renamed `description` to match the parts. The description now stays visible when an error shows. `useFieldControl` is removed; the Base UI field context replaces it. Nothing in `apps/web` used them.
-- **Checkbox corners:** they use half the theme's `radius-sm`, so forelume's 12px radius doesn't turn checkboxes into circles.
+- **Checkbox corners:** they use half the theme's `radius-sm`, so veracand's 12px radius doesn't turn checkboxes into circles.
 - **SegmentedControl and Form:** it isn't a Base UI control, so a FieldLabel can't point at it, and `onFormSubmit` doesn't include its value. It submits through `name` in native `FormData`.
 - **Spring presets:** moved to 5c with `AnimatedNumber`, their first consumer.
 

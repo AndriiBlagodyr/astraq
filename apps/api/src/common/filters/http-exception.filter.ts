@@ -6,16 +6,10 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import type { Problem, ValidationIssue } from '@astraq/shared';
 import { Request, Response } from 'express';
-
-interface ProblemDetail {
-  type: string;
-  title: string;
-  status: number;
-  detail?: string;
-  instance: string;
-  timestamp: string;
-}
+import { ZodValidationException } from 'nestjs-zod';
+import { ZodError } from 'zod';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -43,15 +37,29 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
-    const problem: ProblemDetail = {
+    const problem: Problem = {
       type: `https://httpstatuses.io/${status}`,
       title: HttpStatus[status] ?? 'Unknown Error',
       status,
       detail: message,
       instance: request.url,
       timestamp: new Date().toISOString(),
+      errors: validationIssues(exception),
     };
 
     response.status(status).json(problem);
   }
+}
+
+/** The failed checks behind a request-validation 400, if that's what this is. */
+function validationIssues(exception: unknown): ValidationIssue[] | undefined {
+  if (!(exception instanceof ZodValidationException)) return undefined;
+  const error = exception.getZodError();
+  if (!(error instanceof ZodError)) return undefined;
+
+  return error.issues.map((issue) => ({
+    // Zod allows symbol keys; request inputs never have them.
+    path: issue.path.filter((key) => typeof key !== 'symbol'),
+    message: issue.message,
+  }));
 }
