@@ -1,3 +1,4 @@
+import { createApiClient } from "@astraq/sdk";
 import { env } from "./env";
 
 export type ServiceHealth = {
@@ -11,15 +12,37 @@ export type ServiceHealth = {
 
 const TIMEOUT_MS = 2_000;
 
-const services = [
-  { name: "API", url: new URL("/health/ready", env.API_URL).toString() },
-  { name: "ML service", url: new URL("/health", env.ML_URL).toString() },
+const api = createApiClient(env.API_URL);
+
+type Probe = (
+  url: string,
+  init: Pick<RequestInit, "cache" | "signal">
+) => Promise<Response>;
+
+const services: Array<{ name: string; url: string; probe: Probe }> = [
+  {
+    name: "API",
+    url: new URL("/health/ready", env.API_URL).toString(),
+    // Through the generated SDK: the first web → api call on the contract.
+    probe: async (_url, init) =>
+      (await api.GET("/health/ready", init)).response,
+  },
+  {
+    // The ML service isn't part of the OpenAPI contract, so plain fetch.
+    name: "ML service",
+    url: new URL("/health", env.ML_URL).toString(),
+    probe: (url, init) => fetch(url, init),
+  },
 ];
 
-async function check(name: string, url: string): Promise<ServiceHealth> {
+async function check(
+  name: string,
+  url: string,
+  probe: Probe
+): Promise<ServiceHealth> {
   const started = performance.now();
   try {
-    const response = await fetch(url, {
+    const response = await probe(url, {
       cache: "no-store",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
@@ -43,5 +66,7 @@ async function check(name: string, url: string): Promise<ServiceHealth> {
 }
 
 export function checkServices() {
-  return Promise.all(services.map((service) => check(service.name, service.url)));
+  return Promise.all(
+    services.map((service) => check(service.name, service.url, service.probe))
+  );
 }

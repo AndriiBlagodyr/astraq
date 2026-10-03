@@ -1,0 +1,9 @@
+{
+  "name": "@astraq/ml",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Turborepo entry point for the uv-managed ML service. Python dependencies live in pyproject.toml.",
+  "scripts": {
+    "dev": "uv run uvicorn app.main:app --reload --port 8000"
+  }
+}

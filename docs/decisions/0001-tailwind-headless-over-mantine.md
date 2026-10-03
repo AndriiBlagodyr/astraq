@@ -5,7 +5,7 @@
 
 ## Context
 
-Forelume needs a distinct, accessible design language that supports independent brand themes and light/dark modes. The existing web app used Mantine primarily for its provider and color-scheme runtime while most product visuals were already app-owned CSS Modules.
+Veracand needs a distinct, accessible design language that supports independent brand themes and light/dark modes. The existing web app used Mantine primarily for its provider and color-scheme runtime while most product visuals were already app-owned CSS Modules.
 
 Keeping Mantine would reduce short-term migration work, but reusable components would remain coupled to Mantine's theme and component APIs. Building every interactive primitive from scratch would provide full control at the cost of accessibility risk and maintenance.
 
@@ -22,7 +22,7 @@ Keeping Mantine would reduce short-term migration work, but reusable components 
 
 ## Consequences
 
-- Forelume owns its visual language and can add themes without changing component code.
+- Veracand owns its visual language and can add themes without changing component code.
 - Accessible overlays and composite controls reuse maintained interaction behavior.
 - Product pages can migrate incrementally through the semantic token compatibility layer.
 - Contributors must avoid raw palette values in shared components and must document meaningful states in Storybook.

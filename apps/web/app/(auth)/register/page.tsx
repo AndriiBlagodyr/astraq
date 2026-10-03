@@ -13,7 +13,7 @@ export default function RegisterPage() {
           Phase 2 · Auth
         </p>
         <h1 className="m-0 font-display text-3xl font-bold tracking-tight text-foreground">
-          Create a Forelume account
+          Create a Veracand account
         </h1>
         <p className="m-0 leading-7 text-secondary">
           Accounts hold your watchlists, paper trades, and saved strategies.

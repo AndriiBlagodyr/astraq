@@ -1,8 +1,8 @@
 import { FONTS, type ThemeSource } from "../schema";
 
-export const forelume = {
-  name: "forelume",
-  label: "Forelume",
+export const veracand = {
+  name: "veracand",
+  label: "Veracand",
   description: "Cyan to indigo with a warm gold accent. Glass surfaces.",
   density: "comfortable",
   surfaces: "glass",

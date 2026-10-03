@@ -24,13 +24,13 @@ A sidebar on desktop, plus a top bar.
 | Trading | **Portfolio** | `/portfolios` | 3 |
 | Trading | **Strategies** | `/strategies` | 5 |
 | Trading | **Backtests** | `/backtests` | 5 |
-| Research | **Analysis** | `/analysis` | 6 |
+| Research | **Analysis** | `/analysis/returns` → `/analysis` | 2 → 6 |
 | Research | **Journal** | `/journal` | 6 |
 | Research | **Alerts** | `/alerts` | 9 |
 | Bottom of sidebar | **Settings** | `/settings` | 2 |
 | Bottom of sidebar | **Status** | `/status` | 0 (admin-only from 7) |
 
-- A group header appears only once it has an item. Until Phase 3 the sidebar is Today, Watchlists, Stocks, and Status.
+- A group header appears only once it has an item. Until Phase 3 the sidebar is Today, Watchlists, Stocks, Analysis, and Status. Analysis points at the returns distribution until Phase 6 adds the `/analysis` index.
 - **Top bar:** symbol search (Phase 1), which becomes the ⌘K / Ctrl+K command palette in Phase 2 (pages, symbols, actions, recent items). After that come the theme menu (theme, mode, density) and the user menu (Settings, Sign out; Phase 2).
 - **Keyboard:** `/` focuses search, `g` + a letter jumps to a page, `?` lists the shortcuts (Phase 2, motion plan).
 - **Phone (Phase 6 mobile pass):** a bottom tab bar with Today, Watchlists, Portfolio, and Search. The rest live in a "More" sheet (`Drawer`).
@@ -67,7 +67,8 @@ Phase 2 onward, for visitors who aren't signed in: the logo, Sign in, and the th
 | `/portfolios/[id]/activity` | Portfolio — Activity (fills, cash, dividends) | 3 | signed in |
 | `/strategies`, `/strategies/new`, `/strategies/[id]` | Strategies | 5 | signed in |
 | `/backtests`, `/backtests/[id]` | Backtests | 5 | signed in |
-| `/analysis/*` | Analysis views | 6 | signed in |
+| `/analysis/returns` | Returns distribution (`d3`) | 2 | signed in |
+| `/analysis`, `/analysis/*` | Analysis index and the other views | 6 | signed in |
 | `/journal`, `/journal/[id]` | Research journal | 6 | signed in |
 | `/alerts` | Alerts | 9 | signed in |
 | `/settings/*` | Settings | 2, 7 | signed in |
@@ -84,7 +85,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
 
 | Phase | Adds |
 |---|---|
-| 0 | No data yet. A short text page: what Forelume is and what's being built. No mock charts or metrics. |
+| 0 | No data yet. A short text page: what Veracand is and what's being built. No mock charts or metrics. |
 | 1 | Symbol search, plus a table of the bootstrapped tickers (~20) with last close, day change, and as-of date, each linking to its chart. |
 | 2 | Watchlist summary: each watchlist's symbols with sparklines and day change. Recently viewed stocks. |
 | 3 | Portfolio card: equity, day PnL, cash, open orders. Market status: open or closed, and the next session from the exchange calendar. |
@@ -93,7 +94,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
 | 6 | Biggest moves across your watchlists, news for watched symbols, and the latest journal notes. Panels can be reordered (drag or keyboard). |
 | 9 | Triggered alerts and live prices with the tick flash. |
 
-**Landing (signed out, Phase 2 onward):** one sentence on what Forelume is, the honesty pitch (one fill model, always a benchmark, no look-ahead by construction), and Sign in. Registration is invite-only, so there's no sign-up push. A real screenshot can replace the text later; never a mock.
+**Landing (signed out, Phase 2 onward):** one sentence on what Veracand is, the honesty pitch (one fill model, always a benchmark, no look-ahead by construction), and Sign in. Registration is invite-only, so there's no sign-up push. A real screenshot can replace the text later; never a mock.
 
 ### Stocks — `/stocks`
 
@@ -111,7 +112,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
   - Candles plus a volume pane (`lightweight-charts`) from `GET /api/symbols/:ticker/candles?from&to&adjusted=true`.
   - A range picker (1M, 6M, 1Y, 5Y, Max, custom via `DateRangePicker`) and an adjusted / raw toggle. Split days are marked when showing raw prices.
   - The draw-in animation runs on first load only, and the crosshair tooltip shows OHLCV.
-- **Phase 2:** "Add to watchlist" in the header.
+- **Phase 2:** "Add to watchlist" in the header, and a "Returns" link to `/analysis/returns?symbol=`.
 - **Phase 3:** "Trade" in the header opens the order ticket (below). Your fills show as markers on the chart. A position summary (quantity, average cost, unrealized PnL) appears when you hold the symbol.
 - **Backtests tab (Phase 5):** runs that included this symbol, plus "Backtest a strategy on this symbol". Strategy signals can be overlaid on the chart.
 - **Phase 6, on the Chart tab:** indicator overlays (SMA, EMA, Bollinger) and RSI / MACD panes with synced crosshairs. Saved chart layouts.
@@ -134,7 +135,7 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
 **For:** keeping the symbols you follow, grouped your way.
 
 - **List:** your watchlists, each with a symbol count and its best and worst movers today. Create, rename, delete (with undo).
-- **Detail:** a row per symbol with last close, day change, and a sparkline from stored candles. Add symbols by search, remove them, and reorder by drag or keyboard. A row opens the stock page with the shared-element morph.
+- **Detail:** a row per symbol with last close, day change, and a sparkline from stored candles. Add symbols by search, remove them, and reorder by drag or keyboard. A row opens the stock page with the shared-element morph, and its menu links to the symbol's returns distribution.
 - **Phase 6:** a watchlist performance view over a chosen range links to `/analysis/watchlist/[id]`.
 - **Phase 9:** live prices and tick flash in the rows.
 
@@ -170,14 +171,14 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
   - Re-run with changed parameters creates a new run; it doesn't overwrite.
 - **Phase 6:** hovering a trade highlights it on the chart (linked views).
 
-### Analysis — `/analysis/*` (Phase 6)
+### Analysis — `/analysis/*` (Phase 2, Phase 6)
 
-**For:** questions across symbols or time, not about one stock. The index page lists the views. Each is its own route, with inputs in search params.
+**For:** questions across symbols or time, not about one stock. The index page (Phase 6) lists the views. Each is its own route, with inputs in search params.
 
 - `/analysis/compare`: relative performance of several symbols (rebased to 100) over a range.
 - `/analysis/watchlist/[id]`: a performance table for one watchlist.
 - `/analysis/drawdowns`: drawdown chart for a symbol or portfolio.
-- `/analysis/returns`: returns distribution (`d3`).
+- `/analysis/returns` (Phase 2): daily-returns histogram for one symbol over a range, with a normal-curve overlay and a stats table (mean, standard deviation, skew, best and worst day, share of up days). The first `d3` view; see ROADMAP Phase 2 item 7.
 - `/analysis/seasonality`: monthly or weekday seasonality heatmap (`d3`).
 
 ### Journal — `/journal`, `/journal/[id]` (Phase 6)
@@ -235,12 +236,12 @@ Done. What the current app needed to match this plan:
 1. **Deleted** `/market-data`, `/experiments`, `/predictions/**`, `/stocks/**` (including `compare`, `custom`, `tradingview`), and every route listed above for a later phase (`/watchlists`, `/portfolio/**`, `/strategies/**`, `/backtests/**`, `/account`). `/stocks` was a placeholder too; it comes back with real data in Phase 1, the others in their phase.
 2. **One shell.** `/` moved into the app shell as Today, and the `(marketing)` layout and page are gone. Nothing is public-only before Phase 2, so the signed-out landing returns with auth.
 3. **Home page:** the mock chart, sample backtest and forecast numbers, and stale phase status are replaced by the short Phase 0 text page.
-4. **Brand:** the product is **Forelume** everywhere people read it: UI copy, metadata, logo title, and docs. "astraq" survives only as the repo name and the `@astraq/*` package scope. The flagship theme shares the brand's name.
+4. **Brand:** the product is **Veracand** everywhere people read it: UI copy, metadata, logo title, and docs. "astraq" survives only as the repo name and the `@astraq/*` package scope. The flagship theme shares the brand's name. The product was called Forelume until 2026-10-03; it was renamed because forelume.com is an existing crypto trading-signals business (see the ROADMAP revision log).
 5. **Navigation:** `apps/web/lib/navigation.ts` is a flat list, Today and Status. The "Current focus" card and the header's Home and Experiments links are gone.
 6. **Status:** the hand-written phase table is replaced by live checks of the API (`/health/ready`) and the ML service (`/health`), with response and latency, rendered per request. The deployed version joins it with the first deployment in Phase 1.
 7. **Env:** `apps/web/lib/env.ts` validates `NEXT_PUBLIC_APP_URL`, `API_URL`, and `ML_URL` with Zod. `instrumentation.ts` imports it at server start, so an invalid value stops the server.
 8. **Auth screens:** `/login`, `/register`, and `/forgot-password` stay, as the ROADMAP says, with their copy updated to the current phases. Nothing links to them until Phase 2 makes them work.
-9. **CSS:** `(app)/layout.module.css` keeps only the shell's classes (374 → 83 lines), and the 815 lines of marketing CSS are deleted with their pages. New pages use Tailwind and `@astraq/ui`.
+9. **CSS:** `(app)/layout.module.css` keeps only the shell's classes (374 → 83 lines), and the 815 lines of marketing CSS are deleted with their pages. New pages use Tailwind and `@astraq/ui`. Later in Phase 0 the shells, navigation, and the error, not-found, and loading screens moved to `Card`, `Button`, and `Spinner` compositions, and their CSS modules were deleted. Only `VeracandLogo.module.css` stays, for the logo's SVG keyframes and per-mode colors.
 
 ## Open questions
 

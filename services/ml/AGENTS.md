@@ -1,6 +1,7 @@
-# services/ml — Forelume ML Service
+# services/ml — Veracand ML Service
 
 - Python 3.12 (pinned in `.python-version`), FastAPI, uvicorn. Package managed with `uv` (`uv.lock`, `uv sync --group dev`).
+- `package.json` exists only so `pnpm dev` (Turborepo) starts the service. Keep it to the `dev` script: no Node dependencies, no lint/test scripts (CI runs those through `uv`). See ADR 0003.
 - Style: ruff (lint + format), mypy (strict on `app/`), pytest + hypothesis.
 - Data: polars for heavy pipelines, pandas when interop with sklearn/statsmodels is required.
 - Models: scikit-learn for tabular, PyTorch for sequence models (LSTM/TCN/N-BEATS).

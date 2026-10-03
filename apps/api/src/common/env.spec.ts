@@ -8,7 +8,7 @@ describe('env validation', () => {
     expect(result.data).toMatchObject({
       PORT: 4000,
       NODE_ENV: 'development',
-      DATABASE_URL: 'postgres://forelume:forelume@localhost:5432/forelume',
+      DATABASE_URL: 'postgres://veracand:veracand@localhost:5432/veracand',
       REDIS_URL: 'redis://localhost:6379',
       CORS_ORIGINS: ['http://localhost:3000'],
     });
@@ -16,19 +16,19 @@ describe('env validation', () => {
 
   it('splits CORS_ORIGINS into a trimmed list', () => {
     const result = parseEnv({
-      CORS_ORIGINS: 'https://forelume.app, https://preview.forelume.app',
+      CORS_ORIGINS: 'https://veracand.app, https://preview.veracand.app',
     });
 
     expect(result.data?.CORS_ORIGINS).toEqual([
-      'https://forelume.app',
-      'https://preview.forelume.app',
+      'https://veracand.app',
+      'https://preview.veracand.app',
     ]);
   });
 
   it('rejects an origin with a path, and a non-postgres DATABASE_URL', () => {
     const result = parseEnv({
-      CORS_ORIGINS: 'https://forelume.app/',
-      DATABASE_URL: 'mysql://localhost/forelume',
+      CORS_ORIGINS: 'https://veracand.app/',
+      DATABASE_URL: 'mysql://localhost/veracand',
     });
 
     expect(result.success).toBe(false);

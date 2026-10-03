@@ -46,7 +46,7 @@ export default async function StatusPage() {
       <TableWrap>
         <Table>
           <TableCaption className="sr-only">
-            Health checks for the services behind Forelume
+            Health checks for the services behind Veracand
           </TableCaption>
           <Thead>
             <Tr>

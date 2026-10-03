@@ -1,11 +1,11 @@
-# Forelume Roadmap
+# Veracand Roadmap
 
-> **Status (2026-10-02)** — Design system v2 is done; Phase 0 (close the foundation) is in progress: hygiene, the placeholder-route cleanup, local infra, env validation, CI, and request-id echo are done. Rewritten roadmap, see [Revision log](#revision-log).
-> **Actually working today:** NestJS skeleton (Pino, request ids echoed in `x-request-id`, Zod env, error filter, health), `@astraq/ui` 0.2.0 (Base UI components, generated tokens, 6 themes × light/dark, density, built ESM) + Storybook with docs pages, Turborepo, `uv`-managed `services/ml` stub. `apps/web` has one app shell with Today (a short text page), `/status` (live API and ML health checks), and auth screens that aren't wired yet; its env is Zod-validated at boot. `pnpm infra:up` runs Postgres 16 + TimescaleDB and Redis 7 locally; nothing connects to them yet. GitHub Actions CI runs lint, typecheck, and unit tests for every Node package, the token drift check, and ruff, mypy, and pytest for `services/ml`.
-> **Not yet real:** any database, any web → api data call (only health checks), any chart, deployment.
+> **Status (2026-10-03)** — Design system v2 is done. Phase 0 (close the foundation) is done except making CI required on `master` (a GitHub setting) and the fresh-clone exit check. Phase 1 (walking skeleton) has started: the contract pipeline (item 1, ADR 0004) is done, and the API's predictions stub is deleted. Rewritten roadmap, see [Revision log](#revision-log).
+> **Actually working today:** NestJS skeleton (Pino, request ids echoed in `x-request-id`, Zod env, error filter, health), with requests and responses validated against Zod schemas from `packages/shared`, a committed `openapi.json`, Swagger UI at `/api/docs` outside production, and a typed `packages/sdk` client generated from the spec, `@astraq/ui` 0.2.0 (Base UI components, generated tokens, 6 themes × light/dark, density, built ESM) + Storybook with docs pages, Turborepo, `uv`-managed `services/ml` stub. `pnpm dev` starts web, api, ml, and the UI package watcher together. `apps/web` has one app shell with Today (a short text page), `/status` (live API and ML health checks; the API check goes through the SDK), and auth screens that aren't wired yet; its env is Zod-validated at boot. `pnpm infra:up` runs Postgres 16 + TimescaleDB and Redis 7 locally; nothing connects to them yet. GitHub Actions CI runs lint, typecheck, and unit tests for every Node package, the token drift check, a contract drift check (`pnpm contract` must leave `openapi.json` and the SDK unchanged), and ruff, mypy, and pytest for `services/ml`. Renovate opens grouped dependency PRs weekly.
+> **Not yet real:** any database, any web → api data call beyond health checks, any chart, deployment.
 > **Rule for this block:** it describes what runs, not what is planned. Update it in the same PR that changes reality.
 
-Forelume has two jobs at once:
+Veracand has two jobs at once:
 
 1. Turn a frontend-heavy background into real fullstack depth — Node.js, Python, SQL, data modeling, infrastructure.
 2. Become a personal market-research tool you actually use — not a sandbox of disconnected experiments.
@@ -27,7 +27,7 @@ The first meaningful release lets you:
 - backtest them with bias guards you can trust
 - paper trade the same rules and see accurate portfolio PnL
 
-**The wedge** — what makes Forelume worth opening instead of TradingView: *honesty*. Backtests and paper trading share one fill model, results always show a buy-and-hold benchmark, and look-ahead or survivorship shortcuts are impossible by construction rather than by discipline. That is also where the deepest engineering learning lives.
+**The wedge** — what makes Veracand worth opening instead of TradingView: *honesty*. Backtests and paper trading share one fill model, results always show a buy-and-hold benchmark, and look-ahead or survivorship shortcuts are impossible by construction rather than by discipline. That is also where the deepest engineering learning lives.
 
 If a task doesn't move the core loop forward or clearly deepen a core engineering skill, question it.
 
@@ -58,7 +58,7 @@ These are locked unless an ADR reverses them.
 |---|---|---|---|
 | Web | Next.js 16 App Router, RSC-first, TanStack Query for client state | now | Web is a BFF: holds tokens in `HttpOnly` cookies, never a second auth system. |
 | UI | `packages/ui` (Tailwind + semantic tokens + headless primitives) | now | Trading patterns stay in `apps/web`. |
-| Charts | `lightweight-charts` for OHLCV, `d3` only for bespoke visuals | Phase 1 / Phase 6 | |
+| Charts | `lightweight-charts` for OHLCV, `d3` only for bespoke visuals | Phase 1 / Phase 2 | First `d3` view (returns distribution) in Phase 2; the rest in Phase 6. |
 | API | NestJS 11, `nestjs-zod`, `@nestjs/swagger` | now | Layering `controller → service → repository`. |
 | Contracts | `packages/shared` (Zod) → OpenAPI → `packages/sdk` via `openapi-typescript` + `openapi-fetch` | Phase 1 | Small, readable generated client — no heavyweight codegen. |
 | Cross-language contracts | Zod → JSON Schema (`z.toJSONSchema`) → Pydantic (`datamodel-code-generator`) | Phase 5 | One source of truth for the strategy DSL. CI fails on drift. |
@@ -160,7 +160,7 @@ Base UI primitives, a generated token pipeline, 6 themes, density, and an extrac
 - PR 7 (Storybook docs pages, raw-color lint rule, alias cleanup) — done
 - Follow-up: the app's CSS modules read `--ds-*` tokens directly, and the transitional aliases are deleted — done
 
-Follow-ups folded into Phase 0: app pages still style themselves with `layout.module.css` — migrate the surviving routes to `packages/ui` compositions. The CI job also runs the token drift check (item 5).
+Follow-ups folded into Phase 0: migrate the surviving routes from `layout.module.css` to `packages/ui` compositions — done (only `VeracandLogo.module.css` remains: SVG keyframes and per-mode logo colors). The CI job also runs the token drift check (item 5) — done.
 
 ---
 
@@ -173,7 +173,7 @@ Follow-ups folded into Phase 0: app pages still style themselves with `layout.mo
 3. **Local infra** in `infra/docker/compose.yml`: Postgres 16 + TimescaleDB, Redis 7. (Mongo and Mailhog join in the phases that use them.) Root scripts `pnpm infra:up` / `infra:down` — done.
 4. **Env validation everywhere:** `pydantic-settings` in `services/ml`; add `CORS_ORIGINS`, `DATABASE_URL`, `REDIS_URL` to the API schema. Replace `app.enableCors()` with an allowlist — done.
 5. **CI** (GitHub Actions): install, lint, typecheck, unit tests for all Node packages and `services/ml`, with Turborepo and `uv` caching. Add ruff + mypy to the ML job now — cheap while the codebase is tiny. Run `pnpm --filter @astraq/ui tokens:check`, so stale generated token files fail CI — done.
-6. **Renovate** with grouped, weekly updates.
+6. **Renovate** with grouped, weekly updates — done.
 7. Echo `x-request-id` back in API responses — done.
 
 **Learning focus:** reproducible environments, CI pipelines, container basics.
@@ -183,7 +183,7 @@ Follow-ups folded into Phase 0: app pages still style themselves with `layout.mo
 - fresh clone → `pnpm install && pnpm infra:up && pnpm dev` boots everything with no manual steps
 - CI is green and required on `master`
 - every service crashes on invalid env
-- ADR 0003: "pnpm + Turborepo, and how Python lives in the monorepo"
+- ADR 0003: "pnpm + Turborepo, and how Python lives in the monorepo" — [done](docs/decisions/0003-pnpm-turborepo-and-python-in-the-monorepo.md)
 
 **Kill/pivot trigger:** if CI or compose polish runs past a week, ship whatever runs and list the gaps under "Carried gaps".
 
@@ -193,7 +193,7 @@ Follow-ups folded into Phase 0: app pages still style themselves with `layout.mo
 
 **Goal:** one real feature from provider to deployed chart, proving every layer and contract at once.
 
-1. **Contracts:** create `packages/shared` (Zod) and wire `nestjs-zod` + `@nestjs/swagger`. Emit `openapi.json` at build and commit it. Generate `packages/sdk` with `openapi-typescript` + `openapi-fetch`. CI fails if the committed spec or SDK drifts from the code.
+1. **Contracts:** create `packages/shared` (Zod) and wire `nestjs-zod` + `@nestjs/swagger`. `pnpm contract` writes `apps/api/openapi.json` and regenerates `packages/sdk` (`openapi-typescript` + `openapi-fetch`); both are committed. CI fails if the committed spec or SDK drifts from the code — done ([ADR 0004](docs/decisions/0004-nestjs-openapi-generated-sdk-contract.md)).
 2. **Schema (Prisma + raw SQL migration):**
    - `Symbol` (ticker, name, exchange, active flag)
    - `candles_daily` hypertable: `(symbol_id, ts)` primary key, raw OHLCV, `numeric` prices
@@ -202,7 +202,7 @@ Follow-ups folded into Phase 0: app pages still style themselves with `layout.mo
 4. **Endpoints:** `GET /api/symbols?query=`, `GET /api/symbols/:ticker/candles?from&to&adjusted=true`. Adjustment is computed in SQL from raw bars + corporate actions — the first hand-written query worth being proud of.
 5. **Web:** `/stocks/[symbol]` renders a real `lightweight-charts` candle + volume pane from the SDK, with loading, empty, and error states. Symbol search on `/stocks`.
 6. **Deploy:** web on Vercel, api on Railway/Fly, Postgres with Timescale support. Preview deploys for web PRs. `/health/ready` really checks the database.
-7. Remove the `/predictions/summary` and ML `/predict` stubs — dead placeholders teach nothing.
+7. Remove the `/predictions/summary` and ML `/predict` stubs — dead placeholders teach nothing. The API stub is gone; the ML one is left.
 
 **Learning focus:** OpenAPI and typed clients, migrations, hypertables, composite keys, SQL window functions, RSC vs client boundaries for charts, first deployment.
 
@@ -211,15 +211,15 @@ Follow-ups folded into Phase 0: app pages still style themselves with `layout.mo
 - a deployed URL shows adjusted candles for any bootstrapped ticker
 - an integration test runs the candle endpoint against real Timescale in CI (Testcontainers or a compose service)
 - a unit test proves split adjustment with a known split (e.g. NVDA 2024 10:1)
-- ADR 0003: "NestJS + OpenAPI-generated SDK as the web ↔ api contract"
-- ADR 0004: "Hosting topology and Timescale availability"
+- ADR 0004: "NestJS + OpenAPI-generated SDK as the web ↔ api contract" — [done](docs/decisions/0004-nestjs-openapi-generated-sdk-contract.md)
+- ADR 0005: "Hosting topology and Timescale availability"
 - **product check:** I opened a candle chart on my phone from the deployed URL
 
 **Kill/pivot trigger:** if the bootstrap starts growing retries, caching, or multi-provider logic, stop — that's Phase 4. If NestJS DI is blocking progress after two weeks, fall back to Fastify with a hand-rolled module pattern and record why.
 
 ---
 
-## Phase 2 — Accounts and watchlists · ~3 weeks
+## Phase 2 — Accounts, watchlists, and the first D3 view · ~3–4 weeks
 
 **Goal:** real authentication, built once, protecting the first personal data.
 
@@ -235,18 +235,25 @@ No temporary auth shim: the skeleton already shows value without login, so there
 4. **Schema:** `User`, `Session`, `RefreshToken`, `Watchlist`, `WatchlistItem`, `AuditLog`.
 5. **Watchlists:** create, rename, reorder, add/remove symbols. Watchlist page shows last close, day change, and a sparkline per row from stored candles.
 6. **Symbol universe:** load the full active US equity list from Alpaca into `Symbol` so search covers everything; candles for a newly watched symbol are fetched on demand by the bootstrap path.
+7. **First D3 view — returns distribution** (`/analysis/returns?symbol=&from&to`), pulled forward from Phase 6 so the visualization goal starts early. It needs only stored candles:
+   - `GET /api/symbols/:ticker/returns?from&to`: daily returns from adjusted closes with `lag()`, plus summary stats (mean, standard deviation, skew, best and worst day, share of up days) in the same SQL query
+   - a histogram with a normal-curve overlay, hand-built with `d3-scale`, `d3-array` (`bin`), and `d3-shape`. React renders the SVG; D3 only computes scales, bins, and paths. Colors come from the `chart-*` tokens
+   - hovering a bar shows its range and day count; the stats sit beside the chart as a table, so the numbers don't depend on the visual
+   - linked from the stock page header and a watchlist row. The sidebar gets **Analysis**, pointing at this view until Phase 6 adds the index
 
-**Learning focus:** password hashing, token rotation, session security, cookie semantics, CSRF/CORS, rate limiting, authorization at the repository layer.
+**Learning focus:** password hashing, token rotation, session security, cookie semantics, CSRF/CORS, rate limiting, authorization at the repository layer, SQL window functions, D3 scales and generators inside React.
 
 **Exit criteria:**
 
 - register → login → refresh → logout works end to end on the deployed app
 - reuse of a rotated refresh token revokes the whole family (integration-tested)
 - users cannot read or modify another user's watchlist (tested at API level)
-- ADR 0005: "Refresh-token rotation and reuse-detection design"
-- **product check:** I keep my real watchlist in Forelume and stay logged in on my phone
+- a unit test checks the returns query's stats against a hand-computed fixture
+- ADR 0006: "Refresh-token rotation and reuse-detection design"
+- ADR 0007: "Chart composition: lightweight-charts for time-axis charts, D3 for the rest, and how D3 lives in React"
+- **product check:** I keep my real watchlist in Veracand and stay logged in on my phone, and I've read the returns distribution of a stock I own
 
-**Kill/pivot trigger:** if the auth core isn't stable after three weeks, ship without "log out everywhere" and fine-grained rate limits. Rotation and reuse detection are non-negotiable.
+**Kill/pivot trigger:** if the auth core isn't stable after three weeks, ship without "log out everywhere" and fine-grained rate limits. Rotation and reuse detection are non-negotiable. Auth comes first: if the returns view would push the phase past four weeks, move it back to Phase 6 and note it under "Carried gaps".
 
 ---
 
@@ -275,8 +282,8 @@ No temporary auth shim: the skeleton already shows value without login, so there
 - concurrent duplicate order submissions with the same idempotency key produce exactly one order (integration test against real Postgres)
 - a split on a held symbol leaves the portfolio's market value unchanged
 - every order is traceable from browser request to SQL statement
-- ADR 0006: "Fill model shared by paper trading and backtesting"
-- ADR 0007: "Ledger accounting and order transaction boundaries"
+- ADR 0008: "Fill model shared by paper trading and backtesting"
+- ADR 0009: "Ledger accounting and order transaction boundaries"
 - **product check:** I placed at least five paper trades in a week and the PnL matched my own spreadsheet
 
 **Kill/pivot trigger:** if PnL drifts between sessions, stop adding features until the property tests find the bug.
@@ -302,8 +309,8 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 - any watched symbol stays fresh automatically for two weeks with no manual action
 - replaying one archived raw payload reproduces the stored bars exactly
-- ADR 0008: "Provider contract and failure modes"
-- ADR 0009: "MongoDB vs Postgres JSONB for the raw payload archive" — if JSONB wins, drop Mongo and say so
+- ADR 0010: "Provider contract and failure modes"
+- ADR 0011: "MongoDB vs Postgres JSONB for the raw payload archive" — if JSONB wins, drop Mongo and say so
 - **product check:** I haven't run the bootstrap script by hand in two weeks
 
 **Kill/pivot trigger:** if the second adapter costs more than a week, ship with Alpaca only. The contract is the deliverable, not the number of providers.
@@ -337,8 +344,8 @@ No temporary auth shim: the skeleton already shows value without login, so there
 - the same strategy + data + seed produces byte-identical results (golden-file test)
 - a **parity test** shows backtest fills match fills from replaying the same signals through the paper-trading engine
 - a deliberately leaky strategy (peeking at tomorrow's close) is rejected or has no effect
-- ADR 0010: "Strategy DSL shape and versioning"
-- ADR 0011: "Bias guards in the backtest engine"
+- ADR 0012: "Strategy DSL shape and versioning"
+- ADR 0013: "Bias guards in the backtest engine"
 - **product check:** a strategy I care about has been running on a paper portfolio for two weeks
 
 **Kill/pivot trigger:** if the DSL design runs past a week without a backtest running, freeze it at SMA crossover + RSI threshold and move on.
@@ -347,10 +354,10 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 ## Phase 6 — Analysis dashboard and research journal · ~3 weeks
 
-**Goal:** make Forelume the tab you open every morning.
+**Goal:** make Veracand the tab you open every morning.
 
 1. **Symbol page upgrade:** multi-pane layout with synced crosshairs, indicator overlays (EMA/SMA/Bollinger), RSI/MACD panes, markers for your fills and strategy signals.
-2. **Analysis views:** watchlist performance table, relative performance comparison, drawdown chart, returns distribution, seasonality heatmap (`d3`).
+2. **Analysis views:** an `/analysis` index, watchlist performance table, relative performance comparison, drawdown chart, seasonality heatmap (`d3`). The returns distribution already shipped in Phase 2.
 3. **Saved chart layouts** (Postgres `JSONB` — relational ownership, flexible payload).
 4. **News per symbol** from a free source into MongoDB, shown on the symbol page.
 5. **Research journal:** notes attached to a symbol, trade, or backtest run, with tags and full-text search. Use Mongo or Postgres per the Phase 4 ADR.
@@ -362,8 +369,8 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 - core pages are usable at phone and desktop widths
 - symbol page interaction stays under 100 ms on 10 years of daily bars (measured)
-- ADR 0012: "Chart composition: lightweight-charts panes vs d3 views"
-- **product check:** Forelume replaced one daily habit (finviz, TradingView lite, a spreadsheet)
+- the chart split from ADR 0007 still holds, or ADR 0007 is amended with the measurements
+- **product check:** Veracand replaced one daily habit (finviz, TradingView lite, a spreadsheet)
 
 **Kill/pivot trigger:** if sourcing news is harder than displaying it, ship charts and the journal without news.
 
@@ -385,7 +392,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 **Exit criteria:**
 
 - a new user can register, verify, enable 2FA, reset their password, and recover with a recovery code
-- ADR 0013: "2FA and API-key design"
+- ADR 0014: "2FA and API-key design"
 - **product check:** a friend signed up without my help
 
 **Kill/pivot trigger:** if email deliverability eats the phase, keep invite-only and ship 2FA + API keys.
@@ -410,7 +417,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 - every served model has a model card: data window, validation method, out-of-sample metrics vs naive baseline
 - the leakage test suite passes (shuffled-target and future-feature canaries)
-- ADR 0014: "Time-series validation strategy"
+- ADR 0015: "Time-series validation strategy"
 - **product check:** I read a forecast band on a chart I care about and can say whether it beats naive
 
 **Kill/pivot trigger:** if four weeks pass without a model beating naive out of sample, ship the volatility bands (GARCH) and the harness — an honest "no edge" result is a valid outcome.
@@ -419,7 +426,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 ## Phase 9 — Realtime and alerts · ~3–4 weeks
 
-**Goal:** make Forelume feel alive without making it fragile.
+**Goal:** make Veracand feel alive without making it fragile.
 
 1. **`services/ingest`** (Python): Alpaca websocket (IEX) for watched symbols → Redis Streams, with reconnects, heartbeats, and gap backfill.
 2. Intraday bars (1-minute hypertable + continuous aggregates). Paper-trading fills move to latest-trade price during the session.
@@ -433,7 +440,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 - ingest survives a full trading week including a forced restart, with gaps backfilled automatically
 - alerts arrive within 60 seconds of the triggering condition
-- ADR 0015: "Redis Streams + SSE for this scope"
+- ADR 0016: "Redis Streams + SSE for this scope"
 - **product check:** an alert changed what I did that day
 
 **Kill/pivot trigger:** if ingest can't stay up for a week, fall back to 5-minute polling and keep alerts.
@@ -442,7 +449,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 ## Phase 10 — Operate: observability, performance, reliability · ~3 weeks
 
-**Goal:** run Forelume like a small production system. There's real traffic by now, so the dashboards mean something.
+**Goal:** run Veracand like a small production system. There's real traffic by now, so the dashboards mean something.
 
 1. OpenTelemetry across web, api, ml workers, and ingest; metrics to Prometheus + Grafana (or Grafana Cloud's free tier).
 2. Dashboards: API latency, queue depth, job failures, ingestion lag, data freshness, model serve time.
@@ -458,7 +465,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 
 - three SLOs defined, visible, and alerting
 - a real restore performed and documented, with the measured recovery time
-- ADR 0016: "SLOs and what they protect"
+- ADR 0017: "SLOs and what they protect"
 - **product check:** I found and fixed a production issue from a dashboard, not a bug report
 
 **Kill/pivot trigger:** if deploys keep breaking, freeze features and harden CI/CD before anything else.
@@ -488,14 +495,18 @@ Only after the core loop has been in weekly use for a month.
 | Document databases | Phase 4 (raw archive), Phase 6 (news, journal) |
 | Python engineering | Phase 5 (engine), Phase 8 (ML), Phase 9 (ingest) |
 | Quant correctness | Phases 1, 3, 5, 8 (adjustment, fills, bias guards, validation) |
-| Frontend and visualization | Phase 1 (first chart), Phase 6 (dashboard), Phase 9 (live UI) |
+| Frontend and visualization | Phase 1 (first chart), Phase 2 (first D3 view), Phase 6 (dashboard), Phase 9 (live UI) |
 | Operations | Phase 0 (CI), Phase 1 (deploy), Phase 3 (tracing), Phase 10 (SLOs, DR) |
 
-**Estimated total:** roughly 34–40 weeks at 10–12 hours/week for Phases 0–10. Re-estimate at the start of every phase.
+**Estimated total:** roughly 35–41 weeks at 10–12 hours/week for Phases 0–10. Re-estimate at the start of every phase.
 
 ---
 
 ## Revision log
+
+**2026-10-03 — product renamed from Forelume to Veracand.** forelume.com turned out to be an existing paid crypto trading-signals business (TradingView indicators, Discord alerts) with the tagline "Light Before The Move": the same name, the same field, and a concept close to the old "light ahead" logo story. The rename happened before any deployment or domain. "Veracand" (*vera* + *cand(le)*: the true candle) had no `.com`, `.app`, or `.dev` registration and no finance or trading use in a web search on that date; a formal trademark search (USPTO, EUIPO; classes 9, 36, 42) is still to do before Phase 1 deploys. Everything followed: UI copy and metadata, the logo component, the flagship theme id and its storage keys, the local Postgres user and database, the compose project, the ML package (`veracand-ml`), and the docs. The repo name and the `@astraq/*` scope stay. The mark was redrawn to fit the name: a V whose rising arm runs into a candlestick (the true candle), with the gold spark kept as the forecast target. `app/favicon.ico`, until then the Next.js scaffold default, is now generated from the same geometry as `lib/brand-icon.ts`.
+
+**2026-10-03 — first D3 view pulled forward; ADRs renumbered.** The returns distribution moves from Phase 6 to Phase 2, so the creative-visualization goal starts months earlier with a view that needs only stored candles. The chart composition ADR moves with it (now ADR 0007). ADR 0003 went to the pnpm + Turborepo decision in Phase 0, so every later ADR shifts: the contract ADR is now 0004 and the rest follow in order.
 
 **2026-10-02 — design system v2 done.** All 7 plan PRs and the alias follow-up are merged; `@astraq/ui` is versioned `0.2.0`. The token drift check joins the Phase 0 CI item.
 

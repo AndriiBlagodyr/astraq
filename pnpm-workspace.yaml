@@ -1,3 +1,5 @@
 packages:
   - "apps/*"
   - "packages/*"
+  # Python services join only for `turbo dev`; see ADR 0003.
+  - "services/*"

@@ -1,6 +1,6 @@
-# Forelume
+# Veracand
 
-Forelume is a learning-focused algorithmic trading and market analysis platform.
+Veracand is a learning-focused algorithmic trading and market analysis platform.
 
 The project has two goals:
 
@@ -10,7 +10,8 @@ The project has two goals:
 ## Current status
 
 - `apps/web` is the most developed app today and contains the current UI.
-- `apps/api` is a NestJS service with structured logging, validated environment configuration, and health endpoints.
+- `apps/api` is a NestJS service with structured logging, validated environment configuration, and health endpoints. Requests and responses are validated with Zod schemas from `packages/shared`, and its OpenAPI spec is committed in `apps/api/openapi.json`.
+- `packages/sdk` is the typed API client generated from that spec. The web app's `/status` page calls the API through it.
 - `packages/ui` contains the Tailwind-based semantic design system and Storybook catalog.
 - `services/ml` is a FastAPI service managed with `uv` (Python 3.12, lockfile in `uv.lock`).
 - The product plan and phased execution live in [ROADMAP.md](./ROADMAP.md).
@@ -25,7 +26,9 @@ astraq/
 ├── services/
 │   └── ml/          Python FastAPI service (uv)
 ├── packages/
-│   └── ui/          Shared tokens, accessible components, and Storybook
+│   ├── ui/          Shared tokens, accessible components, and Storybook
+│   ├── shared/      Zod schemas shared by the apps (the contract's source)
+│   └── sdk/         Typed API client generated from the OpenAPI spec
 └── infra/
     └── docker/      Local Postgres + TimescaleDB and Redis (compose)
 ```
@@ -36,6 +39,7 @@ astraq/
 - [AGENTS.md](./AGENTS.md): repository-wide architectural guardrails
 - [apps/web/AGENTS.md](./apps/web/AGENTS.md): frontend conventions
 - [apps/api/AGENTS.md](./apps/api/AGENTS.md): backend conventions
+- [packages/shared/AGENTS.md](./packages/shared/AGENTS.md) and [packages/sdk/AGENTS.md](./packages/sdk/AGENTS.md): the API contract
 - [services/ml/AGENTS.md](./services/ml/AGENTS.md): ML service conventions
 
 ## Running locally
@@ -63,9 +67,11 @@ pnpm infra:up
 pnpm dev
 ```
 
+`pnpm dev` starts web (`:3000`), api (`:4000`), and ml (`:8000`), and rebuilds `packages/ui` on change. It needs `uv` on `PATH` for the ML service. How Python fits into the pnpm + Turborepo setup is in [ADR 0003](./docs/decisions/0003-pnpm-turborepo-and-python-in-the-monorepo.md).
+
 ### Local infra
 
-`pnpm infra:up` starts Postgres 16 + TimescaleDB (`localhost:5432`) and Redis 7 (`localhost:6379`) from `infra/docker/compose.yml`, and waits until both are healthy. It needs Docker running. The local database and user are both `forelume` (password `forelume`). To change a port or the credentials, copy `infra/docker/.env.example` to `infra/docker/.env`.
+`pnpm infra:up` starts Postgres 16 + TimescaleDB (`localhost:5432`) and Redis 7 (`localhost:6379`) from `infra/docker/compose.yml`, and waits until both are healthy. It needs Docker running. The local database and user are both `veracand` (password `veracand`). To change a port or the credentials, copy `infra/docker/.env.example` to `infra/docker/.env`.
 
 `pnpm infra:down` stops the containers and keeps the data. To wipe it too, run `docker compose -f infra/docker/compose.yml down -v`.
 
@@ -77,7 +83,7 @@ Every service validates its env at boot and exits with a readable error on a bad
 |---|---|---|
 | api | `PORT` | `4000` |
 | api | `LOG_LEVEL` | `info` |
-| api, ml | `DATABASE_URL` | `postgres://forelume:forelume@localhost:5432/forelume` |
+| api, ml | `DATABASE_URL` | `postgres://veracand:veracand@localhost:5432/veracand` |
 | api, ml | `REDIS_URL` | `redis://localhost:6379` |
 | api | `CORS_ORIGINS` | `http://localhost:3000` (comma-separated origins, no paths) |
 | ml | `LOG_LEVEL` | `info` |
@@ -109,6 +115,18 @@ pnpm install
 pnpm dev
 ```
 
+Swagger UI runs at `http://localhost:4000/api/docs` outside production.
+
+#### Changing an endpoint
+
+The contract runs from a Zod schema in `packages/shared`, to the Nest DTO and handler (`@ZodResponse`), to `apps/api/openapi.json`, to the generated `packages/sdk/src/schema.ts`. After changing any of the first two, run at the root:
+
+```bash
+pnpm contract
+```
+
+and commit both regenerated files. CI runs the same command and fails if they differ. See [ADR 0004](./docs/decisions/0004-nestjs-openapi-generated-sdk-contract.md).
+
 ### ML service
 
 Python 3.12 is pinned in `services/ml/.python-version`. From the repo root or `services/ml`:
@@ -116,8 +134,10 @@ Python 3.12 is pinned in `services/ml/.python-version`. From the repo root or `s
 ```bash
 cd services/ml
 uv sync --group dev
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload --port 8000
 ```
+
+`pnpm dev` at the root runs the same command.
 
 ## Testing
 
@@ -141,6 +161,6 @@ pnpm test:unit:ml
 
 ## Near-term priorities
 
-- Phase 0: CI, Renovate, and echoing `x-request-id` (hygiene, placeholder-route cleanup, local infra, and env validation are done)
-- Phase 1: walking skeleton — adjusted daily candles from provider to a deployed chart through the generated SDK
+- Phase 0: make CI required on `master` (everything else is done)
+- Phase 1: walking skeleton — adjusted daily candles from provider to a deployed chart through the generated SDK (the contract pipeline — shared schemas, OpenAPI, SDK — is in place)
 - see [ROADMAP.md](./ROADMAP.md) for the full phased plan

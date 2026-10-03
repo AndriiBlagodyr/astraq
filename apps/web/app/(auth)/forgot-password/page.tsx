@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
           Reset your password
         </h1>
         <p className="m-0 leading-7 text-secondary">
-          Enter the email associated with your Forelume account and we&apos;ll
+          Enter the email associated with your Veracand account and we&apos;ll
           send a single-use reset link. Tokens expire in 30 minutes and rotate
           on use to detect replay attempts.
         </p>

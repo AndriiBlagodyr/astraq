@@ -1,22 +1,17 @@
 import Link from "next/link";
-import styles from "./status.module.css";
+import { buttonVariants } from "@astraq/ui";
+import { StatusPanel } from "@/app/components/StatusPanel";
 
 export default function NotFound() {
   return (
-    <main className={styles.wrap}>
-      <div className={styles.panel}>
-        <p className={styles.eyebrow}>404</p>
-        <h1 className={styles.title}>Page not found</h1>
-        <p className={styles.text}>
-          This page doesn&apos;t exist. Forelume adds pages as each one gets real data, so an old link may
-          point to one that was removed.
-        </p>
-        <div className={styles.actions}>
-          <Link href="/" className={styles.primary}>
-            Back to Today
-          </Link>
-        </div>
-      </div>
-    </main>
+    <StatusPanel
+      eyebrow="404"
+      title="Page not found"
+      description="This page doesn't exist. Veracand adds pages as each one gets real data, so an old link may point to one that was removed."
+    >
+      <Link href="/" className={buttonVariants()}>
+        Back to Today
+      </Link>
+    </StatusPanel>
   );
 }

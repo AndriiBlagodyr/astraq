@@ -3,10 +3,30 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**", "storybook-static/**"]
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**",
+        "storybook-static/**"
+      ]
     },
     "dev": {
       "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "@astraq/ui#dev": {
+      "dependsOn": ["@astraq/ui#build"],
+      "cache": false,
+      "persistent": true
+    },
+    "@astraq/shared#dev": {
+      "dependsOn": ["@astraq/shared#build"],
+      "cache": false,
+      "persistent": true
+    },
+    "@astraq/sdk#dev": {
+      "dependsOn": ["@astraq/sdk#build"],
       "cache": false,
       "persistent": true
     },

@@ -1,0 +1,3 @@
+# Generated contract files must match Linux CI (`pnpm contract` + git diff).
+apps/api/openapi.json text eol=lf
+packages/sdk/src/schema.ts text eol=lf

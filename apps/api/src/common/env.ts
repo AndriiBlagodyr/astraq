@@ -4,7 +4,7 @@ import { z } from 'zod/v4';
 // clone boots with no .env. Production gets no defaults for these: a missing
 // value there is a deploy mistake, not something to paper over.
 const LOCAL_DEFAULTS = {
-  DATABASE_URL: 'postgres://forelume:forelume@localhost:5432/forelume',
+  DATABASE_URL: 'postgres://veracand:veracand@localhost:5432/veracand',
   REDIS_URL: 'redis://localhost:6379',
   CORS_ORIGINS: 'http://localhost:3000',
 } as const;
@@ -32,7 +32,7 @@ const envSchema = z
       .default('info'),
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }).optional(),
     REDIS_URL: z.url({ protocol: /^rediss?$/ }).optional(),
-    // Comma-separated, e.g. "https://forelume.app,https://preview.forelume.app".
+    // Comma-separated, e.g. "https://veracand.app,https://preview.veracand.app".
     CORS_ORIGINS: z
       .string()
       .transform((value) =>

@@ -2,8 +2,8 @@
 
 export const THEMES = [
   {
-    name: "forelume",
-    label: "Forelume",
+    name: "veracand",
+    label: "Veracand",
     description: "Cyan to indigo with a warm gold accent. Glass surfaces.",
     density: "comfortable",
   },
@@ -39,4 +39,4 @@ export const THEMES = [
   },
 ] as const;
 
-export const DEFAULT_THEME = "forelume";
+export const DEFAULT_THEME = "veracand";
