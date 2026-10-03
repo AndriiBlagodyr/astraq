@@ -5,6 +5,8 @@
   "packageManager": "pnpm@10.18.3",
   "scripts": {
     "dev": "turbo dev",
+    "share": "bash scripts/share.sh",
+    "share:storybook": "bash scripts/share-storybook.sh",
     "dev:web": "turbo dev --filter=web...",
     "dev:api": "pnpm --filter @astraq/api dev",
     "dev:storybook": "pnpm --filter @astraq/ui storybook",

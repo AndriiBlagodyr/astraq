@@ -69,6 +69,26 @@ pnpm dev
 
 `pnpm dev` starts web (`:3000`), api (`:4000`), and ml (`:8000`), and rebuilds `packages/ui` on change. It needs `uv` on `PATH` for the ML service. How Python fits into the pnpm + Turborepo setup is in [ADR 0003](./docs/decisions/0003-pnpm-turborepo-and-python-in-the-monorepo.md).
 
+### Share a local session (ngrok)
+
+Tunnel only the Next.js app. The API and ML service stay on localhost; the web server calls them as the BFF.
+
+1. Install ngrok (`brew install ngrok`) and add your token once:
+
+```bash
+ngrok config add-authtoken <your-token>
+```
+
+2. With `pnpm dev` already running:
+
+```bash
+pnpm share
+```
+
+The public HTTPS URL is printed in the ngrok terminal (and at `http://127.0.0.1:4040`). Do not commit tokens. This is for personal demos, not production.
+
+Storybook is a second process (`pnpm dev:storybook` on `:6006`). Tunnel it with `pnpm share:storybook`. Free ngrok is one hostname, so with Storybook already shared, `pnpm share` opens a second URL for the app (Cloudflare quick tunnel, or localtunnel if that is unavailable).
+
 ### Local infra
 
 `pnpm infra:up` starts Postgres 16 + TimescaleDB (`localhost:5432`) and Redis 7 (`localhost:6379`) from `infra/docker/compose.yml`, and waits until both are healthy. It needs Docker running. The local database and user are both `veracand` (password `veracand`). To change a port or the credentials, copy `infra/docker/.env.example` to `infra/docker/.env`.

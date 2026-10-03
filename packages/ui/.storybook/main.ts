@@ -15,9 +15,25 @@ const config: StorybookConfig = {
     name: "@storybook/react-vite",
     options: {},
   },
+  // Dev-only. Lets the Storybook server accept the public ngrok Host header.
+  core: {
+    allowedHosts: [
+      ".ngrok-free.app",
+      ".ngrok-free.dev",
+      ".ngrok.app",
+      ".ngrok.io",
+    ],
+  },
   async viteFinal(viteConfig) {
     viteConfig.plugins ??= [];
     viteConfig.plugins.push(tailwindcss());
+    viteConfig.server ??= {};
+    viteConfig.server.allowedHosts = [
+      ".ngrok-free.app",
+      ".ngrok-free.dev",
+      ".ngrok.app",
+      ".ngrok.io",
+    ];
     return viteConfig;
   },
 };
