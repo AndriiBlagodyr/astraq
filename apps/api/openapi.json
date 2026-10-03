@@ -28,7 +28,9 @@
           }
         },
         "summary": "The process is up",
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     },
     "/health/ready": {
@@ -58,7 +60,9 @@
           }
         },
         "summary": "The API can serve requests",
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     }
   },
@@ -119,12 +123,21 @@
                   "type": "string"
                 }
               },
-              "required": ["path", "message"],
+              "required": [
+                "path",
+                "message"
+              ],
               "additionalProperties": false
             }
           }
         },
-        "required": ["type", "title", "status", "instance", "timestamp"],
+        "required": [
+          "type",
+          "title",
+          "status",
+          "instance",
+          "timestamp"
+        ],
         "additionalProperties": false
       },
       "HealthStatus_Output": {
@@ -135,7 +148,9 @@
             "const": "ok"
           }
         },
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "additionalProperties": false
       }
     }
