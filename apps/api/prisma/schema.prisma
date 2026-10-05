@@ -1,0 +1,84 @@
+// The api's Postgres schema. Prisma Migrate owns every change to it; see
+// apps/api/AGENTS.md. TimescaleDB DDL (the extension, hypertables) and CHECK
+// constraints can't be expressed here, so they live in hand-edited
+// migrations made with `prisma migrate dev --create-only`.
+//
+// Conventions: tables and columns are snake_case (`@@map` / `@map`), money
+// and prices are fixed-precision `numeric`, timestamps are `timestamptz`.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// A tradable instrument, keyed by its exchange ticker.
+model Symbol {
+  id        Int      @id @default(autoincrement())
+  ticker    String   @unique @db.VarChar(16)
+  name      String
+  /// MIC-style exchange code, e.g. XNAS, XNYS.
+  exchange  String   @db.VarChar(16)
+  /// Inactive symbols keep their history but are skipped by ingestion.
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  candlesDaily     CandleDaily[]
+  corporateActions CorporateAction[]
+
+  @@map("symbols")
+}
+
+/// One raw (unadjusted) daily bar. A TimescaleDB hypertable partitioned on
+/// `ts`. Adjusted prices are computed at read time from `corporate_actions`.
+model CandleDaily {
+  symbolId Int      @map("symbol_id")
+  /// The session date at 00:00 UTC.
+  ts       DateTime @db.Timestamptz(6)
+  open     Decimal  @db.Decimal(18, 6)
+  high     Decimal  @db.Decimal(18, 6)
+  low      Decimal  @db.Decimal(18, 6)
+  close    Decimal  @db.Decimal(18, 6)
+  volume   BigInt
+
+  symbol Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+
+  // Hypertable unique keys must include the partition column (`ts`). Leading
+  // with symbol_id serves "one symbol over a date range", the main read.
+  @@id([symbolId, ts])
+  @@map("candles_daily")
+}
+
+enum CorporateActionType {
+  SPLIT    @map("split")
+  DIVIDEND @map("dividend")
+
+  @@map("corporate_action_type")
+}
+
+/// A split or cash dividend, effective on its ex-date. Which columns are set
+/// depends on `type`; a CHECK constraint in the migration enforces it.
+model CorporateAction {
+  id         Int                 @id @default(autoincrement())
+  symbolId   Int                 @map("symbol_id")
+  type       CorporateActionType
+  exDate     DateTime            @map("ex_date") @db.Date
+  /// Split: `split_from` old shares became `split_to` new ones
+  /// (NVDA 2024: from 1, to 10). A reverse split has from > to.
+  splitFrom  Decimal?            @map("split_from") @db.Decimal(18, 6)
+  splitTo    Decimal?            @map("split_to") @db.Decimal(18, 6)
+  /// Dividend: cash paid per share, in the listing currency.
+  cashAmount Decimal?            @map("cash_amount") @db.Decimal(18, 6)
+  createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  symbol Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+
+  // Also the natural key the bootstrap CLI upserts on.
+  @@unique([symbolId, type, exDate])
+  @@map("corporate_actions")
+}

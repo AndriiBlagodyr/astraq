@@ -1,14 +1,8 @@
 import { z } from 'zod/v4';
+import { LOCAL_DEFAULTS } from './local-defaults';
 
-// Defaults point at `pnpm infra:up` (infra/docker/compose.yml), so a fresh
-// clone boots with no .env. Production gets no defaults for these: a missing
-// value there is a deploy mistake, not something to paper over.
-const LOCAL_DEFAULTS = {
-  DATABASE_URL: 'postgres://veracand:veracand@localhost:5432/veracand',
-  REDIS_URL: 'redis://localhost:6379',
-  CORS_ORIGINS: 'http://localhost:3000',
-} as const;
-
+// Production gets no defaults: a missing value there is a deploy mistake, not
+// something to paper over.
 const REQUIRED_IN_PRODUCTION = Object.keys(LOCAL_DEFAULTS) as Array<
   keyof typeof LOCAL_DEFAULTS
 >;

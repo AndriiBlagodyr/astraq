@@ -1,8 +1,8 @@
 # Veracand Roadmap
 
-> **Status (2026-10-03)** — Design system v2 is done. Phase 0 (close the foundation) is done except making CI required on `master` (a GitHub setting) and the fresh-clone exit check. Phase 1 (walking skeleton) has started: the contract pipeline (item 1, ADR 0004) is done, and the API's predictions stub is deleted. Rewritten roadmap, see [Revision log](#revision-log).
-> **Actually working today:** NestJS skeleton (Pino, request ids echoed in `x-request-id`, Zod env, error filter, health), with requests and responses validated against Zod schemas from `packages/shared`, a committed `openapi.json`, Swagger UI at `/api/docs` outside production, and a typed `packages/sdk` client generated from the spec, `@astraq/ui` 0.2.0 (Base UI components, generated tokens, 6 themes × light/dark, density, built ESM) + Storybook with docs pages, Turborepo, `uv`-managed `services/ml` stub. `pnpm dev` starts web, api, ml, and the UI package watcher together. `apps/web` has one app shell with Today (a short text page), `/status` (live API and ML health checks; the API check goes through the SDK), and auth screens that aren't wired yet; its env is Zod-validated at boot. `pnpm infra:up` runs Postgres 16 + TimescaleDB and Redis 7 locally; nothing connects to them yet. GitHub Actions CI runs lint, typecheck, and unit tests for every Node package, the token drift check, a contract drift check (`pnpm contract` must leave `openapi.json` and the SDK unchanged), and ruff, mypy, and pytest for `services/ml`. Renovate opens grouped dependency PRs weekly.
-> **Not yet real:** any database, any web → api data call beyond health checks, any chart, deployment.
+> **Status (2026-10-04)** — Design system v2 is done. Phase 0 (close the foundation) is done except making CI required on `master` (a GitHub setting). Phase 1 (walking skeleton) has started: the contract pipeline (item 1, ADR 0004) and the Prisma schema with the `candles_daily` hypertable (item 2) are done, and the API's predictions stub is deleted. Rewritten roadmap, see [Revision log](#revision-log).
+> **Actually working today:** NestJS skeleton (Pino, request ids echoed in `x-request-id`, Zod env, error filter, health), with requests and responses validated against Zod schemas from `packages/shared`, a committed `openapi.json`, Swagger UI at `/api/docs` outside production, and a typed `packages/sdk` client generated from the spec, `@astraq/ui` 0.2.0 (Base UI components, generated tokens, 6 themes × light/dark, density, built ESM) + Storybook with docs pages, Turborepo, `uv`-managed `services/ml` stub. `pnpm dev` starts web, api, ml, and the UI package watcher together. `apps/web` has one app shell with Today (a short text page), `/status` (live API and ML health checks; the API check goes through the SDK), and auth screens that aren't wired yet; its env is Zod-validated at boot. `pnpm infra:up` runs Postgres 16 + TimescaleDB and Redis 7 locally. `pnpm db:migrate` applies the Prisma migrations: `symbols`, `corporate_actions`, and the `candles_daily` hypertable, all still empty. `/health/ready` returns 503 when the database doesn't answer. Nothing uses Redis yet. GitHub Actions CI runs lint, typecheck, and unit tests for every Node package, the token drift check, a contract drift check (`pnpm contract` must leave `openapi.json` and the SDK unchanged), and ruff, mypy, and pytest for `services/ml`. Renovate opens grouped dependency PRs weekly.
+> **Not yet real:** any stored market data, any web → api data call beyond health checks, any chart, deployment.
 > **Rule for this block:** it describes what runs, not what is planned. Update it in the same PR that changes reality.
 
 Veracand has two jobs at once:
@@ -63,10 +63,10 @@ These are locked unless an ADR reverses them.
 | Contracts | `packages/shared` (Zod) → OpenAPI → `packages/sdk` via `openapi-typescript` + `openapi-fetch` | Phase 1 | Small, readable generated client — no heavyweight codegen. |
 | Cross-language contracts | Zod → JSON Schema (`z.toJSONSchema`) → Pydantic (`datamodel-code-generator`) | Phase 5 | One source of truth for the strategy DSL. CI fails on drift. |
 | Relational + time series | Postgres 16 + TimescaleDB | Phase 0 infra, Phase 1 schema | |
-| ORM / SQL | Prisma for relational models; hand-written SQL (Prisma TypedSQL / `$queryRaw`) for candle and analytics queries | Phase 1 | Learning goal: be fluent in real SQL, not just the ORM. Hypertables created in raw SQL migrations. |
+| ORM / SQL | **Prisma is the only database toolkit on the Node side**: Prisma Client for models, Prisma Migrate for every schema change, TypedSQL (`$queryRaw` as fallback) for hand-written candle and analytics queries, `prisma db seed` for fixtures. No second ORM, query builder, or migration tool (no Drizzle, Kysely, TypeORM, Knex, node-pg-migrate) | Phase 1 | Learning goal: be fluent in real SQL, not just the ORM. TimescaleDB DDL (extension, hypertables, later compression and continuous aggregates) lives in Prisma migrations made with `migrate dev --create-only` and edited by hand. Prisma is Node-only: `services/ml` reads Postgres with a plain SQL driver against the schema Prisma owns, and never migrates it. |
 | Cache, limits, queues | Redis 7 + BullMQ | Phase 2 (rate limits), Phase 4 (jobs) | |
 | Node ↔ Python jobs | BullMQ on both sides (`bullmq` Python package for workers) | Phase 5 | One queue technology instead of BullMQ + Celery. |
-| Documents | MongoDB 7 | Phase 4 | Raw provider payload archive, later news and research notes. Explicit learning goal; ADR compares against `JSONB`. |
+| Documents | MongoDB 7 via Prisma's MongoDB connector (separate Prisma schema and client), not Mongoose | Phase 4 | Raw provider payload archive, later news and research notes. Explicit learning goal; ADR compares against `JSONB`. Check that the Prisma major in use supports MongoDB before Phase 4 starts. Prisma has no MongoDB migrations, so TTL and other indexes are created in a small idempotent script. |
 | Python service | FastAPI, `uv`, polars, ruff, mypy (strict), pytest + hypothesis | now | Owns backtesting, analytics, and ML. Never owns transactional flows. |
 | Streaming | Redis Streams → SSE to the browser | Phase 9 | NATS/Kafka dropped from scope. |
 | Observability | Pino now → OpenTelemetry tracing in Phase 3 → metrics/dashboards in Phase 10 | | |
@@ -180,7 +180,7 @@ Follow-ups folded into Phase 0: migrate the surviving routes from `layout.module
 
 **Exit criteria:**
 
-- fresh clone → `pnpm install && pnpm infra:up && pnpm dev` boots everything with no manual steps
+- fresh clone → `pnpm install && pnpm infra:up && pnpm dev` boots everything with no manual steps — done 2026-10-04 (web, api with migrations applied to an empty database, and ml all healthy on `/status`)
 - CI is green and required on `master`
 - every service crashes on invalid env
 - ADR 0003: "pnpm + Turborepo, and how Python lives in the monorepo" — [done](docs/decisions/0003-pnpm-turborepo-and-python-in-the-monorepo.md)
@@ -194,14 +194,16 @@ Follow-ups folded into Phase 0: migrate the surviving routes from `layout.module
 **Goal:** one real feature from provider to deployed chart, proving every layer and contract at once.
 
 1. **Contracts:** create `packages/shared` (Zod) and wire `nestjs-zod` + `@nestjs/swagger`. `pnpm contract` writes `apps/api/openapi.json` and regenerates `packages/sdk` (`openapi-typescript` + `openapi-fetch`); both are committed. CI fails if the committed spec or SDK drifts from the code — done ([ADR 0004](docs/decisions/0004-nestjs-openapi-generated-sdk-contract.md)).
-2. **Schema (Prisma + raw SQL migration):**
+2. **Schema (Prisma schema + Prisma Migrate; the hypertable SQL is a hand-edited `--create-only` migration):**
    - `Symbol` (ticker, name, exchange, active flag)
    - `candles_daily` hypertable: `(symbol_id, ts)` primary key, raw OHLCV, `numeric` prices
    - `corporate_actions` (split ratio / dividend, ex-date)
+
+   Done: one `init` migration. Prisma's diff ignores the extension, the hypertable, and the CHECK constraint, so `migrate dev` reports no drift. Timescale's default `ts` index is skipped (`create_default_indexes => false`); Prisma would otherwise try to drop it.
 3. **Bootstrap CLI** (`apps/api` script): fetch daily raw bars + corporate actions for a fixed list of ~20 tickers from Alpaca (Yahoo fallback) and upsert them. Idempotent, synchronous, no queues.
 4. **Endpoints:** `GET /api/symbols?query=`, `GET /api/symbols/:ticker/candles?from&to&adjusted=true`. Adjustment is computed in SQL from raw bars + corporate actions — the first hand-written query worth being proud of.
 5. **Web:** `/stocks/[symbol]` renders a real `lightweight-charts` candle + volume pane from the SDK, with loading, empty, and error states. Symbol search on `/stocks`.
-6. **Deploy:** web on Vercel, api on Railway/Fly, Postgres with Timescale support. Preview deploys for web PRs. `/health/ready` really checks the database.
+6. **Deploy:** web on Vercel, api on Railway/Fly, Postgres with Timescale support. Preview deploys for web PRs. `/health/ready` really checks the database (done).
 7. Remove the `/predictions/summary` and ML `/predict` stubs — dead placeholders teach nothing. The API stub is gone; the ML one is left.
 
 **Learning focus:** OpenAPI and typed clients, migrations, hypertables, composite keys, SQL window functions, RSC vs client boundaries for charts, first deployment.
@@ -300,7 +302,7 @@ No temporary auth shim: the skeleton already shows value without login, so there
 4. **Data quality checks:** missing sessions, duplicate bars, OHLC sanity (low ≤ open/close ≤ high), stale symbols. Failures surface on `/status`.
 5. **Timescale maintenance:** compression and retention policies, a continuous aggregate for weekly bars.
 6. **Redis caching** for hot reads (latest bar per symbol, symbol search).
-7. **MongoDB enters:** an append-only archive of raw provider responses (schema varies by provider and version, TTL index, replayable into the normalizer). Add Mongo + Mongo Express to compose.
+7. **MongoDB enters:** an append-only archive of raw provider responses (schema varies by provider and version, TTL index, replayable into the normalizer), accessed through a second Prisma client (MongoDB connector). Add Mongo + Mongo Express to compose.
 8. Bull Board (or equivalent) behind admin auth to inspect queues.
 
 **Learning focus:** adapter pattern, contract testing, queue design, retry semantics, data quality, time-series storage policies, document modeling.
@@ -503,6 +505,8 @@ Only after the core loop has been in weekly use for a month.
 ---
 
 ## Revision log
+
+**2026-10-03 — Prisma everywhere on the Node side.** Prisma is the single database toolkit in `apps/api`: Client, Migrate (including the hand-edited TimescaleDB migrations), TypedSQL for raw queries, and seeding. MongoDB in Phase 4 uses Prisma's MongoDB connector instead of Mongoose. `services/ml` is the one exception, because Prisma has no maintained Python client: it reads Postgres with a plain SQL driver and never owns the schema.
 
 **2026-10-03 — product renamed from Forelume to Veracand.** forelume.com turned out to be an existing paid crypto trading-signals business (TradingView indicators, Discord alerts) with the tagline "Light Before The Move": the same name, the same field, and a concept close to the old "light ahead" logo story. The rename happened before any deployment or domain. "Veracand" (*vera* + *cand(le)*: the true candle) had no `.com`, `.app`, or `.dev` registration and no finance or trading use in a web search on that date; a formal trademark search (USPTO, EUIPO; classes 9, 36, 42) is still to do before Phase 1 deploys. Everything followed: UI copy and metadata, the logo component, the flagship theme id and its storage keys, the local Postgres user and database, the compose project, the ML package (`veracand-ml`), and the docs. The repo name and the `@astraq/*` scope stay. The mark was redrawn to fit the name: a V whose rising arm runs into a candlestick (the true candle), with the gold spark kept as the forecast target. `app/favicon.ico`, until then the Next.js scaffold default, is now generated from the same geometry as `lib/brand-icon.ts`.
 
