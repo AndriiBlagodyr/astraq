@@ -28,9 +28,7 @@
           }
         },
         "summary": "The process is up",
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
       }
     },
     "/health/ready": {
@@ -60,9 +58,115 @@
           }
         },
         "summary": "The API can serve requests (its database answers)",
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
+      }
+    },
+    "/api/symbols": {
+      "get": {
+        "operationId": "searchSymbols",
+        "parameters": [
+          {
+            "name": "query",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SymbolList_Output"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Find symbols by ticker prefix or name",
+        "tags": ["symbols"]
+      }
+    },
+    "/api/symbols/{ticker}/candles": {
+      "get": {
+        "operationId": "getDailyCandles",
+        "parameters": [
+          {
+            "name": "ticker",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "adjustment",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "split",
+              "$ref": "#/components/schemas/Adjustment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandleSeries_Output"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Daily candles, adjusted for splits (and dividends) on request",
+        "tags": ["symbols"]
       }
     }
   },
@@ -123,21 +227,12 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "path",
-                "message"
-              ],
+              "required": ["path", "message"],
               "additionalProperties": false
             }
           }
         },
-        "required": [
-          "type",
-          "title",
-          "status",
-          "instance",
-          "timestamp"
-        ],
+        "required": ["type", "title", "status", "instance", "timestamp"],
         "additionalProperties": false
       },
       "HealthStatus_Output": {
@@ -148,10 +243,96 @@
             "const": "ok"
           }
         },
-        "required": [
-          "status"
-        ],
+        "required": ["status"],
         "additionalProperties": false
+      },
+      "SymbolSummary_Output": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "exchange": {
+            "type": "string"
+          }
+        },
+        "required": ["ticker", "name", "exchange"],
+        "additionalProperties": false
+      },
+      "SymbolList_Output": {
+        "type": "object",
+        "properties": {
+          "symbols": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SymbolSummary_Output"
+            }
+          }
+        },
+        "required": ["symbols"],
+        "additionalProperties": false
+      },
+      "Adjustment_Output": {
+        "type": "string",
+        "enum": ["raw", "split", "all"]
+      },
+      "Candle_Output": {
+        "type": "object",
+        "properties": {
+          "time": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "open": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "high": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "low": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "close": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "volume": {
+            "type": "string",
+            "pattern": "^\\d+$"
+          }
+        },
+        "required": ["time", "open", "high", "low", "close", "volume"],
+        "additionalProperties": false
+      },
+      "CandleSeries_Output": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string"
+          },
+          "adjustment": {
+            "$ref": "#/components/schemas/Adjustment_Output"
+          },
+          "candles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Candle_Output"
+            }
+          }
+        },
+        "required": ["ticker", "adjustment", "candles"],
+        "additionalProperties": false
+      },
+      "Adjustment": {
+        "type": "string",
+        "enum": ["raw", "split", "all"]
       }
     }
   }

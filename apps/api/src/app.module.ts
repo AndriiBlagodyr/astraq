@@ -5,6 +5,7 @@ import { ZodSerializerInterceptor, ZodValidationPipe } from 'nestjs-zod';
 import { env } from './common/env';
 import { assignRequestId } from './common/request-id';
 import { HealthModule } from './health/health.module';
+import { SymbolsModule } from './symbols/symbols.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { HealthModule } from './health/health.module';
       },
     }),
     HealthModule,
+    SymbolsModule,
   ],
   providers: [
     // Zod DTOs validate every request input and every @ZodResponse body.

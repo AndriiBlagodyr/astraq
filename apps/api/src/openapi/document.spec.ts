@@ -46,6 +46,8 @@ describe('buildOpenApiDocument', () => {
     expect(Object.keys(document.paths)).toEqual([
       '/health/live',
       '/health/ready',
+      '/api/symbols',
+      '/api/symbols/{ticker}/candles',
     ]);
   });
 });
