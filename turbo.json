@@ -13,7 +13,21 @@
     "dev": {
       "dependsOn": ["^build"],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      // Turborepo's strict env mode hands tasks only the variables it knows
+      // about. These are the service settings a developer may override from
+      // the shell (README "Environment variables"); dev is never cached, so
+      // they pass through without joining a hash.
+      "passThroughEnv": [
+        "PORT",
+        "LOG_LEVEL",
+        "DATABASE_URL",
+        "REDIS_URL",
+        "CORS_ORIGINS",
+        "ENVIRONMENT",
+        "API_URL",
+        "ML_URL"
+      ]
     },
     "@astraq/ui#dev": {
       "dependsOn": ["@astraq/ui#build"],
