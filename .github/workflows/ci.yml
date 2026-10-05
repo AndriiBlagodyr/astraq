@@ -52,6 +52,45 @@ jobs:
 
       - run: pnpm turbo run lint typecheck test:unit
 
+  api-integration:
+    name: API — integration tests (TimescaleDB)
+    runs-on: ubuntu-latest
+    services:
+      # Same image as infra/docker/compose.yml.
+      postgres:
+        image: timescale/timescaledb:2.17.2-pg16
+        env:
+          POSTGRES_USER: veracand
+          POSTGRES_PASSWORD: veracand
+          POSTGRES_DB: veracand
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U veracand -d veracand"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://veracand:veracand@localhost:5432/veracand
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter "@astraq/api^..." build
+
+      # The same migrations a deploy applies, so the tests see the real schema.
+      - run: pnpm --filter @astraq/api db:deploy
+
+      - run: pnpm --filter @astraq/api test:integration
+
   ml:
     name: ML — ruff, mypy, pytest
     runs-on: ubuntu-latest

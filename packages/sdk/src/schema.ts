@@ -38,6 +38,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/symbols": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Find symbols by ticker prefix or name */
+        get: operations["searchSymbols"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/symbols/{ticker}/candles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daily candles, adjusted for splits (and dividends) on request */
+        get: operations["getDailyCandles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -59,6 +93,32 @@ export interface components {
             /** @constant */
             status: "ok";
         };
+        SymbolSummary_Output: {
+            ticker: string;
+            name: string;
+            exchange: string;
+        };
+        SymbolList_Output: {
+            symbols: components["schemas"]["SymbolSummary_Output"][];
+        };
+        /** @enum {string} */
+        Adjustment_Output: "raw" | "split" | "all";
+        Candle_Output: {
+            /** Format: date */
+            time: string;
+            open: string;
+            high: string;
+            low: string;
+            close: string;
+            volume: string;
+        };
+        CandleSeries_Output: {
+            ticker: string;
+            adjustment: components["schemas"]["Adjustment_Output"];
+            candles: components["schemas"]["Candle_Output"][];
+        };
+        /** @enum {string} */
+        Adjustment: "raw" | "split" | "all";
     };
     responses: never;
     parameters: never;
@@ -111,6 +171,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthStatus_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    searchSymbols: {
+        parameters: {
+            query?: {
+                query?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SymbolList_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    getDailyCandles: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                adjustment?: components["schemas"]["Adjustment"];
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandleSeries_Output"];
                 };
             };
             /** @description Any error, as an RFC 9457 problem detail */
