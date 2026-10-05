@@ -93,6 +93,10 @@ Storybook is a second process (`pnpm dev:storybook` on `:6006`). Tunnel it with 
 
 `pnpm infra:up` starts Postgres 16 + TimescaleDB (`localhost:5432`) and Redis 7 (`localhost:6379`) from `infra/docker/compose.yml`, and waits until both are healthy. It needs Docker running. The local database and user are both `veracand` (password `veracand`). To change a port or the credentials, copy `infra/docker/.env.example` to `infra/docker/.env`.
 
+The api applies pending Prisma migrations (`prisma migrate deploy`) every time `pnpm dev` starts it. If the database is down it logs the error and starts anyway, and `/health/ready` reports 503. After editing `apps/api/prisma/schema.prisma`, run `pnpm db:migrate` to create and apply a new migration. `pnpm install` generates the Prisma Client into `apps/api/src/generated/`, which is gitignored; after editing the schema, `pnpm --filter @astraq/api db:generate` refreshes it.
+
+If something else already listens on `5432` (a native Postgres install, for example), `infra:up` fails with "ports are not available". Set `POSTGRES_PORT=5433` in `infra/docker/.env`, and point the api at it with `DATABASE_URL=postgres://veracand:veracand@localhost:5433/veracand`.
+
 `pnpm infra:down` stops the containers and keeps the data. To wipe it too, run `docker compose -f infra/docker/compose.yml down -v`.
 
 ### Environment variables

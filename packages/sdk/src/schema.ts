@@ -28,7 +28,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The API can serve requests */
+        /** The API can serve requests (its database answers) */
         get: operations["getReadiness"];
         put?: never;
         post?: never;
