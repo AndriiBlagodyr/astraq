@@ -60,7 +60,9 @@
           }
         },
         "summary": "The API can serve requests (its database answers)",
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     }
   },
