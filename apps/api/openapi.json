@@ -28,7 +28,9 @@
           }
         },
         "summary": "The process is up",
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     },
     "/health/ready": {
@@ -58,7 +60,9 @@
           }
         },
         "summary": "The API can serve requests (its database answers)",
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     },
     "/api/symbols": {
@@ -98,7 +102,9 @@
           }
         },
         "summary": "Find symbols by ticker prefix or name",
-        "tags": ["symbols"]
+        "tags": [
+          "symbols"
+        ]
       }
     },
     "/api/symbols/{ticker}/candles": {
@@ -166,7 +172,9 @@
           }
         },
         "summary": "Daily candles, adjusted for splits (and dividends) on request",
-        "tags": ["symbols"]
+        "tags": [
+          "symbols"
+        ]
       }
     }
   },
@@ -227,12 +235,21 @@
                   "type": "string"
                 }
               },
-              "required": ["path", "message"],
+              "required": [
+                "path",
+                "message"
+              ],
               "additionalProperties": false
             }
           }
         },
-        "required": ["type", "title", "status", "instance", "timestamp"],
+        "required": [
+          "type",
+          "title",
+          "status",
+          "instance",
+          "timestamp"
+        ],
         "additionalProperties": false
       },
       "HealthStatus_Output": {
@@ -243,7 +260,9 @@
             "const": "ok"
           }
         },
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "additionalProperties": false
       },
       "SymbolSummary_Output": {
@@ -259,7 +278,11 @@
             "type": "string"
           }
         },
-        "required": ["ticker", "name", "exchange"],
+        "required": [
+          "ticker",
+          "name",
+          "exchange"
+        ],
         "additionalProperties": false
       },
       "SymbolList_Output": {
@@ -272,12 +295,18 @@
             }
           }
         },
-        "required": ["symbols"],
+        "required": [
+          "symbols"
+        ],
         "additionalProperties": false
       },
       "Adjustment_Output": {
         "type": "string",
-        "enum": ["raw", "split", "all"]
+        "enum": [
+          "raw",
+          "split",
+          "all"
+        ]
       },
       "Candle_Output": {
         "type": "object",
@@ -308,7 +337,14 @@
             "pattern": "^\\d+$"
           }
         },
-        "required": ["time", "open", "high", "low", "close", "volume"],
+        "required": [
+          "time",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
         "additionalProperties": false
       },
       "CandleSeries_Output": {
@@ -327,12 +363,20 @@
             }
           }
         },
-        "required": ["ticker", "adjustment", "candles"],
+        "required": [
+          "ticker",
+          "adjustment",
+          "candles"
+        ],
         "additionalProperties": false
       },
       "Adjustment": {
         "type": "string",
-        "enum": ["raw", "split", "all"]
+        "enum": [
+          "raw",
+          "split",
+          "all"
+        ]
       }
     }
   }

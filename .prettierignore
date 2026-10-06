@@ -1,0 +1,5 @@
+# Generated contract files. `pnpm contract` writes them and CI diffs the
+# result byte for byte, so a formatter (an editor's format-on-save included)
+# must never touch them. Change the code, then run `pnpm contract`.
+apps/api/openapi.json
+packages/sdk/src/schema.ts
