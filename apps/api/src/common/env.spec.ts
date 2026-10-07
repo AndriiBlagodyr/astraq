@@ -37,14 +37,13 @@ describe('env validation', () => {
     );
   });
 
-  it('requires infra URLs and origins in production', () => {
+  it('requires the database URL and origins in production', () => {
     const result = parseEnv({ NODE_ENV: 'production' });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues.map((issue) => issue.path[0]).sort()).toEqual([
       'CORS_ORIGINS',
       'DATABASE_URL',
-      'REDIS_URL',
     ]);
   });
 });

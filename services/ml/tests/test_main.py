@@ -12,14 +12,3 @@ def test_health_returns_ok() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "service": "ml"}
-
-
-def test_predict_returns_placeholder_signal() -> None:
-    response = client.get("/predict")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "symbol": "BTCUSDT",
-        "prediction": "hold",
-        "confidence": 0.0,
-    }

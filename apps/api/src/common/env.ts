@@ -2,10 +2,12 @@ import { z } from 'zod/v4';
 import { LOCAL_DEFAULTS } from './local-defaults';
 
 // Production gets no defaults: a missing value there is a deploy mistake, not
-// something to paper over.
-const REQUIRED_IN_PRODUCTION = Object.keys(LOCAL_DEFAULTS) as Array<
-  keyof typeof LOCAL_DEFAULTS
->;
+// something to paper over. REDIS_URL joins this list with the first module
+// that uses Redis (BullMQ, Phase 3); until then a deploy needs no Redis.
+const REQUIRED_IN_PRODUCTION = [
+  'DATABASE_URL',
+  'CORS_ORIGINS',
+] as const satisfies ReadonlyArray<keyof typeof LOCAL_DEFAULTS>;
 
 // An origin is scheme + host + port only. `new URL(x).origin === x` rejects
 // paths, trailing slashes and queries, which the browser never sends.
