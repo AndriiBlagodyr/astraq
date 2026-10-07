@@ -41,6 +41,7 @@ astraq/
 - [apps/api/AGENTS.md](./apps/api/AGENTS.md): backend conventions
 - [packages/shared/AGENTS.md](./packages/shared/AGENTS.md) and [packages/sdk/AGENTS.md](./packages/sdk/AGENTS.md): the API contract
 - [services/ml/AGENTS.md](./services/ml/AGENTS.md): ML service conventions
+- [docs/deploy.md](./docs/deploy.md): deploying web to Vercel and the api and TimescaleDB to Railway ([ADR 0005](./docs/decisions/0005-hosting-topology-and-timescale-availability.md))
 
 ## Running locally
 
@@ -101,7 +102,7 @@ If something else already listens on `5432` (a native Postgres install, for exam
 
 ### Environment variables
 
-Every service validates its env at boot and exits with a readable error on a bad value. Outside production every variable has a default that matches `pnpm infra:up`, so local dev needs no `.env`. In production (`NODE_ENV=production` for api, `ENVIRONMENT=production` for ml) the infra URLs have no defaults and must be set.
+Every service validates its env at boot and exits with a readable error on a bad value. Outside production every variable has a default that matches `pnpm infra:up`, so local dev needs no `.env`. In production (`NODE_ENV=production` for api, `ENVIRONMENT=production` for ml) the infra URLs have no defaults and must be set. The api's `REDIS_URL` is the exception until a module uses Redis (Phase 3).
 
 | Service | Variable | Local default |
 |---|---|---|

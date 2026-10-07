@@ -1,46 +1,12 @@
+"use client";
+
+// Client: Button always attaches a click handler (it blocks activation while
+// loading or aria-disabled), and handlers can't cross the server boundary.
 import type { ComponentProps, MouseEvent, ReactNode } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/cn";
 import { Spinner } from "../spinner";
-
-export const buttonVariants = cva(
-  [
-    "relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-pill border font-semibold whitespace-nowrap select-none",
-    "transition-[translate,scale,background-color,border-color,color,box-shadow,filter,opacity] duration-(--ds-motion-fast) ease-out",
-    "[&_svg]:pointer-events-none [&_svg]:shrink-0",
-    // Hover lifts, press sinks. Transforms only when motion is allowed.
-    "motion-safe:hover:-translate-y-px motion-safe:active:translate-y-0 motion-safe:active:scale-[0.98]",
-    // `disabled` for native buttons, `aria-disabled` for links and loading
-    // buttons that must stay focusable.
-    "disabled:pointer-events-none disabled:opacity-45 disabled:shadow-none",
-    "aria-disabled:pointer-events-none aria-disabled:opacity-45 aria-disabled:shadow-none",
-    // Loading keeps full opacity: the spinner is the signal, not a faded button.
-    "data-loading:aria-disabled:opacity-100",
-  ],
-  {
-    variants: {
-      variant: {
-        primary:
-          "border-transparent bg-[image:var(--ds-gradient-brand)] text-on-brand shadow-brand hover:brightness-110 active:brightness-95",
-        secondary:
-          "border-border-strong bg-surface-muted text-foreground hover:border-focus-ring/70 hover:bg-surface active:bg-surface-strong",
-        ghost:
-          "border-transparent bg-transparent text-secondary hover:bg-surface-muted hover:text-foreground active:bg-surface-strong",
-        danger:
-          "border-negative/35 bg-negative/12 text-negative-fg hover:border-negative/55 hover:bg-negative/18 active:bg-negative/24",
-      },
-      size: {
-        sm: "min-h-control-sm px-inset-sm text-xs [&_svg:not([class*='size-'])]:size-3.5",
-        md: "min-h-control-md px-inset-md text-sm [&_svg:not([class*='size-'])]:size-4",
-        lg: "min-h-control-lg px-inset-lg text-base [&_svg:not([class*='size-'])]:size-5",
-      },
-    },
-    defaultVariants: {
-      variant: "primary",
-      size: "md",
-    },
-  },
-);
+import { buttonVariants } from "./button-variants";
 
 export type ButtonProps = ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -88,7 +54,12 @@ export function Button({
       {/* `contents` keeps children in the flex layout. Loading hides them by
           color and opacity, not `invisible`: width holds and, unlike
           visibility, the text still names the button for screen readers. */}
-      <span className={cn("contents", loading && "text-transparent [&_*]:opacity-0")}>
+      <span
+        className={cn(
+          "contents",
+          loading && "text-transparent [&_*]:opacity-0",
+        )}
+      >
         {children}
       </span>
       {loading ? <Spinner className="absolute inset-0 m-auto" /> : null}
@@ -120,11 +91,7 @@ export function IconButton({
       aria-label={label}
       title={label}
       size={size}
-      className={cn(
-        "min-h-0 px-0",
-        iconButtonSize[size ?? "md"],
-        className,
-      )}
+      className={cn("min-h-0 px-0", iconButtonSize[size ?? "md"], className)}
       {...props}
     >
       {children}

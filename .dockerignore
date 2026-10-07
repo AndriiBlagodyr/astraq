@@ -1,0 +1,29 @@
+# Build context for apps/api/Dockerfile (built from the repo root).
+# Local installs and build output never enter the image: the build stage
+# installs and compiles from source for Linux.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/storybook-static
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo
+**/src/generated
+
+# Not part of the api build.
+services
+**/.venv
+**/__pycache__
+.mypy_cache
+.git
+.github
+.vscode
+.cursor
+docs
+
+# Secrets stay out of every image.
+**/.env
+**/.env.local
+**/.env.*.local
