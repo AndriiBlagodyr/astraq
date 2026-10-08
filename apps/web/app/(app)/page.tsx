@@ -1,13 +1,16 @@
-import Link from "next/link";
-import { Card, buttonVariants } from "@astraq/ui";
+import { Button, Card, EmptyState, Input } from "@astraq/ui";
+import { SymbolTable } from "@/app/components/SymbolTable";
+import { searchSymbols } from "@/lib/market-data";
 
-// A short text page until the Today table lands: the bootstrapped tickers
-// with last close and day change (docs/ui-plan.md § Today). Until then it
-// points at Stocks, the first page with real data. No mock charts or numbers.
+// Today, Phase 1 (docs/ui-plan.md § Today): symbol search plus every loaded
+// symbol with its last close and day change. Watchlists replace the full
+// list in Phase 2, once search covers the whole US universe.
 
 const loop = ["Watchlist", "Chart", "Strategy", "Honest backtest", "Paper trade", "Review"];
 
-export default function TodayPage() {
+export default async function TodayPage() {
+  const symbols = await searchSymbols();
+
   return (
     <main className="grid gap-5">
       <Card className="grid gap-5 p-7">
@@ -31,20 +34,27 @@ export default function TodayPage() {
         </ol>
       </Card>
 
-      <Card className="grid gap-3 p-7">
-        <h2 className="m-0 text-xl font-semibold text-foreground">Daily candles are in</h2>
-        <p className="m-0 max-w-2xl leading-7 text-secondary">
-          A first set of US tickers has daily history since 2016, adjusted for splits. Search them
-          and open a chart. This page will summarize them next.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <Link href="/stocks" className={buttonVariants({ size: "sm" })}>
-            Browse stocks
-          </Link>
-          <Link href="/status" className={buttonVariants({ variant: "secondary", size: "sm" })}>
-            Check service status
-          </Link>
+      <Card className="grid gap-4 p-7">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="m-0 text-xl font-semibold text-foreground">Stocks</h2>
+          <form action="/stocks" className="flex flex-wrap items-end gap-2" role="search">
+            <label className="sr-only" htmlFor="today-search">
+              Ticker or company name
+            </label>
+            <Input id="today-search" name="q" type="search" placeholder="NVDA, Apple…" />
+            <Button type="submit" size="sm">
+              Search
+            </Button>
+          </form>
         </div>
+        {symbols.length > 0 ? (
+          <SymbolTable symbols={symbols} caption="Loaded symbols with their last close" />
+        ) : (
+          <EmptyState
+            title="No symbols loaded yet"
+            description="Daily candles arrive with the bootstrap: pnpm --filter @astraq/api bootstrap."
+          />
+        )}
       </Card>
     </main>
   );

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Adjustment, Candle } from '@astraq/shared';
+import type { Adjustment, Candle, LatestClose, Split } from '@astraq/shared';
 import { PrismaService } from '../database/prisma.service';
 
 export type CandleRange = {
@@ -105,5 +105,79 @@ export class CandlesRepository {
              OR b.ts <= (${range.to}::date::timestamp AT TIME ZONE 'UTC'))
       ORDER BY b.ts
     `;
+  }
+
+  /**
+   * The latest close and the one before it, per symbol, keyed by symbol id.
+   * Symbols without bars are left out.
+   *
+   * Each LATERAL subquery is an `ORDER BY ts DESC LIMIT 1` on the
+   * `(symbol_id, ts)` primary key, so it reads one index entry per symbol
+   * however long the history is. The previous close is divided by the
+   * splits that went ex after it, up to and including the latest session:
+   * NVDA's 1208.88 before its 2024 10:1 split reads as 120.888. An empty
+   * `numeric_product` is 1, so no split leaves it unchanged.
+   */
+  async findLatestCloses(
+    symbolIds: number[],
+  ): Promise<Map<number, LatestClose>> {
+    if (symbolIds.length === 0) return new Map();
+
+    const rows = await this.prisma.$queryRaw<
+      Array<LatestClose & { symbolId: number }>
+    >`
+      SELECT s.id AS "symbolId",
+             to_char(latest.ts AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
+             trim_scale(latest.close)::text AS close,
+             trim_scale(round(previous.close * splits.factor, 6))::text
+               AS "previousClose"
+      FROM symbols s
+      CROSS JOIN LATERAL (
+        SELECT c.ts, c.close
+        FROM candles_daily c
+        WHERE c.symbol_id = s.id
+        ORDER BY c.ts DESC
+        LIMIT 1
+      ) latest
+      LEFT JOIN LATERAL (
+        SELECT c.ts, c.close
+        FROM candles_daily c
+        WHERE c.symbol_id = s.id AND c.ts < latest.ts
+        ORDER BY c.ts DESC
+        LIMIT 1
+      ) previous ON true
+      LEFT JOIN LATERAL (
+        SELECT numeric_product(ca.split_from / ca.split_to) AS factor
+        FROM corporate_actions ca
+        WHERE ca.symbol_id = s.id
+          AND ca.type = 'split'
+          AND ca.ex_date > (previous.ts AT TIME ZONE 'UTC')::date
+          AND ca.ex_date <= (latest.ts AT TIME ZONE 'UTC')::date
+      ) splits ON true
+      WHERE s.id = ANY(${symbolIds}::int[])
+    `;
+    return new Map(rows.map(({ symbolId, ...close }) => [symbolId, close]));
+  }
+
+  /** Splits with an ex-date in the range (inclusive), oldest first. */
+  async findSplits(symbolId: number, range: CandleRange): Promise<Split[]> {
+    const splits = await this.prisma.corporateAction.findMany({
+      where: {
+        symbolId,
+        type: 'SPLIT',
+        exDate: {
+          ...(range.from && { gte: new Date(range.from) }),
+          ...(range.to && { lte: new Date(range.to) }),
+        },
+      },
+      select: { exDate: true, splitFrom: true, splitTo: true },
+      orderBy: { exDate: 'asc' },
+    });
+    // The CHECK constraint guarantees both ratio columns on a split.
+    return splits.map((split) => ({
+      exDate: split.exDate.toISOString().slice(0, 10),
+      from: split.splitFrom!.toString(),
+      to: split.splitTo!.toString(),
+    }));
   }
 }

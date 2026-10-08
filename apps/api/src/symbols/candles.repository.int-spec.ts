@@ -7,6 +7,7 @@ import { CandlesRepository } from './candles.repository';
 
 const NVDA = 'ITEST_NVDA';
 const DIV = 'ITEST_DIV';
+const TICKERS = [NVDA, DIV, 'ITEST_EMPTY', 'ITEST_ONE'];
 
 const bar = (
   ts: string,
@@ -28,7 +29,7 @@ describe('CandlesRepository (database)', () => {
   let divId: number;
 
   beforeAll(async () => {
-    await prisma.symbol.deleteMany({ where: { ticker: { in: [NVDA, DIV] } } });
+    await prisma.symbol.deleteMany({ where: { ticker: { in: TICKERS } } });
 
     // NVDA's real 2021 4:1 and 2024 10:1 splits, with raw bars either side.
     const nvda = await prisma.symbol.create({
@@ -76,7 +77,7 @@ describe('CandlesRepository (database)', () => {
   });
 
   afterAll(async () => {
-    await prisma.symbol.deleteMany({ where: { ticker: { in: [NVDA, DIV] } } });
+    await prisma.symbol.deleteMany({ where: { ticker: { in: TICKERS } } });
     await prisma.$disconnect();
   });
 
@@ -145,5 +146,57 @@ describe('CandlesRepository (database)', () => {
     expect(split.map((c) => c.close)).toEqual(['100', '101']);
     expect(total.map((c) => c.close)).toEqual(['99', '101']);
     expect(total[0].volume).toBe('1000');
+  });
+
+  it('lists splits that went ex within the range, without dividends', async () => {
+    expect(await repository.findSplits(nvdaId, all)).toEqual([
+      { exDate: '2021-07-20', from: '1', to: '4' },
+      { exDate: '2024-06-10', from: '1', to: '10' },
+    ]);
+    expect(
+      await repository.findSplits(nvdaId, {
+        from: '2024-06-10',
+        to: '2024-06-10',
+      }),
+    ).toEqual([{ exDate: '2024-06-10', from: '1', to: '10' }]);
+    expect(await repository.findSplits(divId, all)).toEqual([]);
+  });
+
+  it('reads the latest close with the previous one split-adjusted', async () => {
+    const closes = await repository.findLatestCloses([nvdaId, divId]);
+
+    // 1208.88 before the 10:1 split is 120.888 in post-split shares.
+    expect(closes.get(nvdaId)).toEqual({
+      date: '2024-06-10',
+      close: '121.79',
+      previousClose: '120.888',
+    });
+    // Dividends don't touch the day change.
+    expect(closes.get(divId)).toEqual({
+      date: '2024-01-03',
+      close: '101',
+      previousClose: '100',
+    });
+  });
+
+  it('leaves out symbols without bars and has no previous close for one bar', async () => {
+    const empty = await prisma.symbol.create({
+      data: { ticker: 'ITEST_EMPTY', name: 'No bars', exchange: 'XNYS' },
+    });
+    const single = await prisma.symbol.create({
+      data: { ticker: 'ITEST_ONE', name: 'One bar', exchange: 'XNYS' },
+    });
+    await prisma.candleDaily.create({
+      data: { ...bar('2024-01-02', ['5', '5', '5', '5'], 1), symbolId: single.id },
+    });
+
+    const closes = await repository.findLatestCloses([empty.id, single.id]);
+
+    expect(closes.has(empty.id)).toBe(false);
+    expect(closes.get(single.id)).toEqual({
+      date: '2024-01-02',
+      close: '5',
+      previousClose: null,
+    });
   });
 });

@@ -10,8 +10,18 @@ export class SymbolsService {
     private readonly candles: CandlesRepository,
   ) {}
 
+  /** Matching symbols, each with its latest close for the day change. */
   async search(query: string | undefined): Promise<SymbolList> {
-    return { symbols: await this.symbols.search(query || undefined) };
+    const rows = await this.symbols.search(query || undefined);
+    const closes = await this.candles.findLatestCloses(
+      rows.map((row) => row.id),
+    );
+    return {
+      symbols: rows.map(({ id, ...symbol }) => ({
+        ...symbol,
+        latestClose: closes.get(id) ?? null,
+      })),
+    };
   }
 
   /** Daily bars for a ticker (case-insensitive); 404 when it's unknown. */
@@ -25,11 +35,11 @@ export class SymbolsService {
       throw new NotFoundException(`Unknown symbol ${ticker}`);
     }
 
-    const candles = await this.candles.findDaily(
-      symbolId,
-      { from: query.from ?? null, to: query.to ?? null },
-      query.adjustment,
-    );
-    return { ticker, adjustment: query.adjustment, candles };
+    const range = { from: query.from ?? null, to: query.to ?? null };
+    const [candles, splits] = await Promise.all([
+      this.candles.findDaily(symbolId, range, query.adjustment),
+      this.candles.findSplits(symbolId, range),
+    ]);
+    return { ticker, adjustment: query.adjustment, candles, splits };
   }
 }

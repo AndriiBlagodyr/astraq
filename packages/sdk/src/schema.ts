@@ -97,6 +97,13 @@ export interface components {
             ticker: string;
             name: string;
             exchange: string;
+            latestClose: components["schemas"]["LatestClose_Output"] | null;
+        };
+        LatestClose_Output: {
+            /** Format: date */
+            date: string;
+            close: string;
+            previousClose: string | null;
         };
         SymbolList_Output: {
             symbols: components["schemas"]["SymbolSummary_Output"][];
@@ -112,10 +119,17 @@ export interface components {
             close: string;
             volume: string;
         };
+        Split_Output: {
+            /** Format: date */
+            exDate: string;
+            from: string;
+            to: string;
+        };
         CandleSeries_Output: {
             ticker: string;
             adjustment: components["schemas"]["Adjustment_Output"];
             candles: components["schemas"]["Candle_Output"][];
+            splits: components["schemas"]["Split_Output"][];
         };
         /** @enum {string} */
         Adjustment: "raw" | "split" | "all";
