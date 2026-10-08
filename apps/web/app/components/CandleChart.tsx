@@ -6,6 +6,7 @@ import {
   ColorType,
   HistogramSeries,
   createChart,
+  createSeriesMarkers,
   type CandlestickData,
   type DeepPartial,
   type IChartApi,
@@ -13,12 +14,14 @@ import {
   type ChartOptions,
   type UTCTimestamp,
 } from "lightweight-charts";
-import type { Candle } from "@/lib/stock-chart";
+import { splitLabel, type Candle, type Split } from "@/lib/stock-chart";
 
 type CandleChartProps = {
   candles: Candle[];
   /** Accessible name, e.g. "NVDA daily candles, split-adjusted". */
   label: string;
+  /** Splits to mark above their ex-date bar; pass them for raw prices only. */
+  splits?: Split[];
 };
 
 type Palette = {
@@ -27,6 +30,7 @@ type Palette = {
   grid: string;
   axis: string;
   border: string;
+  marker: string;
   font: string;
 };
 
@@ -41,6 +45,7 @@ function readPalette(): Palette {
     grid: token("--ds-chart-grid"),
     axis: token("--ds-chart-axis"),
     border: token("--ds-border-default"),
+    marker: token("--ds-chart-1"),
     font: token("--ds-font-sans"),
   };
 }
@@ -78,6 +83,10 @@ function chartOptions(palette: Palette): DeepPartial<ChartOptions> {
 const toTime = (date: string) =>
   (Date.parse(`${date}T00:00:00Z`) / 1000) as UTCTimestamp;
 
+// A stable default: a fresh [] per render would rebuild the chart on every
+// crosshair move.
+const noSplits: Split[] = [];
+
 const volumeFormat = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 2,
@@ -87,7 +96,11 @@ const volumeFormat = new Intl.NumberFormat("en-US", {
  * Daily candles over a volume pane (lightweight-charts). Prices arrive as
  * decimal strings and become numbers only here, at the drawing edge.
  */
-export function CandleChart({ candles, label }: CandleChartProps) {
+export function CandleChart({
+  candles,
+  label,
+  splits = noSplits,
+}: CandleChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<Candle | null>(null);
   const byTime = useMemo(
@@ -120,6 +133,9 @@ export function CandleChart({ candles, label }: CandleChartProps) {
       1
     );
     chart.panes()[1]?.setHeight(110);
+    // On raw prices a split reads as a crash (or a spike, if reversed); the
+    // marker says why.
+    const markers = createSeriesMarkers(price);
 
     const paint = (colors: Palette) => {
       chart.applyOptions(chartOptions(colors));
@@ -139,6 +155,15 @@ export function CandleChart({ candles, label }: CandleChartProps) {
               : colors.down,
             0.45
           ),
+        }))
+      );
+      markers.setMarkers(
+        splits.map((split) => ({
+          time: toTime(split.exDate),
+          position: "aboveBar",
+          shape: "arrowDown",
+          color: colors.marker,
+          text: splitLabel(split),
         }))
       );
     };
@@ -174,7 +199,7 @@ export function CandleChart({ candles, label }: CandleChartProps) {
       observer.disconnect();
       chart.remove();
     };
-  }, [candles, byTime]);
+  }, [candles, byTime, splits]);
 
   const shown = hovered ?? candles.at(-1);
 

@@ -6,6 +6,21 @@ import { z } from "zod";
 const decimalString = z.string().regex(/^\d+(\.\d+)?$/);
 const integerString = z.string().regex(/^\d+$/);
 
+/**
+ * The latest stored session of a symbol. `previousClose` is split-adjusted
+ * to the latest session's shares, so a split between the two bars doesn't
+ * read as a crash; dividends aren't applied (the usual day-change basis).
+ */
+export const LatestCloseSchema = z
+  .object({
+    /** Session date, YYYY-MM-DD. */
+    date: z.iso.date(),
+    close: decimalString,
+    /** The session before; null when only one bar is stored. */
+    previousClose: decimalString.nullable(),
+  })
+  .meta({ id: "LatestClose" });
+
 /** A tradable instrument. */
 export const SymbolSummarySchema = z
   .object({
@@ -13,6 +28,8 @@ export const SymbolSummarySchema = z
     name: z.string(),
     /** MIC exchange code, e.g. XNAS. */
     exchange: z.string(),
+    /** Null until the symbol has stored candles. */
+    latestClose: LatestCloseSchema.nullable(),
   })
   .meta({ id: "SymbolSummary" });
 
@@ -64,19 +81,33 @@ export const CandleSchema = z
   })
   .meta({ id: "Candle" });
 
+/** A stock split: `from` old shares became `to` new ones (NVDA 2024: 1, 10). */
+export const SplitSchema = z
+  .object({
+    /** First session priced after the split, YYYY-MM-DD. */
+    exDate: z.iso.date(),
+    from: decimalString,
+    to: decimalString,
+  })
+  .meta({ id: "Split" });
+
 /** Body of `GET /api/symbols/{ticker}/candles`, oldest bar first. */
 export const CandleSeriesSchema = z
   .object({
     ticker: z.string(),
     adjustment: AdjustmentSchema,
     candles: z.array(CandleSchema),
+    /** Splits that went ex within the range, oldest first. */
+    splits: z.array(SplitSchema),
   })
   .meta({ id: "CandleSeries" });
 
+export type LatestClose = z.infer<typeof LatestCloseSchema>;
 export type SymbolSummary = z.infer<typeof SymbolSummarySchema>;
 export type SymbolSearchQuery = z.infer<typeof SymbolSearchQuerySchema>;
 export type SymbolList = z.infer<typeof SymbolListSchema>;
 export type Adjustment = z.infer<typeof AdjustmentSchema>;
 export type CandlesQuery = z.infer<typeof CandlesQuerySchema>;
 export type Candle = z.infer<typeof CandleSchema>;
+export type Split = z.infer<typeof SplitSchema>;
 export type CandleSeries = z.infer<typeof CandleSeriesSchema>;

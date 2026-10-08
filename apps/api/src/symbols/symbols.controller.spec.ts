@@ -14,7 +14,11 @@ import { SymbolsRepository } from './symbols.repository';
 describe('SymbolsController', () => {
   let app: INestApplication;
   const symbols = { search: vi.fn(), findIdByTicker: vi.fn() };
-  const candles = { findDaily: vi.fn() };
+  const candles = {
+    findDaily: vi.fn(),
+    findLatestCloses: vi.fn(),
+    findSplits: vi.fn(),
+  };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -38,9 +42,31 @@ describe('SymbolsController', () => {
     await app.close();
   });
 
+  it("adds each symbol's latest close to search results, null without bars", async () => {
+    symbols.search.mockResolvedValueOnce([
+      { id: 7, ticker: 'NVDA', name: 'NVIDIA', exchange: 'XNAS' },
+      { id: 9, ticker: 'NEW', name: 'Newly listed', exchange: 'XNYS' },
+    ]);
+    const close = { date: '2024-06-10', close: '121.79', previousClose: '120.888' };
+    candles.findLatestCloses.mockResolvedValueOnce(new Map([[7, close]]));
+
+    const res = await request(app.getHttpServer())
+      .get('/symbols?query=n')
+      .expect(200);
+
+    expect(candles.findLatestCloses).toHaveBeenCalledWith([7, 9]);
+    expect(res.body.symbols).toEqual([
+      { ticker: 'NVDA', name: 'NVIDIA', exchange: 'XNAS', latestClose: close },
+      { ticker: 'NEW', name: 'Newly listed', exchange: 'XNYS', latestClose: null },
+    ]);
+  });
+
   it('serves candles for a ticker in any case, split-adjusted by default', async () => {
     symbols.findIdByTicker.mockResolvedValueOnce(7);
     candles.findDaily.mockResolvedValueOnce([]);
+    candles.findSplits.mockResolvedValueOnce([
+      { exDate: '2024-06-10', from: '1', to: '10' },
+    ]);
 
     const res = await request(app.getHttpServer())
       .get('/symbols/nvda/candles?from=2024-01-01')
@@ -52,10 +78,15 @@ describe('SymbolsController', () => {
       { from: '2024-01-01', to: null },
       'split',
     );
+    expect(candles.findSplits).toHaveBeenCalledWith(7, {
+      from: '2024-01-01',
+      to: null,
+    });
     expect(res.body).toEqual({
       ticker: 'NVDA',
       adjustment: 'split',
       candles: [],
+      splits: [{ exDate: '2024-06-10', from: '1', to: '10' }],
     });
   });
 

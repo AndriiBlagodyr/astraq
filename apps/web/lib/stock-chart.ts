@@ -1,6 +1,8 @@
 import type { components } from "@astraq/sdk";
 
 export type Candle = components["schemas"]["Candle_Output"];
+export type LatestClose = components["schemas"]["LatestClose_Output"];
+export type Split = components["schemas"]["Split_Output"];
 
 /** The chart's range presets, in the order the picker shows them. */
 export const chartRanges = ["1M", "6M", "1Y", "5Y", "Max"] as const;
@@ -58,25 +60,38 @@ export type LastSession = {
 };
 
 /**
- * The header's last close and day change. Display-only arithmetic, so plain
+ * Last close and day change for display. Display-only arithmetic, so plain
  * numbers are fine here; the stored and served values stay decimal strings.
  */
+export function sessionChange({
+  date,
+  close,
+  previousClose,
+}: LatestClose): LastSession {
+  if (previousClose === null)
+    return { date, close, change: null, changePercent: null };
+  const change = Number(close) - Number(previousClose);
+  return {
+    date,
+    close,
+    change,
+    changePercent: (change / Number(previousClose)) * 100,
+  };
+}
+
+/** The stock page header's last close and day change, from its candles. */
 export function lastSession(candles: Candle[]): LastSession | null {
   const last = candles.at(-1);
   if (!last) return null;
-  const previous = candles.at(-2);
-  if (!previous)
-    return {
-      date: last.time,
-      close: last.close,
-      change: null,
-      changePercent: null,
-    };
-  const change = Number(last.close) - Number(previous.close);
-  return {
+  return sessionChange({
     date: last.time,
     close: last.close,
-    change,
-    changePercent: (change / Number(previous.close)) * 100,
-  };
+    previousClose: candles.at(-2)?.close ?? null,
+  });
+}
+
+/** "10-for-1 split", or "1-for-10 reverse split" when shares were merged. */
+export function splitLabel({ from, to }: Split): string {
+  const reverse = Number(from) > Number(to);
+  return `${to}-for-${from} ${reverse ? "reverse split" : "split"}`;
 }

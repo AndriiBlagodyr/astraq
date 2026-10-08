@@ -1,4 +1,10 @@
-import { lastSession, parseChartParams, rangeStart } from "./stock-chart";
+import {
+  lastSession,
+  parseChartParams,
+  rangeStart,
+  sessionChange,
+  splitLabel,
+} from "./stock-chart";
 
 describe("rangeStart", () => {
   it("counts months back and clamps to the shorter month", () => {
@@ -51,5 +57,36 @@ describe("lastSession", () => {
   it("has no change for a single bar, and nothing for none", () => {
     expect(lastSession([bar("2024-06-10", "126")])?.change).toBeNull();
     expect(lastSession([])).toBeNull();
+  });
+});
+
+describe("sessionChange", () => {
+  it("measures the change against the split-adjusted previous close", () => {
+    expect(
+      sessionChange({
+        date: "2024-06-10",
+        close: "121.79",
+        previousClose: "120.888",
+      })
+    ).toEqual({
+      date: "2024-06-10",
+      close: "121.79",
+      change: expect.closeTo(0.902, 9),
+      changePercent: expect.closeTo(0.7461, 4),
+    });
+  });
+});
+
+describe("splitLabel", () => {
+  it("names forward and reverse splits by new shares per old", () => {
+    expect(splitLabel({ exDate: "2024-06-10", from: "1", to: "10" })).toBe(
+      "10-for-1 split"
+    );
+    expect(splitLabel({ exDate: "2023-01-03", from: "2", to: "3" })).toBe(
+      "3-for-2 split"
+    );
+    expect(splitLabel({ exDate: "2023-01-03", from: "20", to: "1" })).toBe(
+      "1-for-20 reverse split"
+    );
   });
 });

@@ -1,18 +1,6 @@
 import Link from "next/link";
-import {
-  Button,
-  Card,
-  EmptyState,
-  Input,
-  Table,
-  TableCaption,
-  TableWrap,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
-} from "@astraq/ui";
+import { Button, Card, EmptyState, Input } from "@astraq/ui";
+import { SymbolTable } from "@/app/components/SymbolTable";
 import { searchSymbols } from "@/lib/market-data";
 
 export const metadata = {
@@ -21,8 +9,7 @@ export const metadata = {
 
 // Phase 1: search over the bootstrapped symbols (docs/ui-plan.md § Stocks).
 // A plain GET form, so search works before any JavaScript loads and every
-// result list has a shareable URL. Last close and day change per row need a
-// quotes endpoint; they come with the Today table.
+// result list has a shareable URL.
 export default async function StocksPage({
   searchParams,
 }: {
@@ -76,40 +63,10 @@ export default async function StocksPage({
           )}
         </Card>
       ) : (
-        <TableWrap>
-          <Table>
-            <TableCaption className="sr-only">
-              {query ? `Symbols matching ${query}` : "All symbols"}
-            </TableCaption>
-            <Thead>
-              <Tr>
-                <Th>Ticker</Th>
-                <Th>Name</Th>
-                <Th>Exchange</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {symbols.map((symbol) => (
-                <Tr key={symbol.ticker}>
-                  <Td>
-                    <Link
-                      href={`/stocks/${symbol.ticker}`}
-                      className="font-semibold text-foreground underline-offset-4 hover:underline"
-                    >
-                      {symbol.ticker}
-                    </Link>
-                  </Td>
-                  <Td>{symbol.name}</Td>
-                  <Td>
-                    <code className="text-xs text-muted">
-                      {symbol.exchange}
-                    </code>
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </TableWrap>
+        <SymbolTable
+          symbols={symbols}
+          caption={query ? `Symbols matching ${query}` : "All symbols"}
+        />
       )}
     </main>
   );
