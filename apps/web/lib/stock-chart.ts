@@ -20,7 +20,22 @@ const rangeMonths: Record<Exclude<ChartRange, "Max">, number> = {
 export const chartAdjustments = ["split", "raw"] as const;
 export type ChartAdjustment = (typeof chartAdjustments)[number];
 
-/** Reads `?range=&adjustment=` leniently: anything unknown falls back to the default. */
+/** A picked range of session dates, both ends inclusive, as YYYY-MM-DD. */
+export type CustomRange = { from: string; to: string };
+
+/** A real calendar date in YYYY-MM-DD form (rejects 2026-02-30). */
+function isIsoDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value))
+    return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+}
+
+/**
+ * Reads `?range=&adjustment=` and `?from=&to=` leniently: anything unknown
+ * falls back to the default. A valid `from`/`to` pair wins over `range`; a
+ * half, malformed, or reversed pair is ignored.
+ */
 export function parseChartParams(
   params: Record<string, string | string[] | undefined>
 ) {
@@ -28,7 +43,27 @@ export function parseChartParams(
     chartRanges.find((value) => value === params.range) ?? defaultRange;
   const adjustment =
     chartAdjustments.find((value) => value === params.adjustment) ?? "split";
-  return { range, adjustment };
+  const { from, to } = params;
+  const custom: CustomRange | null =
+    isIsoDate(from) && isIsoDate(to) && from <= to ? { from, to } : null;
+  return { range, adjustment, custom };
+}
+
+/** The stock page URL for a preset range or a custom one. */
+export function chartHref(
+  ticker: string,
+  view: { adjustment: ChartAdjustment } & (
+    | { range: ChartRange }
+    | { custom: CustomRange }
+  )
+): string {
+  const query = new URLSearchParams(
+    "custom" in view
+      ? { from: view.custom.from, to: view.custom.to }
+      : { range: view.range }
+  );
+  query.set("adjustment", view.adjustment);
+  return `/stocks/${ticker}?${query}`;
 }
 
 /**
