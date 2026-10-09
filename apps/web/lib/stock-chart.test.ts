@@ -1,4 +1,5 @@
 import {
+  chartHref,
   lastSession,
   parseChartParams,
   rangeStart,
@@ -21,15 +22,55 @@ describe("rangeStart", () => {
 
 describe("parseChartParams", () => {
   it("falls back to 1Y split-adjusted for missing or unknown values", () => {
-    expect(parseChartParams({})).toEqual({ range: "1Y", adjustment: "split" });
+    expect(parseChartParams({})).toEqual({
+      range: "1Y",
+      adjustment: "split",
+      custom: null,
+    });
     expect(parseChartParams({ range: "2W", adjustment: ["raw"] })).toEqual({
       range: "1Y",
       adjustment: "split",
+      custom: null,
     });
     expect(parseChartParams({ range: "Max", adjustment: "raw" })).toEqual({
       range: "Max",
       adjustment: "raw",
+      custom: null,
     });
+  });
+
+  it("reads a valid from/to pair as a custom range, inclusive of one day", () => {
+    expect(
+      parseChartParams({ range: "1M", from: "2024-05-01", to: "2024-06-28" })
+        .custom
+    ).toEqual({ from: "2024-05-01", to: "2024-06-28" });
+    expect(
+      parseChartParams({ from: "2024-06-10", to: "2024-06-10" }).custom
+    ).toEqual({ from: "2024-06-10", to: "2024-06-10" });
+  });
+
+  it("ignores a half, malformed, impossible, or reversed pair", () => {
+    const custom = (params: Record<string, string | string[]>) =>
+      parseChartParams(params).custom;
+    expect(custom({ from: "2024-05-01" })).toBeNull();
+    expect(custom({ from: "2024-5-1", to: "2024-06-28" })).toBeNull();
+    expect(custom({ from: "2026-02-30", to: "2026-03-10" })).toBeNull();
+    expect(custom({ from: ["2024-05-01"], to: "2024-06-28" })).toBeNull();
+    expect(custom({ from: "2024-06-28", to: "2024-05-01" })).toBeNull();
+  });
+});
+
+describe("chartHref", () => {
+  it("links a preset or a custom range with the price mode", () => {
+    expect(chartHref("NVDA", { range: "5Y", adjustment: "raw" })).toBe(
+      "/stocks/NVDA?range=5Y&adjustment=raw"
+    );
+    expect(
+      chartHref("NVDA", {
+        custom: { from: "2024-05-01", to: "2024-06-28" },
+        adjustment: "split",
+      })
+    ).toBe("/stocks/NVDA?from=2024-05-01&to=2024-06-28&adjustment=split");
   });
 });
 

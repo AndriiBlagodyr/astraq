@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card, EmptyState } from "@astraq/ui";
 import { CandleChart } from "@/app/components/CandleChart";
+import { CustomRangePicker } from "@/app/components/CustomRangePicker";
 import { DayChange } from "@/app/components/DayChange";
 import { findSymbol, getDailyCandles } from "@/lib/market-data";
 import {
   chartAdjustments,
+  chartHref,
   chartRanges,
   lastSession,
   parseChartParams,
@@ -41,24 +43,33 @@ export default async function StockPage({
   searchParams,
 }: StockPageProps) {
   const { symbol } = await params;
-  const { range, adjustment } = parseChartParams(await searchParams);
+  const { range, adjustment, custom } = parseChartParams(await searchParams);
   const ticker = symbol.toUpperCase();
   const today = new Date().toISOString().slice(0, 10);
 
   const [summary, series] = await Promise.all([
     findSymbol(ticker),
-    getDailyCandles(ticker, { from: rangeStart(range, today), adjustment }),
+    getDailyCandles(ticker, {
+      from: custom ? custom.from : rangeStart(range, today),
+      to: custom?.to,
+      adjustment,
+    }),
   ]);
   if (!series) notFound();
 
   const last = lastSession(series.candles);
+  // A preset link drops the custom dates; a price link keeps whichever is on.
   const href = (next: { range?: ChartRange; adjustment?: ChartAdjustment }) => {
-    const query = new URLSearchParams({
-      range: next.range ?? range,
-      adjustment: next.adjustment ?? adjustment,
-    });
-    return `/stocks/${ticker}?${query}` as Route;
+    const view = next.range ?? custom ?? range;
+    const nextAdjustment = next.adjustment ?? adjustment;
+    return chartHref(
+      ticker,
+      typeof view === "string"
+        ? { range: view, adjustment: nextAdjustment }
+        : { custom: view, adjustment: nextAdjustment }
+    ) as Route;
   };
+  const rangeLabel = custom ? `${custom.from} to ${custom.to}` : range;
 
   return (
     <main className="grid gap-5">
@@ -92,15 +103,24 @@ export default async function StockPage({
 
       <Card className="grid gap-4 p-5 sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <PillLinks
-            label="Range"
-            items={chartRanges.map((value) => ({
-              key: value,
-              text: value,
-              href: href({ range: value }),
-              current: value === range,
-            }))}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <PillLinks
+              label="Range"
+              items={chartRanges.map((value) => ({
+                key: value,
+                text: value,
+                href: href({ range: value }),
+                current: !custom && value === range,
+              }))}
+            />
+            <CustomRangePicker
+              key={custom ? `${custom.from}/${custom.to}` : "preset"}
+              ticker={ticker}
+              adjustment={adjustment}
+              value={custom}
+              max={today}
+            />
+          </div>
           <PillLinks
             label="Prices"
             items={chartAdjustments.map((value) => ({
@@ -116,7 +136,7 @@ export default async function StockPage({
           <>
             <CandleChart
               candles={series.candles}
-              label={`${ticker} daily candles, ${adjustmentLabels[adjustment].toLowerCase()}, ${range}`}
+              label={`${ticker} daily candles, ${adjustmentLabels[adjustment].toLowerCase()}, ${rangeLabel}`}
               splits={adjustment === "raw" ? series.splits : undefined}
             />
             {series.splits.length > 0 ? (

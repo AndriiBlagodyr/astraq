@@ -40,10 +40,14 @@ export async function findSymbol(
 /** Daily candles, or null when the API doesn't know the ticker. */
 export async function getDailyCandles(
   ticker: string,
-  { from, adjustment }: { from?: string; adjustment: ChartAdjustment }
+  {
+    from,
+    to,
+    adjustment,
+  }: { from?: string; to?: string; adjustment: ChartAdjustment }
 ): Promise<CandleSeries | null> {
   const { data, response } = await api.GET("/api/symbols/{ticker}/candles", {
-    params: { path: { ticker }, query: { from, adjustment } },
+    params: { path: { ticker }, query: { from, to, adjustment } },
     ...fresh,
   });
   if (response.status === 404) return null;
