@@ -3,6 +3,7 @@
 - Framework: NestJS 11. The api is the only writer of domain tables.
 - Layering: `controller -> service -> repository -> db`. No DB calls in controllers.
 - DB access: Prisma only. Use Prisma Client for models, Prisma Migrate for every schema change, and TypedSQL (`$queryRaw` as fallback) for hand-written candle and analytics queries. Hypertables and other TimescaleDB DDL go in `migrate dev --create-only` migrations edited by hand. MongoDB (Phase 4+) uses a second Prisma client with the MongoDB connector, not Mongoose. Don't add another ORM, query builder, or migration tool.
+- The Prisma Client in `src/generated/prisma` is generated on install (`postinstall`) and gitignored: never commit it. Migration folders keep the name Prisma gives them (`YYYYMMDDHHMMSS_name`, 14 digits), since Prisma applies them in name order; rename one only before it reaches a shared database.
 - Jobs/queues: BullMQ on Redis. Cron via `@nestjs/schedule`.
 - Validation: Zod schemas shared from `packages/shared`; use `nestjs-zod` for DTO binding.
 - Logging: pino with request-id middleware. No `console.log` in production paths.

@@ -1,6 +1,6 @@
 import {
   chartHref,
-  lastSession,
+  marketDate,
   parseChartParams,
   rangeStart,
   sessionChange,
@@ -74,30 +74,11 @@ describe("chartHref", () => {
   });
 });
 
-describe("lastSession", () => {
-  const bar = (time: string, close: string) => ({
-    time,
-    open: close,
-    high: close,
-    low: close,
-    close,
-    volume: "1",
-  });
-
-  it("reports the last close and its change from the previous one", () => {
-    expect(
-      lastSession([bar("2024-06-07", "120"), bar("2024-06-10", "126")])
-    ).toEqual({
-      date: "2024-06-10",
-      close: "126",
-      change: 6,
-      changePercent: 5,
-    });
-  });
-
-  it("has no change for a single bar, and nothing for none", () => {
-    expect(lastSession([bar("2024-06-10", "126")])?.change).toBeNull();
-    expect(lastSession([])).toBeNull();
+describe("marketDate", () => {
+  it("is New York's date, which trails UTC in the evening", () => {
+    // 21:30 New York on June 10 is already June 11 in UTC.
+    expect(marketDate(new Date("2024-06-11T01:30:00Z"))).toBe("2024-06-10");
+    expect(marketDate(new Date("2024-06-11T14:00:00Z"))).toBe("2024-06-11");
   });
 });
 

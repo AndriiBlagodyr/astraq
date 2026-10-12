@@ -12,6 +12,9 @@ async function bootstrap() {
 
   app.useLogger(app.get(Logger));
   configureApp(app);
+  // Runs onModuleDestroy on SIGTERM, so a redeploy closes the Prisma pool
+  // cleanly instead of cutting it.
+  app.enableShutdownHooks();
 
   // Interactive docs for local work; the committed openapi.json is the contract.
   if (env.NODE_ENV !== 'production') {

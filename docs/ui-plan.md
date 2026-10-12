@@ -31,7 +31,7 @@ A sidebar on desktop, plus a top bar.
 | Bottom of sidebar | **Status** | `/status` | 0 (admin-only from 7) |
 
 - A group header appears only once it has an item. Until Phase 3 the sidebar is Today, Watchlists, Stocks, Analysis, and Status. Analysis points at the returns distribution until Phase 6 adds the `/analysis` index.
-- **Top bar:** symbol search (Phase 1), which becomes the ⌘K / Ctrl+K command palette in Phase 2 (pages, symbols, actions, recent items). After that come the theme menu (theme, mode, density) and the user menu (Settings, Sign out; Phase 2).
+- **Top bar:** symbol search (Phase 1, done: a GET form to `/stocks`), which becomes the ⌘K / Ctrl+K command palette in Phase 2 (pages, symbols, actions, recent items). After that come the theme menu (theme, mode, density) and the user menu (Settings, Sign out; Phase 2).
 - **Keyboard:** `/` focuses search, `g` + a letter jumps to a page, `?` lists the shortcuts (Phase 2, motion plan).
 - **Phone (Phase 6 mobile pass):** a bottom tab bar with Today, Watchlists, Portfolio, and Search. The rest live in a "More" sheet (`Drawer`).
 
@@ -100,7 +100,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
 
 **For:** finding a symbol and opening its page.
 
-- **Phase 1:** search by ticker or name over the bootstrapped symbols (`GET /api/symbols?query=`). Results show ticker, name, exchange, last close, and day change. Enter opens the top result.
+- **Phase 1:** search by ticker or name over the bootstrapped symbols (`GET /api/symbols?query=`). Results show ticker, name, exchange, last close, and day change, best match first (ticker matches, then name matches). Enter opens the top result when it's an exact ticker or the only match; a looser query keeps the list.
 - **Phase 2:** search covers the full active US equity universe. A symbol without stored candles shows "Loading history…" while the on-demand fetch runs. "Add to watchlist" on each result.
 - **Phase 6:** filters (exchange, sector if the provider supplies it) and sortable columns (`DataTable`).
 
@@ -108,6 +108,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
 
 **For:** everything about one symbol. A header (ticker, name, last price, day change, as-of time) sits above tabs. Each tab appears in the phase that fills it.
 
+- **Header (Phase 1):** last price and day change come from the symbol's latest stored session, not the chart's range, so a custom range or raw prices never turn them into a historical quote.
 - **Chart tab (Phase 1):**
   - Candles plus a volume pane (`lightweight-charts`) from `GET /api/symbols/:ticker/candles?from&to&adjusted=true`.
   - A range picker (1M, 6M, 1Y, 5Y, Max, custom via `DateRangePicker`) and an adjusted / raw toggle. Split days are marked when showing raw prices.
@@ -211,7 +212,7 @@ Appearance (theme, mode, density) stays in the top-bar theme menu, not Settings,
 
 **For:** whether the system and the data can be trusted right now.
 
-- **Phase 0:** live API and ML service health (`/health/ready`, `/health`) with response and latency, checked on every request. `/health/ready` checks the database from Phase 1, and the deployed version is added with the first deployment.
+- **Phase 0:** live API and ML service health (`/health/ready`, `/health`) with response and latency, checked on every request. `/health/ready` checks the database from Phase 1. The deployed version (web and api commit) is shown from Phase 1; service addresses are listed only outside production.
 - **Phase 4:** data quality results (missing sessions, duplicate bars, OHLC sanity, stale symbols), the last end-of-day refresh, and job failures. A link to Bull Board (admin).
 - **Phase 7:** becomes admin-only. `/admin/users` joins it.
 - **Phase 10:** SLO status (candle freshness, API p95, alert delivery time) and links to the dashboards.
@@ -243,7 +244,10 @@ Done. What the current app needed to match this plan:
 8. **Auth screens:** `/login`, `/register`, and `/forgot-password` stay, as the ROADMAP says, with their copy updated to the current phases. Nothing links to them until Phase 2 makes them work.
 9. **CSS:** `(app)/layout.module.css` keeps only the shell's classes (374 → 83 lines), and the 815 lines of marketing CSS are deleted with their pages. New pages use Tailwind and `@astraq/ui`. Later in Phase 0 the shells, navigation, and the error, not-found, and loading screens moved to `Card`, `Button`, and `Spinner` compositions, and their CSS modules were deleted. Only `VeracandLogo.module.css` stays, for the logo's SVG keyframes and per-mode colors.
 
+## Decisions
+
+- **Public market data in Phase 1 (resolved 2026-10-09).** Today and the stock page have no auth until Phase 2, and the ROADMAP's data licensing rule says no public redistribution. The Phase 1 deploy sits behind a shared password: with `SITE_PASSWORD` set, `apps/web/proxy.ts` asks for it with HTTP Basic auth on every page. Local dev leaves it unset. Phase 2's sessions replace it. The api's own domain stays reachable without it (the web server calls it server to server); it serves JSON, not pages, and only to someone who knows the URL. Phase 2 puts the data endpoints behind auth.
+
 ## Open questions
 
-- **Public market data in Phase 1.** Today and the stock page are public until auth lands in Phase 2, which shows provider data on a public URL. The ROADMAP's data licensing rule says no public redistribution. Options: keep the Phase 1 deployment behind a basic shared password, or accept it for the few weeks until Phase 2.
 - **One portfolio or several by default.** The plan supports several (each with its own commission settings). If one is enough for v1, `/portfolios` collapses to `/portfolio`.

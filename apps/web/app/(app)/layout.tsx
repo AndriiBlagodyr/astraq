@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Card } from "@astraq/ui";
 import { AppNavigation } from "@/app/components/AppNavigation";
+import { RouteTransition } from "@/app/components/RouteTransition";
+import { SymbolSearch } from "@/app/components/SymbolSearch";
 import { VeracandLogo } from "@/app/components/VeracandLogo";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 
@@ -29,12 +31,13 @@ export default function ProductLayout({ children }: { children: ReactNode }) {
 
       <div className="grid min-w-0 content-start gap-[18px]">
         <header>
-          <Card className="flex items-center justify-end gap-4 px-4 py-3">
+          <Card className="flex items-center justify-between gap-4 px-4 py-3">
+            <SymbolSearch />
             <ThemeToggle />
           </Card>
         </header>
 
-        {children}
+        <RouteTransition>{children}</RouteTransition>
       </div>
     </div>
   );

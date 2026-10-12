@@ -34,7 +34,7 @@ Create one Railway project (`veracand`) with two services, in the same region yo
    | `LOG_LEVEL` | `info` |
    | `ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY` | Alpaca keys, marked **sealed**. Only the bootstrap reads them |
 
-   `NODE_ENV=production` is baked into the image. Railway sets `PORT`.
+   `NODE_ENV=production` is baked into the image. Railway sets `PORT`, and `RAILWAY_GIT_COMMIT_SHA`, which `/health` reports as `version`.
 4. **Networking → Generate Domain.** That URL is the web app's `API_URL`.
 
 The first deploy builds the image, runs the migrations against the empty database (the `init` migration creates the `timescaledb` extension and the hypertable), and goes live once `/health/ready` returns 200.
@@ -63,8 +63,9 @@ It's idempotent: run it again to backfill new bars.
    |---|---|
    | `API_URL` | the Railway API domain, e.g. `https://api-production-xxxx.up.railway.app` |
    | `NEXT_PUBLIC_APP_URL` | the Vercel production URL |
+   | `SITE_PASSWORD` | a shared password, at least 12 characters, marked **sensitive**. Every page asks for it (HTTP Basic auth, any username) until Phase 2 adds accounts: provider data isn't for a public URL ([ui-plan § Decisions](ui-plan.md#decisions)) |
 
-   Leave `ML_URL` unset: the ML service isn't deployed yet, and `/status` says so.
+   Leave `ML_URL` unset: the ML service isn't deployed yet, and `/status` says so. Keep **Settings → Environment Variables → Automatically expose System Environment Variables** on: `/status` shows the web build's `VERCEL_GIT_COMMIT_SHA`.
 
 Every push to `master` deploys production. Every PR gets a preview URL that reads the production API.
 
@@ -81,8 +82,9 @@ Migrations must stay backward compatible with the running api (expand, then cont
 
 ## Check it
 
-- `https://<api-domain>/health/ready` → `{"status":"ok"}`
-- `https://<web-domain>/status` → API up (ML down until it deploys)
+- `https://<api-domain>/health/ready` → `{"status":"ok","version":"<commit>"}`
+- `https://<web-domain>/` → the browser asks for the site password
+- `https://<web-domain>/status` → API up with the same commit as `master`, the web version beside it (ML down until it deploys)
 - `https://<web-domain>/stocks/NVDA` → the split-adjusted chart, on a phone too
 
 ## Build the api image locally
@@ -92,5 +94,6 @@ docker build -f apps/api/Dockerfile -t veracand-api .
 docker run --rm -p 4000:4000 \
   -e DATABASE_URL=postgres://veracand:veracand@host.docker.internal:5432/veracand \
   -e CORS_ORIGINS=http://localhost:3000 \
+  -e COMMIT_SHA="$(git rev-parse HEAD)" \
   veracand-api
 ```

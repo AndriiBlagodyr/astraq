@@ -6,3 +6,25 @@
  */
 @source "./";
 @source "../lib";
+
+/*
+ * Route crossfade (docs/motion-and-delight-plan.md): only the page content
+ * named "route-content" in RouteTransition fades; the shell holds still. The
+ * motion tokens drop to 0ms under reduced motion, so the swap is instant.
+ */
+::view-transition-group(route-content) {
+  animation-duration: var(--ds-motion-base);
+  animation-timing-function: var(--ds-ease-out);
+}
+::view-transition-old(route-content),
+::view-transition-new(route-content) {
+  animation-duration: var(--ds-motion-base);
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

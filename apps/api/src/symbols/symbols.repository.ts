@@ -17,22 +17,45 @@ export type SymbolRow = Omit<SymbolSummary, 'latestClose'> & { id: number };
 export class SymbolsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Active symbols whose ticker starts with, or name contains, `query`. */
-  search(query: string | undefined): Promise<SymbolRow[]> {
-    return this.prisma.symbol.findMany({
-      where: {
-        active: true,
-        ...(query && {
-          OR: [
-            { ticker: { startsWith: query, mode: 'insensitive' } },
-            { name: { contains: query, mode: 'insensitive' } },
-          ],
-        }),
-      },
-      select: summary,
-      orderBy: { ticker: 'asc' },
-      take: SEARCH_LIMIT,
-    });
+  /**
+   * Active symbols whose ticker starts with, or name contains, `query`, best
+   * match first: ticker matches (an exact ticker sorts first among them),
+   * then name-only matches, each alphabetical. The web opens the top result
+   * on an exact ticker, so the order is part of the contract.
+   */
+  async search(query: string | undefined): Promise<SymbolRow[]> {
+    const byTicker = { ticker: 'asc' } as const;
+    if (!query) {
+      return this.prisma.symbol.findMany({
+        where: { active: true },
+        select: summary,
+        orderBy: byTicker,
+        take: SEARCH_LIMIT,
+      });
+    }
+
+    const tickerMatch = {
+      ticker: { startsWith: query, mode: 'insensitive' },
+    } as const;
+    const [tickerMatches, nameMatches] = await Promise.all([
+      this.prisma.symbol.findMany({
+        where: { active: true, ...tickerMatch },
+        select: summary,
+        orderBy: byTicker,
+        take: SEARCH_LIMIT,
+      }),
+      this.prisma.symbol.findMany({
+        where: {
+          active: true,
+          name: { contains: query, mode: 'insensitive' },
+          NOT: tickerMatch,
+        },
+        select: summary,
+        orderBy: byTicker,
+        take: SEARCH_LIMIT,
+      }),
+    ]);
+    return [...tickerMatches, ...nameMatches].slice(0, SEARCH_LIMIT);
   }
 
   /** The symbol's id, or null when the ticker is unknown. */

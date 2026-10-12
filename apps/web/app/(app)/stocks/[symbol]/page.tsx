@@ -10,9 +10,10 @@ import {
   chartAdjustments,
   chartHref,
   chartRanges,
-  lastSession,
+  marketDate,
   parseChartParams,
   rangeStart,
+  sessionChange,
   splitLabel,
   type ChartAdjustment,
   type ChartRange,
@@ -45,7 +46,7 @@ export default async function StockPage({
   const { symbol } = await params;
   const { range, adjustment, custom } = parseChartParams(await searchParams);
   const ticker = symbol.toUpperCase();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = marketDate();
 
   const [summary, series] = await Promise.all([
     findSymbol(ticker),
@@ -57,7 +58,12 @@ export default async function StockPage({
   ]);
   if (!series) notFound();
 
-  const last = lastSession(series.candles);
+  // The header is today's quote, independent of the chart's range and price
+  // mode: a custom range or raw prices mustn't turn it into a historical
+  // price or a split into a -90% "day".
+  const last = summary?.latestClose
+    ? sessionChange(summary.latestClose)
+    : null;
   // A preset link drops the custom dates; a price link keeps whichever is on.
   const href = (next: { range?: ChartRange; adjustment?: ChartAdjustment }) => {
     const view = next.range ?? custom ?? range;

@@ -10,8 +10,9 @@ type TickerSummary = { bars: number; splits: number; dividends: number };
 
 /**
  * Loads raw daily bars and corporate actions for a fixed list of symbols.
- * Synchronous and idempotent: every write is an upsert, so rerunning after a
- * failure (or to pick up new days) is always safe.
+ * Sequential (no queue) and idempotent: bars are upserted and each symbol's
+ * actions in the range are replaced with what the provider reports now, so
+ * rerunning after a failure, or to pick up new days and corrections, is safe.
  */
 @Injectable()
 export class BootstrapService {
@@ -43,8 +44,11 @@ export class BootstrapService {
     const actions = toCorporateActionRows(
       await this.alpaca.corporateActions(tickers, range),
     );
-    for (const [ticker, rows] of actions) {
-      await this.repository.upsertCorporateActions(idFor(ticker), rows);
+    // Every requested ticker, not just those with actions: a symbol whose
+    // only action was withdrawn upstream still needs the stale row removed.
+    for (const ticker of tickers) {
+      const rows = actions.get(ticker) ?? [];
+      await this.repository.replaceCorporateActions(idFor(ticker), range, rows);
       const counts = summary.get(ticker)!;
       counts.splits += rows.filter((row) => row.type === 'SPLIT').length;
       counts.dividends += rows.filter((row) => row.type === 'DIVIDEND').length;

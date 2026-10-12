@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import type { DateRange } from './alpaca/alpaca.client';
 
 /** A symbol as the bootstrap seeds it. */
 export type SymbolSeed = { ticker: string; name: string; exchange: string };
@@ -19,7 +20,7 @@ export type CorporateActionRow =
   | { type: 'SPLIT'; exDate: string; splitFrom: string; splitTo: string }
   | { type: 'DIVIDEND'; exDate: string; cashAmount: string };
 
-/** Writes provider market data. Every method is an idempotent upsert. */
+/** Writes provider market data. Every method is idempotent. */
 @Injectable()
 export class MarketDataRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -73,24 +74,43 @@ export class MarketDataRepository {
     `;
   }
 
-  /** Upserts actions on their natural key `(symbol_id, type, ex_date)`. */
-  async upsertCorporateActions(
+  /**
+   * Makes the symbol's actions with an ex-date in `range` exactly `rows`:
+   * upserts each on its natural key `(symbol_id, type, ex_date)` and deletes
+   * the ones the provider no longer reports. Without the delete, a corrected
+   * ex-date would leave the old row behind and adjust older bars twice.
+   * One transaction, so a reader never sees the half-replaced set.
+   */
+  async replaceCorporateActions(
     symbolId: number,
+    range: DateRange,
     rows: CorporateActionRow[],
   ): Promise<void> {
-    for (const row of rows) {
-      const values =
-        row.type === 'SPLIT'
-          ? { splitFrom: row.splitFrom, splitTo: row.splitTo, cashAmount: null }
-          : { splitFrom: null, splitTo: null, cashAmount: row.cashAmount };
-      const exDate = new Date(`${row.exDate}T00:00:00.000Z`);
-      await this.prisma.corporateAction.upsert({
+    const day = (date: string) => new Date(`${date}T00:00:00.000Z`);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.corporateAction.deleteMany({
         where: {
-          symbolId_type_exDate: { symbolId, type: row.type, exDate },
+          symbolId,
+          exDate: { gte: day(range.from), lte: day(range.to) },
+          NOT: {
+            OR: rows.map((row) => ({ type: row.type, exDate: day(row.exDate) })),
+          },
         },
-        create: { symbolId, type: row.type, exDate, ...values },
-        update: values,
       });
-    }
+      for (const row of rows) {
+        const values =
+          row.type === 'SPLIT'
+            ? { splitFrom: row.splitFrom, splitTo: row.splitTo, cashAmount: null }
+            : { splitFrom: null, splitTo: null, cashAmount: row.cashAmount };
+        const exDate = day(row.exDate);
+        await tx.corporateAction.upsert({
+          where: {
+            symbolId_type_exDate: { symbolId, type: row.type, exDate },
+          },
+          create: { symbolId, type: row.type, exDate, ...values },
+          update: values,
+        });
+      }
+    });
   }
 }

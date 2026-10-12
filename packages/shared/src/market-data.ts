@@ -39,7 +39,20 @@ export const SymbolSearchQuerySchema = z.object({
   query: z.string().trim().max(64).optional(),
 });
 
-/** Body of `GET /api/symbols`, ordered by ticker. */
+/**
+ * Path of `GET /api/symbols/{ticker}/...`. Case-insensitive; share classes
+ * use a dot or dash (BRK.B, BF-B). Same 16-character cap as the column.
+ */
+export const TickerParamSchema = z.object({
+  ticker: z
+    .string()
+    .regex(/^[A-Za-z][A-Za-z0-9.-]{0,15}$/, "Not a ticker symbol"),
+});
+
+/**
+ * Body of `GET /api/symbols`, best match first: ticker-prefix matches (an
+ * exact ticker leads), then name matches, each alphabetical.
+ */
 export const SymbolListSchema = z
   .object({
     symbols: z.array(SymbolSummarySchema),
@@ -105,6 +118,7 @@ export const CandleSeriesSchema = z
 export type LatestClose = z.infer<typeof LatestCloseSchema>;
 export type SymbolSummary = z.infer<typeof SymbolSummarySchema>;
 export type SymbolSearchQuery = z.infer<typeof SymbolSearchQuerySchema>;
+export type TickerParam = z.infer<typeof TickerParamSchema>;
 export type SymbolList = z.infer<typeof SymbolListSchema>;
 export type Adjustment = z.infer<typeof AdjustmentSchema>;
 export type CandlesQuery = z.infer<typeof CandlesQuerySchema>;

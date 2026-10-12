@@ -92,6 +92,8 @@ export interface components {
         HealthStatus_Output: {
             /** @constant */
             status: "ok";
+            /** @description The git commit the running build came from, or null outside a deploy. */
+            version: string | null;
         };
         SymbolSummary_Output: {
             ticker: string;

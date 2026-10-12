@@ -116,6 +116,7 @@
             "required": true,
             "in": "path",
             "schema": {
+              "pattern": "^[A-Za-z][A-Za-z0-9.-]{0,15}$",
               "type": "string"
             }
           },
@@ -258,10 +259,22 @@
           "status": {
             "type": "string",
             "const": "ok"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The git commit the running build came from, or null outside a deploy."
           }
         },
         "required": [
-          "status"
+          "status",
+          "version"
         ],
         "additionalProperties": false
       },
