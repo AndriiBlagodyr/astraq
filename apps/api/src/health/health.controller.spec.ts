@@ -29,7 +29,7 @@ describe('HealthController', () => {
       .get('/health/live')
       .expect(200);
 
-    expect(res.body).toEqual({ status: 'ok' });
+    expect(res.body).toEqual({ status: 'ok', version: null });
   });
 
   it('GET /health/ready returns ok when the database answers', async () => {
@@ -39,7 +39,7 @@ describe('HealthController', () => {
       .get('/health/ready')
       .expect(200);
 
-    expect(res.body).toEqual({ status: 'ok' });
+    expect(res.body).toEqual({ status: 'ok', version: null });
   });
 
   it('GET /health/ready returns 503 when the database is down', async () => {

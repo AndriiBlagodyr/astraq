@@ -1,6 +1,7 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ZodResponse } from 'nestjs-zod';
+import { env } from '../common/env';
 import { ApiProblemResponses } from '../common/problem';
 import { PrismaService } from '../database/prisma.service';
 import { HealthStatusDto } from './health.dto';
@@ -15,7 +16,7 @@ export class HealthController {
   @ApiOperation({ operationId: 'getLiveness', summary: 'The process is up' })
   @ZodResponse({ status: 200, type: HealthStatusDto })
   live() {
-    return { status: 'ok' as const };
+    return { status: 'ok' as const, version: env.COMMIT_SHA };
   }
 
   @Get('ready')
@@ -28,6 +29,6 @@ export class HealthController {
     if (!(await this.prisma.isReachable())) {
       throw new ServiceUnavailableException('Database is unreachable');
     }
-    return { status: 'ok' as const };
+    return { status: 'ok' as const, version: env.COMMIT_SHA };
   }
 }

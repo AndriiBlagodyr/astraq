@@ -7,6 +7,7 @@ import {
   CandlesQueryDto,
   SymbolListDto,
   SymbolSearchQueryDto,
+  TickerParamDto,
 } from './symbols.dto';
 import { SymbolsService } from './symbols.service';
 
@@ -32,7 +33,7 @@ export class SymbolsController {
     summary: 'Daily candles, adjusted for splits (and dividends) on request',
   })
   @ZodResponse({ status: 200, type: CandleSeriesDto })
-  candles(@Param('ticker') ticker: string, @Query() query: CandlesQueryDto) {
+  candles(@Param() { ticker }: TickerParamDto, @Query() query: CandlesQueryDto) {
     return this.symbols.dailyCandles(ticker, query);
   }
 }

@@ -39,6 +39,11 @@ const envSchema = z
       )
       .pipe(z.array(origin).min(1))
       .optional(),
+    // The deployed commit, shown on /health and the web's /status page.
+    // Railway sets RAILWAY_GIT_COMMIT_SHA for repo deploys; COMMIT_SHA lets
+    // any other host (or a local `docker run`) pass it explicitly.
+    COMMIT_SHA: z.string().trim().min(1).optional(),
+    RAILWAY_GIT_COMMIT_SHA: z.string().trim().min(1).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV !== 'production') return;
@@ -52,8 +57,9 @@ const envSchema = z
       }
     }
   })
-  .transform((value) => ({
+  .transform(({ RAILWAY_GIT_COMMIT_SHA, ...value }) => ({
     ...value,
+    COMMIT_SHA: value.COMMIT_SHA ?? RAILWAY_GIT_COMMIT_SHA ?? null,
     DATABASE_URL: value.DATABASE_URL ?? LOCAL_DEFAULTS.DATABASE_URL,
     REDIS_URL: value.REDIS_URL ?? LOCAL_DEFAULTS.REDIS_URL,
     CORS_ORIGINS: value.CORS_ORIGINS ?? [LOCAL_DEFAULTS.CORS_ORIGINS],

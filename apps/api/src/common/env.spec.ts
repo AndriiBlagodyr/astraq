@@ -11,7 +11,18 @@ describe('env validation', () => {
       DATABASE_URL: 'postgres://veracand:veracand@localhost:5432/veracand',
       REDIS_URL: 'redis://localhost:6379',
       CORS_ORIGINS: ['http://localhost:3000'],
+      COMMIT_SHA: null,
     });
+  });
+
+  it("takes the commit from COMMIT_SHA, else Railway's variable", () => {
+    expect(
+      parseEnv({ RAILWAY_GIT_COMMIT_SHA: 'abc1234' }).data?.COMMIT_SHA,
+    ).toBe('abc1234');
+    expect(
+      parseEnv({ COMMIT_SHA: 'def5678', RAILWAY_GIT_COMMIT_SHA: 'abc1234' })
+        .data?.COMMIT_SHA,
+    ).toBe('def5678');
   });
 
   it('splits CORS_ORIGINS into a trimmed list', () => {

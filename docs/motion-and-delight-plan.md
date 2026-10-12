@@ -65,11 +65,11 @@ These ship with the roadmap phase that builds the screen they belong to. No moti
 
 | Item | Phase | Motion requirements |
 |---|---|---|
-| Route transitions | Phase 1 (first real route) | Crossfade between pages with React/Next 16 view-transition support; the shell stays fixed while content transitions. Read `node_modules/next/dist/docs/` first. |
-| Skeleton `loading.tsx` | Phase 1 | Route `loading.tsx` files and suspense boundaries use `Skeleton`. |
-| Chart draw-in | Phase 1 | The line or area draws across on first load only, never on live updates. |
-| Smooth crosshair | Phase 1 | The tooltip follows without jitter and is clamped to the chart bounds. Linked across synced charts from Phase 6. |
-| Prefetching | Phase 1 | Prefetch on hover or focus, and on viewport entry for primary links. |
+| Route transitions | Phase 1 (first real route) — done | Crossfade between pages with React/Next 16 view-transition support; the shell stays fixed while content transitions. Read `node_modules/next/dist/docs/` first. Built as `RouteTransition` (`experimental.viewTransition`): keyed by pathname, so search-param changes such as the chart's range swap in place; durations come from the motion tokens, and reduced motion makes the swap instant. |
+| Skeleton `loading.tsx` | Phase 1 — done | Route `loading.tsx` files and suspense boundaries use `Skeleton`. `(app)/loading.tsx` covers Today and Status; the stock routes have their own. |
+| Chart draw-in | Phase 1 — done | The line or area draws across on first load only, never on live updates. |
+| Smooth crosshair | Phase 1 — done | The tooltip follows without jitter and is clamped to the chart bounds. Linked across synced charts from Phase 6. The OHLCV readout sits in a fixed row above the chart instead of floating, so there is nothing to jitter or clamp. |
+| Prefetching | Phase 1 — done | Prefetch on hover or focus, and on viewport entry for primary links. Next's `<Link>` default does both in production; no custom code. |
 | Shared-element morphs | Phase 2 | A watchlist row morphs into the symbol detail header, using `view-transition-name`. |
 | Sparklines | Phase 2 | In watchlists. Static SVG; only the latest point animates on update. |
 | Command palette (⌘K / Ctrl+K) | Phase 2 (with symbol search) | Built in `apps/web` from `packages/ui` Dialog + Combobox. Jump to any symbol, page, or action, with fuzzy search and recent items. |

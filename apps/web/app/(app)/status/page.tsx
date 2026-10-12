@@ -11,7 +11,8 @@ import {
   Thead,
   Tr,
 } from "@astraq/ui";
-import { checkServices } from "@/lib/health";
+import { env } from "@/lib/env";
+import { checkServices, shortVersion } from "@/lib/health";
 
 export const metadata = {
   title: "Status",
@@ -25,6 +26,9 @@ export default async function StatusPage() {
   const services = await checkServices();
   const allUp = services.every((service) => service.status === "up");
   const checkedAt = new Date().toISOString();
+  // Internal service addresses help locally; a public page shouldn't list
+  // them.
+  const showUrls = env.NODE_ENV !== "production";
 
   return (
     <main className="grid gap-5">
@@ -40,6 +44,9 @@ export default async function StatusPage() {
             Checked at{" "}
             <time dateTime={checkedAt}>{checkedAt.slice(0, 19).replace("T", " ")} UTC</time>
           </span>
+          <span>
+            Web version <code>{shortVersion(env.COMMIT_SHA)}</code>
+          </span>
         </p>
       </Card>
 
@@ -53,6 +60,7 @@ export default async function StatusPage() {
               <Th>Service</Th>
               <Th>Status</Th>
               <Th>Response</Th>
+              <Th>Version</Th>
               <Th align="end">Latency</Th>
             </Tr>
           </Thead>
@@ -62,7 +70,9 @@ export default async function StatusPage() {
                 <Td>
                   <span className="grid gap-0.5">
                     <span className="text-foreground">{service.name}</span>
-                    <code className="text-xs text-muted">{service.url}</code>
+                    {showUrls ? (
+                      <code className="text-xs text-muted">{service.url}</code>
+                    ) : null}
                   </span>
                 </Td>
                 <Td>
@@ -71,6 +81,11 @@ export default async function StatusPage() {
                   </Badge>
                 </Td>
                 <Td>{service.detail}</Td>
+                <Td>
+                  <code title={service.version ?? undefined}>
+                    {shortVersion(service.version)}
+                  </code>
+                </Td>
                 <Td align="end" className="tabular-nums">
                   {service.latencyMs === null ? "—" : `${service.latencyMs} ms`}
                 </Td>

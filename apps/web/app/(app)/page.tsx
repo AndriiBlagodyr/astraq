@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Button, Card, EmptyState, Input } from "@astraq/ui";
 import { SymbolTable } from "@/app/components/SymbolTable";
 import { searchSymbols } from "@/lib/market-data";
@@ -9,6 +10,10 @@ import { searchSymbols } from "@/lib/market-data";
 const loop = ["Watchlist", "Chart", "Strategy", "Honest backtest", "Paper trade", "Review"];
 
 export default async function TodayPage() {
+  // Rendered per request. Without this the page has no dynamic input, so
+  // `next build` prerenders it: the build then needs a live API, and the
+  // deployed Today would show build-time closes until the next deploy.
+  await connection();
   const symbols = await searchSymbols();
 
   return (

@@ -32,7 +32,10 @@ export class AlpacaClient {
           symbols: symbols.join(','),
           timeframe: '1Day',
           start: range.from,
-          end: range.to,
+          // End of the day, not its midnight: daily bars are stamped at
+          // 00:00 New York time (04:00/05:00 UTC), so a date-only end could
+          // drop the bar for `to` itself.
+          end: `${range.to}T23:59:59Z`,
           adjustment: 'raw',
           feed: this.config.ALPACA_FEED,
           limit: '10000',

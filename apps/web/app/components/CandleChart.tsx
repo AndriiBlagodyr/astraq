@@ -294,10 +294,13 @@ export function CandleChart({
 
   const shown = hovered ?? candles.at(-1);
 
+  // The OHLCV readout follows the crosshair, so it isn't the figure's caption:
+  // an accessible name that changes on every mouse move is noise. The chart's
+  // name is its `label`.
   return (
     <figure className="m-0 grid gap-3">
       {shown ? (
-        <figcaption className="flex flex-wrap gap-x-4 gap-y-1 text-sm tabular-nums text-secondary">
+        <p className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-sm tabular-nums text-secondary">
           <time dateTime={shown.time} className="text-foreground">
             {shown.time}
           </time>
@@ -306,7 +309,7 @@ export function CandleChart({
           <span>L {shown.low}</span>
           <span>C {shown.close}</span>
           <span>V {volumeFormat.format(Number(shown.volume))}</span>
-        </figcaption>
+        </p>
       ) : null}
       <div
         ref={containerRef}

@@ -114,15 +114,17 @@ export function sessionChange({
   };
 }
 
-/** The stock page header's last close and day change, from its candles. */
-export function lastSession(candles: Candle[]): LastSession | null {
-  const last = candles.at(-1);
-  if (!last) return null;
-  return sessionChange({
-    date: last.time,
-    close: last.close,
-    previousClose: candles.at(-2)?.close ?? null,
-  });
+const newYorkDate = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/New_York",
+});
+
+/**
+ * Today's date on the US market's calendar, YYYY-MM-DD. Range presets and the
+ * date picker's limit count from it; UTC would run a day ahead every evening
+ * from 8 pm New York time.
+ */
+export function marketDate(now: Date = new Date()): string {
+  return newYorkDate.format(now);
 }
 
 /** "10-for-1 split", or "1-for-10 reverse split" when shares were merged. */

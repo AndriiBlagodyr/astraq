@@ -96,6 +96,15 @@ describe('SymbolsController', () => {
     await request(app.getHttpServer()).get('/symbols/NOPE/candles').expect(404);
   });
 
+  it('rejects a path that is not a ticker before touching the database', async () => {
+    symbols.findIdByTicker.mockClear();
+
+    await request(app.getHttpServer())
+      .get(`/symbols/${'X'.repeat(40)}/candles`)
+      .expect(400);
+    expect(symbols.findIdByTicker).not.toHaveBeenCalled();
+  });
+
   it('rejects a range that ends before it starts', async () => {
     const res = await request(app.getHttpServer())
       .get('/symbols/NVDA/candles?from=2024-02-01&to=2024-01-01')
