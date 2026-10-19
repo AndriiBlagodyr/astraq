@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Problem, ValidationIssue } from '@astraq/shared';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { ZodValidationException } from 'nestjs-zod';
 import { ZodError } from 'zod';
 

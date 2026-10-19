@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Adjustment, Candle, LatestClose, Split } from '@astraq/shared';
+import { toIsoDate, utcMidnight } from '../common/dates';
 import { PrismaService } from '../database/prisma.service';
 
 export type CandleRange = {
@@ -166,8 +167,8 @@ export class CandlesRepository {
         symbolId,
         type: 'SPLIT',
         exDate: {
-          ...(range.from && { gte: new Date(range.from) }),
-          ...(range.to && { lte: new Date(range.to) }),
+          ...(range.from && { gte: utcMidnight(range.from) }),
+          ...(range.to && { lte: utcMidnight(range.to) }),
         },
       },
       select: { exDate: true, splitFrom: true, splitTo: true },
@@ -175,7 +176,7 @@ export class CandlesRepository {
     });
     // The CHECK constraint guarantees both ratio columns on a split.
     return splits.map((split) => ({
-      exDate: split.exDate.toISOString().slice(0, 10),
+      exDate: toIsoDate(split.exDate),
       from: split.splitFrom!.toString(),
       to: split.splitTo!.toString(),
     }));

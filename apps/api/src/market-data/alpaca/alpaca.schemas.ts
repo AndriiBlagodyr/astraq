@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from 'zod';
 
 // Responses are parsed with `parseJsonExact`, so every JSON number arrives as
 // its source string. These schemas accept only plain decimal notation: an

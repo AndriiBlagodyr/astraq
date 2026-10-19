@@ -3,20 +3,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CandlestickSeries,
-  ColorType,
   HistogramSeries,
   createChart,
   createSeriesMarkers,
   type AutoscaleInfo,
   type CandlestickData,
-  type DeepPartial,
   type HistogramData,
   type IChartApi,
   type ISeriesApi,
-  type ChartOptions,
   type UTCTimestamp,
   type WhitespaceData,
 } from "lightweight-charts";
+import {
+  chartOptions,
+  drawInDuration,
+  easeOut,
+  readChartPalette,
+  withAlpha,
+  type ChartPalette,
+} from "@/lib/chart-theme";
+import { utcMidnight } from "@/lib/dates";
 import { splitLabel, type Candle, type Split } from "@/lib/stock-chart";
 
 type CandleChartProps = {
@@ -27,83 +33,9 @@ type CandleChartProps = {
   splits?: Split[];
 };
 
-type Palette = {
-  up: string;
-  down: string;
-  grid: string;
-  axis: string;
-  border: string;
-  marker: string;
-  font: string;
-};
-
-// The chart draws on a canvas, so it can't use CSS variables directly: read
-// the semantic tokens once per theme and hand over concrete colors.
-function readPalette(): Palette {
-  const style = getComputedStyle(document.documentElement);
-  const token = (name: string) => style.getPropertyValue(name).trim();
-  return {
-    up: token("--ds-positive"),
-    down: token("--ds-negative"),
-    grid: token("--ds-chart-grid"),
-    axis: token("--ds-chart-axis"),
-    border: token("--ds-border-default"),
-    marker: token("--ds-chart-1"),
-    font: token("--ds-font-sans"),
-  };
-}
-
-/** `#rrggbb` / `#rgb` / `rgb()` at the given opacity; other formats unchanged. */
-function withAlpha(color: string, alpha: number): string {
-  const hex = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
-  if (hex) {
-    const full = hex.length === 3 ? [...hex].map((c) => c + c).join("") : hex;
-    const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-  const rgb = color.match(/^rgba?\(([^,]+),([^,]+),([^,)]+)/);
-  return rgb ? `rgba(${rgb[1]},${rgb[2]},${rgb[3]}, ${alpha})` : color;
-}
-
-function chartOptions(palette: Palette): DeepPartial<ChartOptions> {
-  return {
-    layout: {
-      background: { type: ColorType.Solid, color: "transparent" },
-      textColor: palette.axis,
-      fontFamily: palette.font || undefined,
-      panes: { separatorColor: palette.border },
-    },
-    grid: {
-      vertLines: { color: palette.grid },
-      horzLines: { color: palette.grid },
-    },
-    rightPriceScale: { borderColor: palette.border },
-    timeScale: { borderColor: palette.border },
-  };
-}
-
-/**
- * How long the first draw-in takes: the slowest motion token, or 0 under
- * reduced motion. The tokens already drop to 0ms there, but this is a JS
- * animation, so it checks for itself (docs/motion-and-delight-plan.md).
- */
-function drawInDuration(): number {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return 0;
-  const token = getComputedStyle(document.documentElement)
-    .getPropertyValue("--ds-motion-slow")
-    .trim();
-  const value = parseFloat(token);
-  if (!Number.isFinite(value)) return 0;
-  return token.endsWith("ms") ? value : value * 1000;
-}
-
-// --ds-ease-out is cubic-bezier(0.22, 1, 0.36, 1), the classic ease-out
-// quint; the closed form saves solving the bezier per frame.
-const easeOut = (t: number) => 1 - (1 - t) ** 5;
-
 // Session dates as UTC midnight: daily bars have no intraday time.
 const toTime = (date: string) =>
-  (Date.parse(`${date}T00:00:00Z`) / 1000) as UTCTimestamp;
+  (utcMidnight(date).getTime() / 1000) as UTCTimestamp;
 
 // A stable default: a fresh [] per render would rebuild the chart on every
 // crosshair move.
@@ -160,7 +92,7 @@ export function CandleChart({
     let shown = animate ? 0 : candles.length;
     const drawing = () => shown < candles.length;
 
-    const palette = readPalette();
+    const palette = readChartPalette();
     const chart: IChartApi = createChart(container, {
       ...chartOptions(palette),
       autoSize: true,
@@ -240,7 +172,7 @@ export function CandleChart({
       );
     };
 
-    const paint = (next: Palette) => {
+    const paint = (next: ChartPalette) => {
       colors = next;
       chart.applyOptions(chartOptions(colors));
       price.applyOptions({
@@ -274,7 +206,7 @@ export function CandleChart({
     });
 
     // Theme and mode live on <html>; repaint when either changes.
-    const observer = new MutationObserver(() => paint(readPalette()));
+    const observer = new MutationObserver(() => paint(readChartPalette()));
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["data-theme", "data-mode", "class", "style"],

@@ -1,4 +1,5 @@
 import type { components } from "@astraq/sdk";
+import { isIsoDate, toIsoDate } from "./dates";
 
 export type Candle = components["schemas"]["Candle_Output"];
 export type LatestClose = components["schemas"]["LatestClose_Output"];
@@ -22,14 +23,6 @@ export type ChartAdjustment = (typeof chartAdjustments)[number];
 
 /** A picked range of session dates, both ends inclusive, as YYYY-MM-DD. */
 export type CustomRange = { from: string; to: string };
-
-/** A real calendar date in YYYY-MM-DD form (rejects 2026-02-30). */
-function isIsoDate(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value))
-    return false;
-  const date = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
-}
 
 /**
  * Reads `?range=&adjustment=` and `?from=&to=` leniently: anything unknown
@@ -82,7 +75,7 @@ export function rangeStart(
     Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)
   ).getUTCDate();
   target.setUTCDate(Math.min(day, lastDay));
-  return target.toISOString().slice(0, 10);
+  return toIsoDate(target);
 }
 
 export type LastSession = {

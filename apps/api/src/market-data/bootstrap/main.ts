@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { parseArgs } from 'node:util';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { toIsoDate } from '../../common/dates';
 import { BOOTSTRAP_FROM, BOOTSTRAP_SYMBOLS } from './bootstrap-symbols';
 import { BootstrapModule } from './bootstrap.module';
 import { BootstrapService } from './bootstrap.service';
@@ -30,7 +31,7 @@ function selectSymbols(tickersArg: string | undefined) {
 function yesterdayUtc(): string {
   const date = new Date();
   date.setUTCDate(date.getUTCDate() - 1);
-  return date.toISOString().slice(0, 10);
+  return toIsoDate(date);
 }
 
 async function main() {

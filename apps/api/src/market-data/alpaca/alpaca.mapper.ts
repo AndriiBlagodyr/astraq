@@ -1,5 +1,6 @@
+import { utcMidnight } from '../../common/dates';
 import { Prisma } from '../../generated/prisma/client';
-import type { CandleRow, CorporateActionRow } from '../market-data.repository';
+import type { CandleRow, CorporateActionRow } from '../market-data.types';
 import type { AlpacaBar, AlpacaCorporateActions } from './alpaca.schemas';
 
 // Alpaca stamps a daily bar with the start of its session day in New York
@@ -13,8 +14,7 @@ const newYorkDate = new Intl.DateTimeFormat('en-CA', {
 
 /** The bar's session date at 00:00 UTC, the `candles_daily.ts` convention. */
 export function sessionDate(barStart: string): Date {
-  const day = newYorkDate.format(new Date(barStart));
-  return new Date(`${day}T00:00:00.000Z`);
+  return utcMidnight(newYorkDate.format(new Date(barStart)));
 }
 
 /** Raw bars to `candles_daily` rows. Prices stay decimal strings throughout. */

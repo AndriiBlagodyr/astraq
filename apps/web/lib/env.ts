@@ -11,7 +11,9 @@ const envSchema = z
       .default("development"),
     NEXT_PUBLIC_APP_URL: z.url().default("http://localhost:3000"),
     API_URL: z.url().default("http://localhost:4000"),
-    ML_URL: z.url().default("http://localhost:8000"),
+    // Unset in production until the ML service deploys; /status then lists it
+    // as not deployed. `pnpm dev` runs it locally, hence the default there.
+    ML_URL: z.url().optional(),
     // The deployed commit, shown on /status. Vercel sets
     // VERCEL_GIT_COMMIT_SHA; COMMIT_SHA lets any other host pass it.
     COMMIT_SHA: z.string().trim().min(1).optional(),
@@ -21,13 +23,18 @@ const envSchema = z
   })
   .transform(({ VERCEL_GIT_COMMIT_SHA, ...value }) => ({
     ...value,
+    ML_URL:
+      value.ML_URL ??
+      (value.NODE_ENV === "production" ? null : "http://localhost:8000"),
     COMMIT_SHA: value.COMMIT_SHA ?? VERCEL_GIT_COMMIT_SHA ?? null,
   }));
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  throw new Error(`Invalid environment variables:\n${z.prettifyError(parsed.error)}`);
+  throw new Error(
+    `Invalid environment variables:\n${z.prettifyError(parsed.error)}`
+  );
 }
 
 export const env = parsed.data;

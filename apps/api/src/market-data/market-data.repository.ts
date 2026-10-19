@@ -1,24 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { utcMidnight } from '../common/dates';
 import { PrismaService } from '../database/prisma.service';
-import type { DateRange } from './alpaca/alpaca.client';
-
-/** A symbol as the bootstrap seeds it. */
-export type SymbolSeed = { ticker: string; name: string; exchange: string };
-
-/** One raw daily bar. Prices and volume are exact decimal strings. */
-export type CandleRow = {
-  ts: Date;
-  open: string;
-  high: string;
-  low: string;
-  close: string;
-  volume: string;
-};
-
-/** A split (both ratio sides) or a dividend (cash amount); `exDate` is YYYY-MM-DD. */
-export type CorporateActionRow =
-  | { type: 'SPLIT'; exDate: string; splitFrom: string; splitTo: string }
-  | { type: 'DIVIDEND'; exDate: string; cashAmount: string };
+import type {
+  CandleRow,
+  CorporateActionRow,
+  DateRange,
+  SymbolSeed,
+} from './market-data.types';
 
 /** Writes provider market data. Every method is idempotent. */
 @Injectable()
@@ -86,14 +74,16 @@ export class MarketDataRepository {
     range: DateRange,
     rows: CorporateActionRow[],
   ): Promise<void> {
-    const day = (date: string) => new Date(`${date}T00:00:00.000Z`);
     await this.prisma.$transaction(async (tx) => {
       await tx.corporateAction.deleteMany({
         where: {
           symbolId,
-          exDate: { gte: day(range.from), lte: day(range.to) },
+          exDate: { gte: utcMidnight(range.from), lte: utcMidnight(range.to) },
           NOT: {
-            OR: rows.map((row) => ({ type: row.type, exDate: day(row.exDate) })),
+            OR: rows.map((row) => ({
+              type: row.type,
+              exDate: utcMidnight(row.exDate),
+            })),
           },
         },
       });
@@ -102,7 +92,7 @@ export class MarketDataRepository {
           row.type === 'SPLIT'
             ? { splitFrom: row.splitFrom, splitTo: row.splitTo, cashAmount: null }
             : { splitFrom: null, splitTo: null, cashAmount: row.cashAmount };
-        const exDate = day(row.exDate);
+        const exDate = utcMidnight(row.exDate);
         await tx.corporateAction.upsert({
           where: {
             symbolId_type_exDate: { symbolId, type: row.type, exDate },

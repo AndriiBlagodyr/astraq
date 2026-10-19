@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Button, Card, EmptyState, Input } from "@astraq/ui";
+import { NoSymbolsLoaded } from "@/app/components/NoSymbolsLoaded";
 import { SymbolTable } from "@/app/components/SymbolTable";
 import { searchSymbols } from "@/lib/market-data";
 
@@ -18,6 +20,14 @@ export default async function StocksPage({
   const { q } = await searchParams;
   const query = typeof q === "string" ? q.trim() : "";
   const symbols = await searchSymbols(query || undefined);
+
+  // An exact ticker (the API ranks it first) or a lone match opens its chart
+  // directly, so the top-bar search goes straight from "nvda" to NVDA.
+  const direct =
+    symbols[0]?.ticker === query.toUpperCase() || symbols.length === 1
+      ? symbols[0]
+      : undefined;
+  if (query && direct) redirect(`/stocks/${direct.ticker}`);
 
   return (
     <main className="grid gap-5">
@@ -56,10 +66,7 @@ export default async function StocksPage({
               }
             />
           ) : (
-            <EmptyState
-              title="No symbols loaded yet"
-              description="Daily candles arrive with the bootstrap: pnpm --filter @astraq/api bootstrap."
-            />
+            <NoSymbolsLoaded />
           )}
         </Card>
       ) : (

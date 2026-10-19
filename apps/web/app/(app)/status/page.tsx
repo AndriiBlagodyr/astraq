@@ -12,11 +12,20 @@ import {
   Tr,
 } from "@astraq/ui";
 import { env } from "@/lib/env";
-import { checkServices, shortVersion } from "@/lib/health";
+import { checkServices, shortVersion, type ServiceHealth } from "@/lib/health";
 
 export const metadata = {
   title: "Status",
 };
+
+const statusBadges = {
+  up: { tone: "positive", text: "Up" },
+  down: { tone: "negative", text: "Down" },
+  "not-deployed": { tone: "neutral", text: "Not deployed" },
+} as const satisfies Record<
+  ServiceHealth["status"],
+  { tone: string; text: string }
+>;
 
 // Live health of the services behind the app. Data quality joins in Phase 4,
 // SLOs in Phase 10 (docs/ui-plan.md § Status).
@@ -24,7 +33,8 @@ export default async function StatusPage() {
   // Checked on every request: a cached "up" would defeat the page.
   await connection();
   const services = await checkServices();
-  const allUp = services.every((service) => service.status === "up");
+  // A service this deploy doesn't include isn't a problem.
+  const allUp = services.every((service) => service.status !== "down");
   const checkedAt = new Date().toISOString();
   // Internal service addresses help locally; a public page shouldn't list
   // them.
@@ -42,7 +52,9 @@ export default async function StatusPage() {
           </Badge>
           <span>
             Checked at{" "}
-            <time dateTime={checkedAt}>{checkedAt.slice(0, 19).replace("T", " ")} UTC</time>
+            <time dateTime={checkedAt}>
+              {checkedAt.slice(0, 19).replace("T", " ")} UTC
+            </time>
           </span>
           <span>
             Web version <code>{shortVersion(env.COMMIT_SHA)}</code>
@@ -70,14 +82,14 @@ export default async function StatusPage() {
                 <Td>
                   <span className="grid gap-0.5">
                     <span className="text-foreground">{service.name}</span>
-                    {showUrls ? (
+                    {showUrls && service.url ? (
                       <code className="text-xs text-muted">{service.url}</code>
                     ) : null}
                   </span>
                 </Td>
                 <Td>
-                  <Badge tone={service.status === "up" ? "positive" : "negative"}>
-                    {service.status === "up" ? "Up" : "Down"}
+                  <Badge tone={statusBadges[service.status].tone}>
+                    {statusBadges[service.status].text}
                   </Badge>
                 </Td>
                 <Td>{service.detail}</Td>

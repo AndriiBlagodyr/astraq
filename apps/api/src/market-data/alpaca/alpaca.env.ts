@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from 'zod';
 
 // Only the bootstrap CLI talks to Alpaca, so these live outside the api's env
 // schema: the server boots without keys, the CLI refuses to start without them.
