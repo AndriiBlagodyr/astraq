@@ -12,7 +12,7 @@ export class SymbolsService {
 
   /** Matching symbols, each with its latest close for the day change. */
   async search(query: string | undefined): Promise<SymbolList> {
-    const rows = await this.symbols.search(query || undefined);
+    const rows = await this.symbols.search(query);
     const closes = await this.candles.findLatestCloses(
       rows.map((row) => row.id),
     );

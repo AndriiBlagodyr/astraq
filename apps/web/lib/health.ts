@@ -1,10 +1,12 @@
-import { createApiClient } from "@astraq/sdk";
+import { api } from "./api";
 import { env } from "./env";
 
 export type ServiceHealth = {
   name: string;
-  url: string;
-  status: "up" | "down";
+  /** The health URL probed; null for a service this deploy doesn't have. */
+  url: string | null;
+  /** `not-deployed` is a known absence, not an outage. */
+  status: "up" | "down" | "not-deployed";
   /** HTTP status, or the reason no response arrived. */
   detail: string;
   latencyMs: number | null;
@@ -14,15 +16,13 @@ export type ServiceHealth = {
 
 const TIMEOUT_MS = 2_000;
 
-const api = createApiClient(env.API_URL);
-
 type Init = Pick<RequestInit, "cache" | "signal">;
 type Probe = (
   url: string,
   init: Init
 ) => Promise<{ response: Response; version: string | null }>;
 
-const services: Array<{ name: string; url: string; probe: Probe }> = [
+const services: Array<{ name: string; url: string | null; probe: Probe }> = [
   {
     name: "API",
     url: new URL("/health/ready", env.API_URL).toString(),
@@ -35,7 +35,7 @@ const services: Array<{ name: string; url: string; probe: Probe }> = [
   {
     // The ML service isn't part of the OpenAPI contract, so plain fetch.
     name: "ML service",
-    url: new URL("/health", env.ML_URL).toString(),
+    url: env.ML_URL ? new URL("/health", env.ML_URL).toString() : null,
     probe: async (url, init) => ({
       response: await fetch(url, init),
       version: null,
@@ -45,9 +45,19 @@ const services: Array<{ name: string; url: string; probe: Probe }> = [
 
 async function check(
   name: string,
-  url: string,
+  url: string | null,
   probe: Probe
 ): Promise<ServiceHealth> {
+  if (url === null) {
+    return {
+      name,
+      url,
+      status: "not-deployed",
+      detail: "Not part of this deploy",
+      latencyMs: null,
+      version: null,
+    };
+  }
   const started = performance.now();
   try {
     const { response, version } = await probe(url, {

@@ -1,10 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AlpacaClient, type DateRange } from '../alpaca/alpaca.client';
+import { AlpacaClient } from '../alpaca/alpaca.client';
 import { toCandleRows, toCorporateActionRows } from '../alpaca/alpaca.mapper';
-import {
-  MarketDataRepository,
-  type SymbolSeed,
-} from '../market-data.repository';
+import { MarketDataRepository } from '../market-data.repository';
+import type { DateRange, SymbolSeed } from '../market-data.types';
 
 type TickerSummary = { bars: number; splits: number; dividends: number };
 
@@ -29,16 +27,21 @@ export class BootstrapService {
       `Bootstrapping ${tickers.length} symbols, ${range.from} to ${range.to}`,
     );
 
-    const ids = await this.repository.upsertSymbols(symbols);
-    const summary = new Map<string, TickerSummary>(
-      tickers.map((ticker) => [ticker, { bars: 0, splits: 0, dividends: 0 }]),
-    );
-    const idFor = (ticker: string) => {
-      const id = ids.get(ticker);
-      if (id === undefined) {
+    // Each requested ticker's row id and running counts, so a ticker the
+    // provider returns unasked is caught before anything is written for it.
+    const requested = new Map<string, { id: number; counts: TickerSummary }>();
+    for (const [ticker, id] of await this.repository.upsertSymbols(symbols)) {
+      requested.set(ticker, {
+        id,
+        counts: { bars: 0, splits: 0, dividends: 0 },
+      });
+    }
+    const symbolFor = (ticker: string) => {
+      const entry = requested.get(ticker);
+      if (entry === undefined) {
         throw new Error(`Alpaca returned data for unrequested ${ticker}`);
       }
-      return id;
+      return entry;
     };
 
     const actions = toCorporateActionRows(
@@ -46,25 +49,24 @@ export class BootstrapService {
     );
     // Every requested ticker, not just those with actions: a symbol whose
     // only action was withdrawn upstream still needs the stale row removed.
-    for (const ticker of tickers) {
+    for (const [ticker, { id, counts }] of requested) {
       const rows = actions.get(ticker) ?? [];
-      await this.repository.replaceCorporateActions(idFor(ticker), range, rows);
-      const counts = summary.get(ticker)!;
+      await this.repository.replaceCorporateActions(id, range, rows);
       counts.splits += rows.filter((row) => row.type === 'SPLIT').length;
       counts.dividends += rows.filter((row) => row.type === 'DIVIDEND').length;
     }
 
     for await (const page of this.alpaca.dailyBarPages(tickers, range)) {
       for (const [ticker, bars] of Object.entries(page)) {
-        const written = await this.repository.upsertCandles(
-          idFor(ticker),
+        const { id, counts } = symbolFor(ticker);
+        counts.bars += await this.repository.upsertCandles(
+          id,
           toCandleRows(bars),
         );
-        summary.get(ticker)!.bars += written;
       }
     }
 
-    for (const [ticker, counts] of summary) {
+    for (const [ticker, { counts }] of requested) {
       this.logger.log(
         `${ticker.padEnd(6)} bars new or changed: ${counts.bars}, ` +
           `splits: ${counts.splits}, dividends: ${counts.dividends}`,

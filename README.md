@@ -114,7 +114,7 @@ Every service validates its env at boot and exits with a readable error on a bad
 | ml | `LOG_LEVEL` | `info` |
 | web | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` |
 | web | `API_URL` | `http://localhost:4000` |
-| web | `ML_URL` | `http://localhost:8000` |
+| web | `ML_URL` | `http://localhost:8000`; no default in production, where unset means the ML service isn't part of the deploy and `/status` lists it as not deployed |
 
 ### Web
 

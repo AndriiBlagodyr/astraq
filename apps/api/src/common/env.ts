@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import { LOCAL_DEFAULTS } from './local-defaults';
 
 // Production gets no defaults: a missing value there is a deploy mistake, not

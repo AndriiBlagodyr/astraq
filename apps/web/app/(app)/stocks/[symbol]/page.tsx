@@ -5,6 +5,7 @@ import { Card, EmptyState } from "@astraq/ui";
 import { CandleChart } from "@/app/components/CandleChart";
 import { CustomRangePicker } from "@/app/components/CustomRangePicker";
 import { DayChange } from "@/app/components/DayChange";
+import { PillLinks } from "@/app/components/PillLinks";
 import { findSymbol, getDailyCandles } from "@/lib/market-data";
 import {
   chartAdjustments,
@@ -61,9 +62,7 @@ export default async function StockPage({
   // The header is today's quote, independent of the chart's range and price
   // mode: a custom range or raw prices mustn't turn it into a historical
   // price or a split into a -90% "day".
-  const last = summary?.latestClose
-    ? sessionChange(summary.latestClose)
-    : null;
+  const last = summary?.latestClose ? sessionChange(summary.latestClose) : null;
   // A preset link drops the custom dates; a price link keeps whichever is on.
   const href = (next: { range?: ChartRange; adjustment?: ChartAdjustment }) => {
     const view = next.range ?? custom ?? range;
@@ -177,29 +176,5 @@ export default async function StockPage({
         )}
       </Card>
     </main>
-  );
-}
-
-type PillLink = { key: string; text: string; href: Route; current: boolean };
-
-/** A row of links that reads as a segmented control; the current one is marked. */
-function PillLinks({ label, items }: { label: string; items: PillLink[] }) {
-  return (
-    <nav aria-label={label}>
-      <ul className="m-0 flex list-none flex-wrap gap-1 rounded-pill border border-border p-1">
-        {items.map((item) => (
-          <li key={item.key}>
-            <Link
-              href={item.href}
-              aria-current={item.current ? "page" : undefined}
-              scroll={false}
-              className="inline-flex min-h-8 items-center rounded-pill px-3 text-sm font-semibold text-muted hover:text-foreground aria-[current=page]:bg-surface-muted aria-[current=page]:text-foreground"
-            >
-              {item.text}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
   );
 }

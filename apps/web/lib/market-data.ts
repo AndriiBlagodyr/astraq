@@ -1,14 +1,12 @@
-import { createApiClient, type components } from "@astraq/sdk";
-import { env } from "./env";
+import type { components } from "@astraq/sdk";
+import { api } from "./api";
 import type { ChartAdjustment } from "./stock-chart";
 
 // Server-side reads of market data through the generated SDK. Server
-// components only: `env` holds server values (see lib/env.ts).
+// components only, like lib/api.ts.
 
 export type SymbolSummary = components["schemas"]["SymbolSummary_Output"];
 export type CandleSeries = components["schemas"]["CandleSeries_Output"];
-
-const api = createApiClient(env.API_URL);
 
 // Bars change only when the bootstrap runs; a stale page would hide a run
 // that just finished, and these pages render per request anyway.

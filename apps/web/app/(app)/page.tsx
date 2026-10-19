@@ -1,5 +1,6 @@
 import { connection } from "next/server";
-import { Button, Card, EmptyState, Input } from "@astraq/ui";
+import { Button, Card, Input } from "@astraq/ui";
+import { NoSymbolsLoaded } from "@/app/components/NoSymbolsLoaded";
 import { SymbolTable } from "@/app/components/SymbolTable";
 import { searchSymbols } from "@/lib/market-data";
 
@@ -7,7 +8,14 @@ import { searchSymbols } from "@/lib/market-data";
 // symbol with its last close and day change. Watchlists replace the full
 // list in Phase 2, once search covers the whole US universe.
 
-const loop = ["Watchlist", "Chart", "Strategy", "Honest backtest", "Paper trade", "Review"];
+const loop = [
+  "Watchlist",
+  "Chart",
+  "Strategy",
+  "Honest backtest",
+  "Paper trade",
+  "Review",
+];
 
 export default async function TodayPage() {
   // Rendered per request. Without this the page has no dynamic input, so
@@ -23,13 +31,19 @@ export default async function TodayPage() {
           Veracand
         </h1>
         <p className="m-0 max-w-2xl leading-7 text-secondary">
-          A personal market research lab for US equities. Backtests and paper trading share one fill
-          model, every result sits next to a buy-and-hold benchmark, and look-ahead is ruled out by
-          construction.
+          A personal market research lab for US equities. Backtests and paper
+          trading share one fill model, every result sits next to a buy-and-hold
+          benchmark, and look-ahead is ruled out by construction.
         </p>
-        <ol className="m-0 flex list-none flex-wrap items-center gap-2 p-0" aria-label="Core loop">
+        <ol
+          className="m-0 flex list-none flex-wrap items-center gap-2 p-0"
+          aria-label="Core loop"
+        >
           {loop.map((step, index) => (
-            <li key={step} className="flex items-center gap-2 text-sm text-secondary">
+            <li
+              key={step}
+              className="flex items-center gap-2 text-sm text-secondary"
+            >
               {index > 0 ? <span aria-hidden="true">→</span> : null}
               <span className="rounded-pill border border-border px-3 py-1 text-foreground">
                 {step}
@@ -42,23 +56,32 @@ export default async function TodayPage() {
       <Card className="grid gap-4 p-7">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 className="m-0 text-xl font-semibold text-foreground">Stocks</h2>
-          <form action="/stocks" className="flex flex-wrap items-end gap-2" role="search">
+          <form
+            action="/stocks"
+            className="flex flex-wrap items-end gap-2"
+            role="search"
+          >
             <label className="sr-only" htmlFor="today-search">
               Ticker or company name
             </label>
-            <Input id="today-search" name="q" type="search" placeholder="NVDA, Apple…" />
+            <Input
+              id="today-search"
+              name="q"
+              type="search"
+              placeholder="NVDA, Apple…"
+            />
             <Button type="submit" size="sm">
               Search
             </Button>
           </form>
         </div>
         {symbols.length > 0 ? (
-          <SymbolTable symbols={symbols} caption="Loaded symbols with their last close" />
-        ) : (
-          <EmptyState
-            title="No symbols loaded yet"
-            description="Daily candles arrive with the bootstrap: pnpm --filter @astraq/api bootstrap."
+          <SymbolTable
+            symbols={symbols}
+            caption="Loaded symbols with their last close"
           />
+        ) : (
+          <NoSymbolsLoaded />
         )}
       </Card>
     </main>

@@ -45,6 +45,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything but build assets and icons, which carry no data.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon|apple-icon).*)"],
+  // Everything but build assets, icons, and robots.txt, which carry no data.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|robots.txt).*)",
+  ],
 };

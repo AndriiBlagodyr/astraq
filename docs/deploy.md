@@ -65,7 +65,7 @@ It's idempotent: run it again to backfill new bars.
    | `NEXT_PUBLIC_APP_URL` | the Vercel production URL |
    | `SITE_PASSWORD` | a shared password, at least 12 characters, marked **sensitive**. Every page asks for it (HTTP Basic auth, any username) until Phase 2 adds accounts: provider data isn't for a public URL ([ui-plan § Decisions](ui-plan.md#decisions)) |
 
-   Leave `ML_URL` unset: the ML service isn't deployed yet, and `/status` says so. Keep **Settings → Environment Variables → Automatically expose System Environment Variables** on: `/status` shows the web build's `VERCEL_GIT_COMMIT_SHA`.
+   Leave `ML_URL` unset: the ML service isn't deployed yet, and `/status` lists it as not deployed (unset in production means "not part of this deploy", not an outage). Keep **Settings → Environment Variables → Automatically expose System Environment Variables** on: `/status` shows the web build's `VERCEL_GIT_COMMIT_SHA`.
 
 Every push to `master` deploys production. Every PR gets a preview URL that reads the production API.
 
@@ -84,7 +84,8 @@ Migrations must stay backward compatible with the running api (expand, then cont
 
 - `https://<api-domain>/health/ready` → `{"status":"ok","version":"<commit>"}`
 - `https://<web-domain>/` → the browser asks for the site password
-- `https://<web-domain>/status` → API up with the same commit as `master`, the web version beside it (ML down until it deploys)
+- `https://<web-domain>/status` → "All services up": API up with the same commit as `master`, the web version beside it, ML not deployed
+- `https://<web-domain>/robots.txt` → `Disallow: /`, served without the password
 - `https://<web-domain>/stocks/NVDA` → the split-adjusted chart, on a phone too
 
 ## Build the api image locally

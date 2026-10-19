@@ -31,7 +31,7 @@ The constraints: one person, personal use (provider data isn't redistributed), a
 
 - Project root `apps/web`. `apps/web/vercel.json` builds through Turborepo (`turbo run build --filter=web`), so `@astraq/ui` and `@astraq/sdk` are built first.
 - Git integration gives a preview deploy for every PR, as Phase 1 requires. Previews call the production API. They're read-only, and the API is the only writer.
-- `API_URL` is the Railway API's public URL. `ML_URL` is left unset until the ML service deploys, so `/status` reports it as down. That's true.
+- `API_URL` is the Railway API's public URL. `ML_URL` is left unset until the ML service deploys, so `/status` lists it as not deployed. (Amended 2026-10-12: it first reported ML as down, which kept the page's headline red on a healthy deploy.)
 
 ### 2. API on Railway, from `apps/api/Dockerfile`
 

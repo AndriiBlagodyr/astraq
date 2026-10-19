@@ -1,4 +1,4 @@
-import type { SymbolSeed } from '../market-data.repository';
+import type { SymbolSeed } from '../market-data.types';
 
 /**
  * The fixed Phase 1 universe. Picked to exercise adjustment, not to be a

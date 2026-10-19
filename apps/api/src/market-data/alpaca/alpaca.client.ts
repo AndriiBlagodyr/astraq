@@ -1,4 +1,5 @@
-import type { z } from 'zod/v4';
+import type { z } from 'zod';
+import type { DateRange } from '../market-data.types';
 import type { AlpacaEnv } from './alpaca.env';
 import {
   type AlpacaBarsPage,
@@ -7,9 +8,6 @@ import {
   alpacaCorporateActionsPageSchema,
 } from './alpaca.schemas';
 import { parseJsonExact } from './exact-json';
-
-/** A closed range of session dates, `YYYY-MM-DD`. */
-export type DateRange = { from: string; to: string };
 
 /**
  * A minimal, hand-written client for the two Alpaca market data endpoints the
