@@ -1,191 +1,103 @@
-# Veracand
+# hw-24 — автентифікація і авторизація
 
-Veracand is a learning-focused algorithmic trading and market analysis platform.
+Колишній код курсового (Veracand) лежить у [`hw-23/`](hw-23/). Цей корінь — ДЗ #24.
 
-The project has two goals:
+Домен тут — маленька крамниця, бо грейдер дивиться на статуси, а не на URL:
 
-1. Grow fullstack depth across Next.js, Node.js, Python, Postgres, MongoDB, Redis, and infrastructure.
-2. Become a genuinely useful personal app for watchlists, charting, paper trading, strategy testing, and later forecasting.
-
-## Current status
-
-- `apps/web` is the most developed app today and contains the current UI.
-- `apps/api` is a NestJS service with structured logging, validated environment configuration, and health endpoints. Requests and responses are validated with Zod schemas from `packages/shared`, and its OpenAPI spec is committed in `apps/api/openapi.json`.
-- `packages/sdk` is the typed API client generated from that spec. The web app's `/status` page calls the API through it.
-- `packages/ui` contains the Tailwind-based semantic design system and Storybook catalog.
-- `services/ml` is a FastAPI service managed with `uv` (Python 3.12, lockfile in `uv.lock`).
-- The product plan and phased execution live in [ROADMAP.md](./ROADMAP.md).
-
-## Repository structure
-
-```text
-astraq/
-├── apps/
-│   ├── web/         Next.js 16 frontend
-│   └── api/         NestJS backend
-├── services/
-│   └── ml/          Python FastAPI service (uv)
-├── packages/
-│   ├── ui/          Shared tokens, accessible components, and Storybook
-│   ├── shared/      Zod schemas shared by the apps (the contract's source)
-│   └── sdk/         Typed API client generated from the OpenAPI spec
-└── infra/
-    └── docker/      Local Postgres + TimescaleDB and Redis (compose)
-```
-
-## Key documents
-
-- [ROADMAP.md](./ROADMAP.md): product and engineering plan
-- [AGENTS.md](./AGENTS.md): repository-wide architectural guardrails
-- [apps/web/AGENTS.md](./apps/web/AGENTS.md): frontend conventions
-- [apps/api/AGENTS.md](./apps/api/AGENTS.md): backend conventions
-- [packages/shared/AGENTS.md](./packages/shared/AGENTS.md) and [packages/sdk/AGENTS.md](./packages/sdk/AGENTS.md): the API contract
-- [services/ml/AGENTS.md](./services/ml/AGENTS.md): ML service conventions
-- [docs/deploy.md](./docs/deploy.md): deploying web to Vercel and the api and TimescaleDB to Railway ([ADR 0005](./docs/decisions/0005-hosting-topology-and-timescale-availability.md))
-
-## Running locally
-
-Node workspaces use **pnpm**. The ML service uses **uv**, not Poetry or a manual `pip` + venv workflow.
-
-If `pnpm` is not available yet, enable the Corepack shim once:
-
-```bash
-corepack enable
-```
-
-If `uv` is not available yet:
-
-```bash
-brew install uv                 # macOS
-winget install astral-sh.uv     # Windows
-```
-
-### Root
-
-```bash
-pnpm install
-pnpm infra:up
-pnpm dev
-```
-
-`pnpm dev` starts web (`:3000`), api (`:4000`), and ml (`:8000`), and rebuilds `packages/ui` on change. It needs `uv` on `PATH` for the ML service. How Python fits into the pnpm + Turborepo setup is in [ADR 0003](./docs/decisions/0003-pnpm-turborepo-and-python-in-the-monorepo.md).
-
-### Share a local session (ngrok)
-
-Tunnel only the Next.js app. The API and ML service stay on localhost; the web server calls them as the BFF.
-
-1. Install ngrok (`brew install ngrok`) and add your token once:
-
-```bash
-ngrok config add-authtoken <your-token>
-```
-
-2. With `pnpm dev` already running:
-
-```bash
-pnpm share
-```
-
-The public HTTPS URL is printed in the ngrok terminal (and at `http://127.0.0.1:4040`). Do not commit tokens. This is for personal demos, not production.
-
-Storybook is a second process (`pnpm dev:storybook` on `:6006`). Tunnel it with `pnpm share:storybook`. Free ngrok is one hostname, so with Storybook already shared, `pnpm share` opens a second URL for the app (Cloudflare quick tunnel, or localtunnel if that is unavailable).
-
-### Local infra
-
-`pnpm infra:up` starts Postgres 16 + TimescaleDB (`localhost:5432`) and Redis 7 (`localhost:6379`) from `infra/docker/compose.yml`, and waits until both are healthy. It needs Docker running. The local database and user are both `veracand` (password `veracand`). To change a port or the credentials, copy `infra/docker/.env.example` to `infra/docker/.env`.
-
-The api applies pending Prisma migrations (`prisma migrate deploy`) every time `pnpm dev` starts it. If the database is down it logs the error and starts anyway, and `/health/ready` reports 503. After editing `apps/api/prisma/schema.prisma`, run `pnpm db:migrate` to create and apply a new migration. `pnpm install` generates the Prisma Client into `apps/api/src/generated/`, which is gitignored; after editing the schema, `pnpm --filter @astraq/api db:generate` refreshes it.
-
-If something else already listens on `5432` (a native Postgres install, for example), `infra:up` fails with "ports are not available". Set `POSTGRES_PORT=5433` in `infra/docker/.env`, and point the api at it with `DATABASE_URL=postgres://veracand:veracand@localhost:5433/veracand`.
-
-`pnpm infra:down` stops the containers and keeps the data. To wipe it too, run `docker compose -f infra/docker/compose.yml down -v`.
-
-### Environment variables
-
-Every service validates its env at boot and exits with a readable error on a bad value. Outside production every variable has a default that matches `pnpm infra:up`, so local dev needs no `.env`. In production (`NODE_ENV=production` for api, `ENVIRONMENT=production` for ml) the infra URLs have no defaults and must be set. The api's `REDIS_URL` is the exception until a module uses Redis (Phase 3).
-
-| Service | Variable | Local default |
+| Імʼя з постановки | Маршрут | Хто |
 |---|---|---|
-| api | `PORT` | `4000` |
-| api | `LOG_LEVEL` | `info` |
-| api, ml | `DATABASE_URL` | `postgres://veracand:veracand@localhost:5432/veracand` |
-| api, ml | `REDIS_URL` | `redis://localhost:6379` |
-| api | `CORS_ORIGINS` | `http://localhost:3000` (comma-separated origins, no paths) |
-| ml | `LOG_LEVEL` | `info` |
-| web | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` |
-| web | `API_URL` | `http://localhost:4000` |
-| web | `ML_URL` | `http://localhost:8000`; no default in production, where unset means the ML service isn't part of the deploy and `/status` lists it as not deployed |
+| ресурс із власником | `GET /orders/{id}` | покупець бачить лише своє замовлення |
+| запис лише для привілейованої ролі | `POST /products` | `seller` або `admin` |
 
-### Web
+Автентифікація відповідає на «хто це?» (підпис ES256, `exp`, денилист `jti`). Авторизація відповідає на «чи можна йому це?» і в токені цього немає: роль у JWT — лише кеш, власність читається з рядка замовлення.
 
-```bash
-cd apps/web
-pnpm install
-pnpm dev
-```
+## Auth
 
-### Design system
+Access-токен — JWT ES256 на 10 хвилин (`sub`, `role`, `jti`, `kid`). Refresh — випадкові 32 байти, у базі лише HMAC-SHA256 із перцем. Усі refresh одного логіна мають спільний `family_id`. Успішний refresh позначає старий рядок `used_at` і видає нову пару в тій самій транзакції. Повторне предʼявлення вже використаного refresh відкликає **всю** сімʼю (`revoked_at`) і пише в лог `family_id` (не сам токен).
 
-```bash
-pnpm dev:storybook
-```
+Обрано **ES256**, не RS256. OWASP позначає RS256 як «Not recommended» і радить ES256, PS256 або EdDSA. У ES256 алгоритм привʼязаний до кривої P-256, ключ короткий, а публічний ключ не можна підсунути як HMAC-секрет так, як це роблять в атаці algorithm confusion на RSA. Перевірка все одно передає явний allowlist `algorithms: ['ES256']` (RFC 8725 §3.1) — це єдиний надійний запобіжник, не «алгоритм із заголовка токена».
 
-Storybook runs on `http://localhost:6006`.
+### Чому логаут — це дві дії
 
-### API
+Refresh — рядок у `refresh_tokens`. Логаут ставить `revoked_at` на всю сімʼю, і цього досить, щоб refresh більше не обертався. Access — self-contained JWT: підпис лишається валідним до `exp`, база про нього нічого не знає. Тому той самий `COMMIT` пише `jti` в `access_denylist` з `expires_at = exp`. Обидві дії в одній транзакції Postgres, не в двох сховищах: інакше це був би dual write. Прострочені `jti` видаляються під час перевірки, тож список не росте довше за життя токена.
 
-```bash
-cd apps/api
-pnpm install
-pnpm dev
-```
+`demo:auth` це і доводить: `after-logout=401` (денилист прибив ще живий access), `refresh-after-logout=401` (сімʼя refresh мертва).
 
-Swagger UI runs at `http://localhost:4000/api/docs` outside production.
+### Ротація ключа і `kid`
 
-#### Changing an endpoint
+Заголовок access-токена містить `kid`. Верифікатор обирає публічний ключ за `kid` і відхиляє будь-який `alg` поза allowlist. Під час overlap-ротації новий ключ публікується під новим `kid`, старий лишається прийнятним рівно на TTL access-токена (10 хвилин). Після цього старий `kid` прибирається, і токени, підписані ним, стають невалідними без денилиста. У цьому ДЗ активний один `kid` з оточення; поле вже стоїть у токені, щоб друга пара додавалась без зміни формату.
 
-The contract runs from a Zod schema in `packages/shared`, to the Nest DTO and handler (`@ZodResponse`), to `apps/api/openapi.json`, to the generated `packages/sdk/src/schema.ts`. After changing any of the first two, run at the root:
+### Роль — кеш, власність — ні
 
-```bash
-pnpm contract
-```
+Роль читається з бази лише коли виписується новий access (логін і refresh). Поки старий access не протух, розжалуваний адмін лишається адміном: ми свідомо не ходимо в `users` на кожен запит. Наступний refresh уже побачить нову роль.
 
-and commit both regenerated files. CI runs the same command and fails if they differ. See [ADR 0004](./docs/decisions/0004-nestjs-openapi-generated-sdk-contract.md).
+Власність у гард не виноситься. Гард стоїть до завантаження ресурсу і знає лише claims. `GET /orders/{id}` спочатку перевіряє підпис, `exp` і денилист (немає або зіпсовано — 401). Потім запит завантажує рядок і порівнює `owner_id` із `sub`. Чужий власник — 403, не 404, щоб клієнт не плутав це з «іди рефреш токен». Рольова заборона `POST /products` теж 403: токен валідний, прав немає.
 
-### ML service
+Паралельний refresh двох вкладкок виглядає як крадіжка: другого шансу немає, вікна благодаті теж. Клієнт має серіалізувати refresh одним промісом. Інакше чесний дубль прибʼє всю сімʼю — це і є `demo:reuse`.
 
-Python 3.12 is pinned in `services/ml/.python-version`. From the repo root or `services/ml`:
+Не логуються ні access, ні refresh, ні їхні хвости. У лог ідуть `jti`, `family_id` і відбиток ключа.
 
-```bash
-cd services/ml
-uv sync --group dev
-uv run uvicorn app.main:app --reload --port 8000
-```
+### Відбитки ключів
 
-`pnpm dev` at the root runs the same command.
+SHA-256 SPKI, перші 16 hex. Приватні ключі в репозиторій не входять. dev і prod різні, тож підпис одного оточення інше не приймає. Пара, яку грейдер генерує в `## Grading`, одноразова і з цими відбитками не збігається.
 
-## Testing
+| Оточення | Відбиток публічного ключа |
+|---|---|
+| dev | `dfc236499d7b40fe` |
+| prod | `271164327d83c883` |
 
-Recommended libraries:
+### Змінні
 
-- Web unit tests: Vitest + Testing Library
-- API unit tests: Vitest
-- Web E2E tests: Playwright
-- ML service tests: pytest + FastAPI TestClient
+| Змінна | Джерело | Навіщо |
+|---|---|---|
+| `JWT_PRIVATE_KEY` | сховище (#11) | підпис access, base64 PKCS#8 PEM (ES256, P-256) |
+| `JWT_PUBLIC_KEY` | сховище (#11) | перевірка підпису, base64 SPKI PEM |
+| `JWT_KID` | сховище (#11) | `kid` у заголовку JWT |
+| `REFRESH_TOKEN_PEPPER` | сховище (#11) | HMAC-перець хеша refresh |
+| `DATABASE_URL` | compose / оточення | дев-креденшели, секретом не є |
+| `PORT` | оточення | HTTP-порт, типово 3000 |
+| `SKIP_VAULT` | грейдер | `1` — секрети вже в оточенні, обгортка їх не підвантажує |
 
-Common commands:
+`npm run start` не підставляє ключ. Немає змінної зі сховища — процес падає з exit ≠ 0 і друкує її імʼя ще до підключення до Postgres. `start:vault` і всі `demo:*` ідуть через `scripts/with-secrets.sh`.
 
-```bash
-pnpm test:unit:web
-pnpm test:unit:api
-pnpm test:e2e:web
-pnpm test:unit:ml
-```
+## Grading
 
-`pnpm test:unit:ml` runs `uv run --directory services/ml pytest`.
+docker compose up -d --wait
 
-## Near-term priorities
+export DATABASE_URL=postgres://app:app@127.0.0.1:5432/shop
 
-- Phase 0: make CI required on `master` (everything else is done)
-- Phase 1: walking skeleton — adjusted daily candles from provider to a deployed chart through the generated SDK (the contract pipeline — shared schemas, OpenAPI, SDK — is in place)
-- see [ROADMAP.md](./ROADMAP.md) for the full phased plan
+export SKIP_VAULT=1
+
+node -e 'const {generateKeyPairSync}=require("node:crypto");
+const k=generateKeyPairSync("ec",{namedCurve:"P-256",
+  privateKeyEncoding:{type:"pkcs8",format:"pem"},
+  publicKeyEncoding:{type:"spki",format:"pem"}});
+const fs=require("node:fs");
+fs.writeFileSync("/tmp/priv.b64",Buffer.from(k.privateKey).toString("base64"));
+fs.writeFileSync("/tmp/pub.b64",Buffer.from(k.publicKey).toString("base64"));'
+
+export JWT_KID=grader
+
+export JWT_PRIVATE_KEY="$(cat /tmp/priv.b64)"
+
+export JWT_PUBLIC_KEY="$(cat /tmp/pub.b64)"
+
+export REFRESH_TOKEN_PEPPER=grader-pepper
+
+npm ci
+
+npm run demo:auth
+
+npm run demo:reuse
+
+npm run demo:rbac
+
+## Scripts
+
+| Script | Що робить |
+|---|---|
+| `npm run start` | голий старт; без ключа падає і називає змінну |
+| `npm run start:vault` | старт через `scripts/with-secrets.sh` |
+| `npm run demo:auth` | логін, 401 без токена, 200 із токеном, refresh, логаут гасить access і refresh |
+| `npm run demo:reuse` | повтор використаного refresh валить усю сімʼю, включно з чесним наступником |
+| `npm run demo:rbac` | 401 без токена, 200 своє замовлення, 403 чуже, 403/201 за роллю, 401 підроблений payload |
