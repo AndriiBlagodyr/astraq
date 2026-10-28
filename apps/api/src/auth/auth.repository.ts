@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client';
 import { AuditAction, SessionRevokedReason } from '../generated/prisma/enums';
 import { PrismaService } from '../database/prisma.service';
 
@@ -7,7 +8,7 @@ const GRACE_WINDOW_MS = 10_000;
 interface RefreshTokenRow {
   id: string;
   session_id: string;
-  token_hash: Buffer;
+  token_hash: Uint8Array<ArrayBuffer>;
   parent_id: string | null;
   expires_at: Date;
   rotated_at: Date | null;
@@ -39,7 +40,7 @@ export class AuthRepository {
   /** Creates a session and its first refresh token atomically. */
   async createSessionWithToken(
     userId: string,
-    tokenHash: Buffer,
+    tokenHash: Uint8Array<ArrayBuffer>,
     sessionExpiresAt: Date,
     tokenExpiresAt: Date,
     ip: string | null,
@@ -61,8 +62,8 @@ export class AuthRepository {
    * Throws UnauthorizedException on any invalid condition, including reuse.
    */
   async rotateRefreshToken(
-    tokenHash: Buffer,
-    newTokenHash: Buffer,
+    tokenHash: Uint8Array<ArrayBuffer>,
+    newTokenHash: Uint8Array<ArrayBuffer>,
     newTokenExpiresAt: Date,
     now: Date,
   ): Promise<{ sessionId: string; userId: string; newTokenExpiresAt: Date }> {
@@ -168,7 +169,7 @@ export class AuthRepository {
     action: AuditAction;
     ip: string | null;
     userAgent: string | null;
-    metadata: Record<string, unknown>;
+    metadata: Prisma.InputJsonValue;
   }) {
     await this.prisma.auditLog.create({ data });
   }

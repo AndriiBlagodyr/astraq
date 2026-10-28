@@ -5,9 +5,14 @@ export function generateRefreshToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
-/** SHA-256 of the token, as a Buffer (stored as BYTEA). */
-export function hashRefreshToken(token: string): Buffer {
-  return createHash('sha256').update(token).digest();
+/** SHA-256 of the token as Uint8Array (Prisma Bytes / BYTEA). */
+export function hashRefreshToken(token: string): Uint8Array<ArrayBuffer> {
+  // Prisma's Bytes type is Uint8Array<ArrayBuffer>; Node's digest() is Buffer
+  // (ArrayBufferLike), so copy into a fresh ArrayBuffer-backed view.
+  const digest = createHash('sha256').update(token).digest();
+  const bytes = new Uint8Array(digest.byteLength);
+  bytes.set(digest);
+  return bytes;
 }
 
 /** Session lifetime: 90 days from login. Rotation never extends it. */
