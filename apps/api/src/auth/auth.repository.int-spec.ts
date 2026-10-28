@@ -1,3 +1,4 @@
+import { SessionRevokedReason } from '../generated/prisma/enums';
 import { PrismaService } from '../database/prisma.service';
 import { AuthRepository } from './auth.repository';
 import {
@@ -84,6 +85,6 @@ describe('AuthRepository (database) — token rotation and reuse detection', () 
 
     const session = await prisma.session.findUnique({ where: { id: sessionId } });
     expect(session?.revokedAt).not.toBeNull();
-    expect(session?.revokedReason).toBe('reuse_detected');
+    expect(session?.revokedReason).toBe(SessionRevokedReason.REUSE_DETECTED);
   });
 });
