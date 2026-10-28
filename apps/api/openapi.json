@@ -1,6 +1,182 @@
 {
   "openapi": "3.1.0",
   "paths": {
+    "/api/auth/register": {
+      "post": {
+        "operationId": "register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokens_Output"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Register with an invited email",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokens_Output"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sign in with email and password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "operationId": "refreshTokens",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokens_Output"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Exchange a refresh token for new tokens",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Revoke the current session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/logout-all": {
+      "post": {
+        "operationId": "logoutAll",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Revoke every session for this user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/health/live": {
       "get": {
         "operationId": "getLiveness",
@@ -252,6 +428,74 @@
           "timestamp"
         ],
         "additionalProperties": false
+      },
+      "RegisterBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AuthTokens_Output": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ],
+        "additionalProperties": false
+      },
+      "LoginBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "RefreshBody": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
       },
       "HealthStatus_Output": {
         "type": "object",

@@ -48,13 +48,14 @@ describe('env validation', () => {
     );
   });
 
-  it('requires the database URL and origins in production', () => {
+  it('requires the database URL, origins, and JWT secret in production', () => {
     const result = parseEnv({ NODE_ENV: 'production' });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues.map((issue) => issue.path[0]).sort()).toEqual([
       'CORS_ORIGINS',
       'DATABASE_URL',
+      'JWT_SECRET',
     ]);
   });
 });

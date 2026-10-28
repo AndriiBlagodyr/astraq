@@ -7,6 +7,7 @@ import { LOCAL_DEFAULTS } from './local-defaults';
 const REQUIRED_IN_PRODUCTION = [
   'DATABASE_URL',
   'CORS_ORIGINS',
+  'JWT_SECRET',
 ] as const satisfies ReadonlyArray<keyof typeof LOCAL_DEFAULTS>;
 
 // An origin is scheme + host + port only. `new URL(x).origin === x` rejects
@@ -44,6 +45,19 @@ const envSchema = z
     // any other host (or a local `docker run`) pass it explicitly.
     COMMIT_SHA: z.string().trim().min(1).optional(),
     RAILWAY_GIT_COMMIT_SHA: z.string().trim().min(1).optional(),
+    // At least 32 bytes; required in production. Has a local default.
+    JWT_SECRET: z.string().min(32).optional(),
+    // Comma-separated invited emails; omit or leave empty to allow no registrations.
+    INVITE_EMAILS: z
+      .string()
+      .transform((v) =>
+        v
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.email()))
+      .optional(),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV !== 'production') return;
@@ -63,6 +77,8 @@ const envSchema = z
     DATABASE_URL: value.DATABASE_URL ?? LOCAL_DEFAULTS.DATABASE_URL,
     REDIS_URL: value.REDIS_URL ?? LOCAL_DEFAULTS.REDIS_URL,
     CORS_ORIGINS: value.CORS_ORIGINS ?? [LOCAL_DEFAULTS.CORS_ORIGINS],
+    JWT_SECRET: value.JWT_SECRET ?? LOCAL_DEFAULTS.JWT_SECRET,
+    INVITE_EMAILS: value.INVITE_EMAILS ?? [],
   }));
 
 export type Env = z.infer<typeof envSchema>;

@@ -5,4 +5,5 @@ export const LOCAL_DEFAULTS = {
   DATABASE_URL: 'postgres://veracand:veracand@localhost:5432/veracand',
   REDIS_URL: 'redis://localhost:6379',
   CORS_ORIGINS: 'http://localhost:3000',
+  JWT_SECRET: 'dev-secret-at-least-32-bytes-long!',
 } as const;
