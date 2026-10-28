@@ -60,6 +60,8 @@ export class AuthRepository {
   /**
    * Rotates a refresh token inside a transaction with a row-level lock.
    * Throws UnauthorizedException on any invalid condition, including reuse.
+   * Reuse revoke+audit must commit before the throw: an exception inside
+   * `$transaction` would roll the revoke back.
    */
   async rotateRefreshToken(
     tokenHash: Uint8Array<ArrayBuffer>,
@@ -67,7 +69,7 @@ export class AuthRepository {
     newTokenExpiresAt: Date,
     now: Date,
   ): Promise<{ sessionId: string; userId: string; newTokenExpiresAt: Date }> {
-    return this.prisma.$transaction(async (tx) => {
+    const outcome = await this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<RefreshTokenRow[]>`
         SELECT
           rt.id, rt.session_id, rt.token_hash, rt.parent_id,
@@ -106,7 +108,7 @@ export class AuthRepository {
               metadata: { sessionId: rt.session_id },
             },
           });
-          throw new UnauthorizedException();
+          return { kind: 'reuse_detected' as const };
         }
         // Grace window: issue a sibling with the same parent.
         const effectiveExpiry = cap(newTokenExpiresAt);
@@ -118,7 +120,12 @@ export class AuthRepository {
             expiresAt: effectiveExpiry,
           },
         });
-        return { sessionId: rt.session_id, userId: rt.user_id, newTokenExpiresAt: effectiveExpiry };
+        return {
+          kind: 'rotated' as const,
+          sessionId: rt.session_id,
+          userId: rt.user_id,
+          newTokenExpiresAt: effectiveExpiry,
+        };
       }
 
       // Normal rotation: mark this token rotated, insert child.
@@ -135,8 +142,18 @@ export class AuthRepository {
           expiresAt: effectiveExpiry,
         },
       });
-      return { sessionId: rt.session_id, userId: rt.user_id, newTokenExpiresAt: effectiveExpiry };
+      return {
+        kind: 'rotated' as const,
+        sessionId: rt.session_id,
+        userId: rt.user_id,
+        newTokenExpiresAt: effectiveExpiry,
+      };
     });
+
+    if (outcome.kind === 'reuse_detected') {
+      throw new UnauthorizedException();
+    }
+    return outcome;
   }
 
   async revokeSession(sessionId: string, reason: SessionRevokedReason, userId: string) {
