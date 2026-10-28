@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { ZodSerializerInterceptor, ZodValidationPipe } from 'nestjs-zod';
+import { AuthModule } from './auth/auth.module';
 import { env } from './common/env';
 import { assignRequestId } from './common/request-id';
 import { HealthModule } from './health/health.module';
@@ -20,6 +21,7 @@ import { SymbolsModule } from './symbols/symbols.module';
         genReqId: assignRequestId,
       },
     }),
+    AuthModule,
     HealthModule,
     SymbolsModule,
   ],
