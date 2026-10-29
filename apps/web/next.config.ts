@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,
-  // Baseline headers for every response. The CSP joins with auth in Phase 2
-  // (ROADMAP § Phase 2, item 3); Vercel adds HSTS itself.
+  // Baseline headers applied via next.config (Vercel adds HSTS itself).
+  // CSP is added per-request in middleware.ts.
   async headers() {
     return [
       {

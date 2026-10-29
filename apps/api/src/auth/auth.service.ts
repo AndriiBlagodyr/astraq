@@ -96,7 +96,7 @@ export class AuthService {
     const newRawToken = generateRefreshToken();
     const newTokenHash = hashRefreshToken(newRawToken);
     const now = new Date();
-    const newExpiry = refreshTokenExpiresAt(now, new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000));
+    const newExpiry = refreshTokenExpiresAt(now, sessionExpiresAt(now));
 
     const { sessionId, userId } = await this.auth.rotateRefreshToken(
       tokenHash,
