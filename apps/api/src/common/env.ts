@@ -2,12 +2,13 @@ import { z } from 'zod';
 import { LOCAL_DEFAULTS } from './local-defaults';
 
 // Production gets no defaults: a missing value there is a deploy mistake, not
-// something to paper over. REDIS_URL joins this list with the first module
-// that uses Redis (BullMQ, Phase 3); until then a deploy needs no Redis.
+// something to paper over. REDIS_URL is required from Phase 2 onward because
+// ThrottlerModule uses it; BullMQ (Phase 4) will share the same connection.
 const REQUIRED_IN_PRODUCTION = [
   'DATABASE_URL',
   'CORS_ORIGINS',
   'JWT_SECRET',
+  'REDIS_URL',
 ] as const satisfies ReadonlyArray<keyof typeof LOCAL_DEFAULTS>;
 
 // An origin is scheme + host + port only. `new URL(x).origin === x` rejects

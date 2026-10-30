@@ -25,13 +25,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+  const clientIp = forwardedFor ?? realIp;
+
   const upstream = await fetch(`${env.API_URL}/api/auth/register`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(clientIp ? { "X-Forwarded-For": clientIp } : {}),
+    },
     body: JSON.stringify(body),
   });
 
   if (!upstream.ok) {
+    if (upstream.status === 429) {
+      return NextResponse.json(
+        { error: "Too many registration attempts. Please wait before trying again." },
+        { status: 429 }
+      );
+    }
     const problem = (await upstream.json().catch(() => ({}))) as Problem;
     // 409 = invite-only rejection or email already registered. Return a
     // consistent message so the response doesn't reveal which emails exist.

@@ -48,7 +48,7 @@ describe('env validation', () => {
     );
   });
 
-  it('requires the database URL, origins, and JWT secret in production', () => {
+  it('requires the database URL, origins, JWT secret, and Redis URL in production', () => {
     const result = parseEnv({ NODE_ENV: 'production' });
 
     expect(result.success).toBe(false);
@@ -56,6 +56,7 @@ describe('env validation', () => {
       'CORS_ORIGINS',
       'DATABASE_URL',
       'JWT_SECRET',
+      'REDIS_URL',
     ]);
   });
 });
