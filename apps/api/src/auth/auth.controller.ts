@@ -7,6 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { ZodResponse } from 'nestjs-zod';
 import type { Request } from 'express';
 import { ApiProblemResponses } from '../common/problem';
@@ -22,6 +23,7 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(201)
+  @Throttle({ default: { limit: 5, ttl: 3600 } })
   @ApiOperation({ operationId: 'register', summary: 'Register with an invited email' })
   @ZodResponse({ status: 201, type: AuthTokensDto })
   register(@Body() body: RegisterBodyDto, @Req() req: Request) {
@@ -33,6 +35,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 900 } })
   @ApiOperation({ operationId: 'login', summary: 'Sign in with email and password' })
   @ZodResponse({ status: 200, type: AuthTokensDto })
   login(@Body() body: LoginBodyDto, @Req() req: Request) {
@@ -44,6 +47,7 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(200)
+  @SkipThrottle()
   @ApiOperation({ operationId: 'refreshTokens', summary: 'Exchange a refresh token for new tokens' })
   @ZodResponse({ status: 200, type: AuthTokensDto })
   refresh(@Body() body: RefreshBodyDto) {
@@ -52,6 +56,7 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(204)
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ operationId: 'logout', summary: 'Revoke the current session' })
   logout(@Req() req: AuthenticatedRequest) {
@@ -60,6 +65,7 @@ export class AuthController {
 
   @Post('logout-all')
   @HttpCode(204)
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ operationId: 'logoutAll', summary: 'Revoke every session for this user' })
   logoutAll(@Req() req: AuthenticatedRequest) {
