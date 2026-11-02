@@ -30,6 +30,7 @@ model Symbol {
 
   candlesDaily     CandleDaily[]
   corporateActions CorporateAction[]
+  watchlistItems   WatchlistItem[]
 
   @@map("symbols")
 }
@@ -98,8 +99,9 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  sessions  Session[]
-  auditLogs AuditLog[]
+  sessions   Session[]
+  auditLogs  AuditLog[]
+  watchlists Watchlist[]
 
   @@map("users")
 }
@@ -194,4 +196,41 @@ model AuditLog {
   // A user's history, newest first.
   @@index([userId, createdAt(sort: Desc)])
   @@map("audit_logs")
+}
+
+/// A user's named group of symbols. Every read and write is scoped by
+/// `user_id` in the repository, so one user never sees another's lists.
+model Watchlist {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  /// Trimmed, one line; unique per user so a rename can't shadow a list.
+  name      String   @db.VarChar(64)
+  /// The list's place among the user's lists, 0-based. Gaps are fine.
+  position  Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items WatchlistItem[]
+
+  @@unique([userId, name])
+  @@index([userId, position])
+  @@map("watchlists")
+}
+
+/// A symbol on a watchlist. A symbol appears on a list at most once.
+model WatchlistItem {
+  watchlistId String   @map("watchlist_id") @db.Uuid
+  symbolId    Int      @map("symbol_id")
+  /// The row's place on the list, 0-based. Reordering rewrites every row's
+  /// position in one transaction, so gaps and ties can't last.
+  position    Int
+  addedAt     DateTime @default(now()) @map("added_at") @db.Timestamptz(6)
+
+  watchlist Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  symbol    Symbol    @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+
+  @@id([watchlistId, symbolId])
+  @@index([watchlistId, position])
+  @@map("watchlist_items")
 }

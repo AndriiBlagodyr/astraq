@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import type { Adjustment, Candle, LatestClose, Split } from '@astraq/shared';
+import type {
+  Adjustment,
+  Candle,
+  LatestClose,
+  SparklinePoint,
+  Split,
+} from '@astraq/shared';
 import { toIsoDate, utcMidnight } from '../common/dates';
 import { PrismaService } from '../database/prisma.service';
 
@@ -158,6 +164,60 @@ export class CandlesRepository {
       WHERE s.id = ANY(${symbolIds}::int[])
     `;
     return new Map(rows.map(({ symbolId, ...close }) => [symbolId, close]));
+  }
+
+  /**
+   * The last `sessions` closes per symbol, oldest first, keyed by symbol id:
+   * a watchlist row's sparkline. Symbols without bars are left out.
+   *
+   * Each close is split-adjusted to the latest session's shares, the same
+   * basis as `findLatestCloses`, so a split inside the window doesn't draw
+   * a cliff. The split factor is the product of the splits that went ex
+   * after the bar and no later than the latest bar; without any it's 1.
+   */
+  async findRecentCloses(
+    symbolIds: number[],
+    sessions: number,
+  ): Promise<Map<number, SparklinePoint[]>> {
+    if (symbolIds.length === 0) return new Map();
+
+    const rows = await this.prisma.$queryRaw<
+      Array<SparklinePoint & { symbolId: number }>
+    >`
+      SELECT s.id AS "symbolId",
+             to_char(bar.ts AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
+             trim_scale(round(bar.close * splits.factor, 6))::text AS close
+      FROM symbols s
+      CROSS JOIN LATERAL (
+        SELECT c.ts, c.close
+        FROM candles_daily c
+        WHERE c.symbol_id = s.id
+        ORDER BY c.ts DESC
+        LIMIT ${sessions}::int
+      ) bar
+      CROSS JOIN LATERAL (
+        SELECT max(c.ts) AS ts
+        FROM candles_daily c
+        WHERE c.symbol_id = s.id
+      ) latest
+      CROSS JOIN LATERAL (
+        SELECT numeric_product(ca.split_from / ca.split_to) AS factor
+        FROM corporate_actions ca
+        WHERE ca.symbol_id = s.id
+          AND ca.type = 'split'
+          AND ca.ex_date > (bar.ts AT TIME ZONE 'UTC')::date
+          AND ca.ex_date <= (latest.ts AT TIME ZONE 'UTC')::date
+      ) splits
+      WHERE s.id = ANY(${symbolIds}::int[])
+      ORDER BY s.id, bar.ts
+    `;
+    const bySymbol = new Map<number, SparklinePoint[]>();
+    for (const { symbolId, ...point } of rows) {
+      const points = bySymbol.get(symbolId) ?? [];
+      points.push(point);
+      bySymbol.set(symbolId, points);
+    }
+    return bySymbol;
   }
 
   /** Splits with an ex-date in the range (inclusive), oldest first. */

@@ -6,7 +6,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { ZodResponse } from 'nestjs-zod';
 import type { Request } from 'express';
@@ -58,6 +58,7 @@ export class AuthController {
   @HttpCode(204)
   @SkipThrottle()
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ operationId: 'logout', summary: 'Revoke the current session' })
   logout(@Req() req: AuthenticatedRequest) {
     return this.authService.logout(req.user.sid, req.user.sub);
@@ -67,6 +68,7 @@ export class AuthController {
   @HttpCode(204)
   @SkipThrottle()
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ operationId: 'logoutAll', summary: 'Revoke every session for this user' })
   logoutAll(@Req() req: AuthenticatedRequest) {
     return this.authService.logoutAll(req.user.sub);

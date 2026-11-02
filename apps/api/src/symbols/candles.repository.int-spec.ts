@@ -199,4 +199,17 @@ describe('CandlesRepository (database)', () => {
       previousClose: null,
     });
   });
+
+  it('reads the last sessions as a sparkline, split-adjusted like the latest close', async () => {
+    const sparklines = await repository.findRecentCloses([nvdaId], 3);
+
+    // The 2021-07-20 bar is only behind the 2024 10:1 split; the 2024-06-07
+    // bar too; the latest bar is as traded.
+    expect(sparklines.get(nvdaId)).toEqual([
+      { date: '2021-07-20', close: '18.75' },
+      { date: '2024-06-07', close: '120.888' },
+      { date: '2024-06-10', close: '121.79' },
+    ]);
+    expect(await repository.findRecentCloses([], 3)).toEqual(new Map());
+  });
 });
