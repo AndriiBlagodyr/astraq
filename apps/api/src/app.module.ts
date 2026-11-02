@@ -2,22 +2,28 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
-import Redis from 'ioredis';
 import { LoggerModule } from 'nestjs-pino';
 import { ZodSerializerInterceptor, ZodValidationPipe } from 'nestjs-zod';
 import { AuthModule } from './auth/auth.module';
 import { env } from './common/env';
+import { RedisModule } from './common/redis.module';
+import { RedisService } from './common/redis.service';
 import { assignRequestId } from './common/request-id';
 import { HealthModule } from './health/health.module';
 import { SymbolsModule } from './symbols/symbols.module';
+import { WatchlistsModule } from './watchlists/watchlists.module';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot({
+    ThrottlerModule.forRootAsync({
+      imports: [RedisModule],
+      inject: [RedisService],
       // Each named throttler is a separate sliding window. Auth routes override
       // the default with @Throttle; other routes stay at 120 req/min.
-      throttlers: [{ name: 'default', ttl: 60, limit: 120 }],
-      storage: new ThrottlerStorageRedisService(new Redis(env.REDIS_URL)),
+      useFactory: (redis: RedisService) => ({
+        throttlers: [{ name: 'default', ttl: 60, limit: 120 }],
+        storage: new ThrottlerStorageRedisService(redis),
+      }),
     }),
     LoggerModule.forRoot({
       pinoHttp: {
@@ -33,6 +39,7 @@ import { SymbolsModule } from './symbols/symbols.module';
     AuthModule,
     HealthModule,
     SymbolsModule,
+    WatchlistsModule,
   ],
   providers: [
     // Rate-limit every route by the request IP; auth endpoints override limits.

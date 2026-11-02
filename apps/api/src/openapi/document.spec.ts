@@ -53,6 +53,11 @@ describe('buildOpenApiDocument', () => {
       '/health/ready',
       '/api/symbols',
       '/api/symbols/{ticker}/candles',
+      '/api/watchlists',
+      '/api/watchlists/{id}',
+      '/api/watchlists/{id}/items',
+      '/api/watchlists/{id}/items/order',
+      '/api/watchlists/{id}/items/{ticker}',
     ]);
   });
 });
