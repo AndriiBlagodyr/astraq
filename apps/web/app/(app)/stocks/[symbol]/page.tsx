@@ -2,11 +2,13 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card, EmptyState } from "@astraq/ui";
+import { AddToWatchlistMenu } from "@/app/components/AddToWatchlistMenu";
 import { CandleChart } from "@/app/components/CandleChart";
 import { CustomRangePicker } from "@/app/components/CustomRangePicker";
 import { DayChange } from "@/app/components/DayChange";
 import { PillLinks } from "@/app/components/PillLinks";
 import { findSymbol, getDailyCandles } from "@/lib/market-data";
+import { listWatchlists } from "@/lib/watchlists";
 import {
   chartAdjustments,
   chartHref,
@@ -49,13 +51,14 @@ export default async function StockPage({
   const ticker = symbol.toUpperCase();
   const today = marketDate();
 
-  const [summary, series] = await Promise.all([
+  const [summary, series, watchlists] = await Promise.all([
     findSymbol(ticker),
     getDailyCandles(ticker, {
       from: custom ? custom.from : rangeStart(range, today),
       to: custom?.to,
       adjustment,
     }),
+    listWatchlists(),
   ]);
   if (!series) notFound();
 
@@ -85,13 +88,16 @@ export default async function StockPage({
           </Link>
           {summary ? ` · ${summary.exchange}` : null}
         </p>
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-          <h1 className="m-0 font-display text-4xl font-bold tracking-tight text-foreground">
-            {ticker}
-          </h1>
-          {summary ? (
-            <p className="m-0 text-lg text-secondary">{summary.name}</p>
-          ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+            <h1 className="m-0 font-display text-4xl font-bold tracking-tight text-foreground">
+              {ticker}
+            </h1>
+            {summary ? (
+              <p className="m-0 text-lg text-secondary">{summary.name}</p>
+            ) : null}
+          </div>
+          <AddToWatchlistMenu ticker={ticker} watchlists={watchlists} />
         </div>
         {last ? (
           <p className="m-0 flex flex-wrap items-center gap-3 tabular-nums">

@@ -13,7 +13,13 @@ type CookieOptions = {
 
 // Access token lifetime mirrors the API's JWT exp: 10 minutes.
 export function accessCookieOpts(): CookieOptions {
-  return { httpOnly: true, secure: IS_PROD, sameSite: "lax", path: "/", maxAge: 600 };
+  return {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 600,
+  };
 }
 
 // Refresh token: 30 days (capped at session expiry by the API).
@@ -28,7 +34,42 @@ export function refreshCookieOpts(): CookieOptions {
 }
 
 export function clearCookieOpts(): CookieOptions {
-  return { httpOnly: true, secure: IS_PROD, sameSite: "lax", path: "/", maxAge: 0 };
+  return {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  };
+}
+
+/** The pair the api returns from register, login, and refresh. */
+export type AuthTokens = {
+  accessToken: string;
+  refreshToken: string;
+};
+
+/** Anything with a response cookie jar: NextResponse, or `cookies()` in an action. */
+type CookieJar = {
+  cookies: {
+    set(name: string, value: string, options: CookieOptions): unknown;
+  };
+};
+
+/** Stores both tokens on the response. The one place the cookie names and options meet. */
+export function setAuthCookies(response: CookieJar, tokens: AuthTokens): void {
+  response.cookies.set(COOKIE_ACCESS, tokens.accessToken, accessCookieOpts());
+  response.cookies.set(
+    COOKIE_REFRESH,
+    tokens.refreshToken,
+    refreshCookieOpts()
+  );
+}
+
+/** Expires both cookies: sign-out, or a refresh the api rejected. */
+export function clearAuthCookies(response: CookieJar): void {
+  response.cookies.set(COOKIE_ACCESS, "", clearCookieOpts());
+  response.cookies.set(COOKIE_REFRESH, "", clearCookieOpts());
 }
 
 /** Base64url-decode the JWT payload. Does NOT verify the signature. */
