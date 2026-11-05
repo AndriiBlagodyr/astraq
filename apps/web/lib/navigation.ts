@@ -3,6 +3,7 @@
 // Research) return once they have an item.
 export const appNavigation = [
   { href: "/", label: "Today" },
+  { href: "/watchlists", label: "Watchlists" },
   { href: "/stocks", label: "Stocks" },
   { href: "/status", label: "Status" },
 ] as const;

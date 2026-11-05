@@ -1,5 +1,5 @@
 import type { components } from "@astraq/sdk";
-import { api } from "./api";
+import { api, apiFailure, fresh } from "./api";
 import type { ChartAdjustment } from "./stock-chart";
 
 // Server-side reads of market data through the generated SDK. Server
@@ -8,20 +8,12 @@ import type { ChartAdjustment } from "./stock-chart";
 export type SymbolSummary = components["schemas"]["SymbolSummary_Output"];
 export type CandleSeries = components["schemas"]["CandleSeries_Output"];
 
-// Bars change only when the bootstrap runs; a stale page would hide a run
-// that just finished, and these pages render per request anyway.
-const fresh = { cache: "no-store" } as const;
-
-function failure(what: string, status: number): Error {
-  return new Error(`${what} failed with HTTP ${status}`);
-}
-
 export async function searchSymbols(query?: string): Promise<SymbolSummary[]> {
   const { data, response } = await api.GET("/api/symbols", {
     params: { query: query ? { query } : {} },
     ...fresh,
   });
-  if (!data) throw failure("Symbol search", response.status);
+  if (!data) throw apiFailure("Symbol search", response.status);
   return data.symbols;
 }
 
@@ -49,6 +41,6 @@ export async function getDailyCandles(
     ...fresh,
   });
   if (response.status === 404) return null;
-  if (!data) throw failure(`Candles for ${ticker}`, response.status);
+  if (!data) throw apiFailure(`Candles for ${ticker}`, response.status);
   return data;
 }

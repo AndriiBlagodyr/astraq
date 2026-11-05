@@ -1,6 +1,6 @@
 "use client";
 
-import { ThemeProvider, TooltipProvider } from "@astraq/ui";
+import { ThemeProvider, ToastProvider, TooltipProvider } from "@astraq/ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -29,9 +29,12 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <ThemeProvider>
       <TooltipProvider>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
+        {/* Toasts: undo for watchlist removals and deletes, action failures. */}
+        <ToastProvider>
+          <QueryClientProvider client={queryClient}>
+            {children}
+          </QueryClientProvider>
+        </ToastProvider>
       </TooltipProvider>
     </ThemeProvider>
   );

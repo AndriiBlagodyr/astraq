@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   // Baseline headers applied via next.config (Vercel adds HSTS itself).
-  // CSP is added per-request in middleware.ts.
+  // CSP is added per-request in proxy.ts.
   async headers() {
     return [
       {
