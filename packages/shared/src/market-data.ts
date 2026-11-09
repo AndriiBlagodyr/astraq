@@ -5,6 +5,15 @@ import { z } from "zod";
 // that needs a number, e.g. the chart.
 const decimalString = z.string().regex(/^\d+(\.\d+)?$/);
 const integerString = z.string().regex(/^\d+$/);
+/** A return or a statistic: a ratio, so it can be negative. */
+const signedDecimalString = z.string().regex(/^-?\d+(\.\d+)?$/);
+
+/** Adds the rule that an optional `from` must not be after an optional `to`. */
+const orderedRange = <T extends { from?: string; to?: string }>(schema: z.ZodType<T>) =>
+  schema.refine((query) => !query.from || !query.to || query.from <= query.to, {
+    message: "`from` must not be after `to`",
+    path: ["from"],
+  });
 
 /**
  * The latest stored session of a symbol. `previousClose` is split-adjusted
@@ -70,16 +79,13 @@ export const AdjustmentSchema = z
   .meta({ id: "Adjustment" });
 
 /** Query of `GET /api/symbols/{ticker}/candles`. Dates are session dates. */
-export const CandlesQuerySchema = z
-  .object({
+export const CandlesQuerySchema = orderedRange(
+  z.object({
     from: z.iso.date().optional(),
     to: z.iso.date().optional(),
     adjustment: AdjustmentSchema.default("split"),
-  })
-  .refine((query) => !query.from || !query.to || query.from <= query.to, {
-    message: "`from` must not be after `to`",
-    path: ["from"],
-  });
+  }),
+);
 
 /** One daily bar. */
 export const CandleSchema = z
@@ -115,6 +121,60 @@ export const CandleSeriesSchema = z
   })
   .meta({ id: "CandleSeries" });
 
+/**
+ * Query of `GET /api/symbols/{ticker}/returns`. Dates are session dates and
+ * bound the returns, not the closes: the first day in the range is compared
+ * with the session before it. Defaults to `all`, because without the
+ * dividend adjustment every ex-dividend day reads as a loss that no holder had.
+ */
+export const ReturnsQuerySchema = orderedRange(
+  z.object({
+    from: z.iso.date().optional(),
+    to: z.iso.date().optional(),
+    adjustment: AdjustmentSchema.default("all"),
+  }),
+);
+
+/** One session's simple return: close / previous close - 1 (0.02 is +2%). */
+export const DailyReturnSchema = z
+  .object({
+    /** Session date, YYYY-MM-DD. */
+    date: z.iso.date(),
+    return: signedDecimalString,
+  })
+  .meta({ id: "DailyReturn" });
+
+/**
+ * Summary of a return series, computed in the same query as the returns.
+ * Ratios, not percentages; rounded to 8 decimals.
+ */
+export const ReturnStatsSchema = z
+  .object({
+    /** Sessions with a return (the range's first session has none). */
+    count: z.number().int().positive(),
+    mean: signedDecimalString,
+    /** Sample standard deviation; null with a single return. */
+    stdDev: signedDecimalString.nullable(),
+    /** Adjusted Fisher-Pearson skewness; null below three returns or with no spread. */
+    skew: signedDecimalString.nullable(),
+    best: DailyReturnSchema,
+    worst: DailyReturnSchema,
+    /** Share of sessions that closed up, 0 to 1. */
+    upShare: decimalString,
+  })
+  .meta({ id: "ReturnStats" });
+
+/** Body of `GET /api/symbols/{ticker}/returns`, oldest return first. */
+export const ReturnSeriesSchema = z
+  .object({
+    ticker: z.string(),
+    adjustment: AdjustmentSchema,
+    returns: z.array(DailyReturnSchema),
+    /** Null when the range holds no returns. */
+    stats: ReturnStatsSchema.nullable(),
+  })
+  .meta({ id: "ReturnSeries" });
+
 export type LatestClose = z.infer<typeof LatestCloseSchema>;
 export type SymbolSummary = z.infer<typeof SymbolSummarySchema>;
 export type SymbolSearchQuery = z.infer<typeof SymbolSearchQuerySchema>;
@@ -125,3 +185,7 @@ export type CandlesQuery = z.infer<typeof CandlesQuerySchema>;
 export type Candle = z.infer<typeof CandleSchema>;
 export type Split = z.infer<typeof SplitSchema>;
 export type CandleSeries = z.infer<typeof CandleSeriesSchema>;
+export type ReturnsQuery = z.infer<typeof ReturnsQuerySchema>;
+export type DailyReturn = z.infer<typeof DailyReturnSchema>;
+export type ReturnStats = z.infer<typeof ReturnStatsSchema>;
+export type ReturnSeries = z.infer<typeof ReturnSeriesSchema>;

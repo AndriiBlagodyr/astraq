@@ -157,6 +157,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/symbols/{ticker}/returns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daily returns from adjusted closes, with summary statistics */
+        get: operations["getDailyReturns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/watchlists": {
         parameters: {
             query?: never;
@@ -322,6 +339,26 @@ export interface components {
             adjustment: components["schemas"]["Adjustment_Output"];
             candles: components["schemas"]["Candle_Output"][];
             splits: components["schemas"]["Split_Output"][];
+        };
+        DailyReturn_Output: {
+            /** Format: date */
+            date: string;
+            return: string;
+        };
+        ReturnStats_Output: {
+            count: number;
+            mean: string;
+            stdDev: string | null;
+            skew: string | null;
+            best: components["schemas"]["DailyReturn_Output"];
+            worst: components["schemas"]["DailyReturn_Output"];
+            upShare: string;
+        };
+        ReturnSeries_Output: {
+            ticker: string;
+            adjustment: components["schemas"]["Adjustment_Output"];
+            returns: components["schemas"]["DailyReturn_Output"][];
+            stats: components["schemas"]["ReturnStats_Output"] | null;
         };
         WatchlistSummary_Output: {
             /** Format: uuid */
@@ -635,6 +672,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CandleSeries_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    getDailyReturns: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                adjustment?: components["schemas"]["Adjustment"];
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReturnSeries_Output"];
                 };
             };
             /** @description Any error, as an RFC 9457 problem detail */
