@@ -1,11 +1,11 @@
 import { EmptyState } from "@astraq/ui";
 
-/** Today and Stocks before the first bootstrap run; both point at the command. */
+/** Today and Stocks before any candles are stored; both point at the commands. */
 export function NoSymbolsLoaded() {
   return (
     <EmptyState
-      title="No symbols loaded yet"
-      description="Daily candles arrive with the bootstrap: pnpm --filter @astraq/api bootstrap."
+      title="No candles loaded yet"
+      description="Load the symbol list and the first candles: pnpm --filter @astraq/api symbols:sync, then bootstrap."
     />
   );
 }

@@ -2,20 +2,37 @@ import type { z } from 'zod';
 import type { DateRange } from '../market-data.types';
 import type { AlpacaEnv } from './alpaca.env';
 import {
+  type AlpacaAsset,
   type AlpacaBarsPage,
   type AlpacaCorporateActions,
+  alpacaAssetsSchema,
   alpacaBarsPageSchema,
   alpacaCorporateActionsPageSchema,
 } from './alpaca.schemas';
 import { parseJsonExact } from './exact-json';
 
 /**
- * A minimal, hand-written client for the two Alpaca market data endpoints the
- * bootstrap needs. No retries or rate limiting on purpose: the bootstrap is
- * idempotent, so a failed run is simply run again (ROADMAP Phase 1).
+ * A minimal, hand-written client for the three Alpaca endpoints the market
+ * data loaders need: bars and corporate actions from the data API, the asset
+ * list from the trading API. No retries or rate limiting on purpose: every
+ * loader is idempotent, so a failed run is simply run again (ROADMAP Phase 1).
  */
 export class AlpacaClient {
   constructor(private readonly config: AlpacaEnv) {}
+
+  /**
+   * Every active US equity Alpaca knows, in one response (about 11,000
+   * rows; the endpoint has no paging). Inactive assets are left out so a
+   * delisting shows up as a ticker missing from the list.
+   */
+  async activeUsEquities(): Promise<AlpacaAsset[]> {
+    return this.get(
+      this.config.ALPACA_TRADING_URL,
+      '/v2/assets',
+      { status: 'active', asset_class: 'us_equity' },
+      alpacaAssetsSchema,
+    );
+  }
 
   /** Raw (unadjusted) daily bars, yielded one page at a time. */
   async *dailyBarPages(
@@ -25,6 +42,7 @@ export class AlpacaClient {
     let pageToken: string | null = null;
     do {
       const page: AlpacaBarsPage = await this.get(
+        this.config.ALPACA_DATA_URL,
         '/v2/stocks/bars',
         {
           symbols: symbols.join(','),
@@ -60,6 +78,7 @@ export class AlpacaClient {
     do {
       const page: z.infer<typeof alpacaCorporateActionsPageSchema> =
         await this.get(
+          this.config.ALPACA_DATA_URL,
           '/v1/corporate-actions',
           {
             symbols: symbols.join(','),
@@ -81,11 +100,12 @@ export class AlpacaClient {
   }
 
   private async get<Schema extends z.ZodType>(
+    base: string,
     path: string,
     params: Record<string, string | null>,
     schema: Schema,
   ): Promise<z.infer<Schema>> {
-    const url = new URL(path, this.config.ALPACA_DATA_URL);
+    const url = new URL(path, base);
     for (const [key, value] of Object.entries(params)) {
       if (value !== null) url.searchParams.set(key, value);
     }

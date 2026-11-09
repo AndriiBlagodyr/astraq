@@ -1,4 +1,4 @@
-import { parseAlpacaEnv } from './alpaca.env';
+import { hasAlpacaKeys, parseAlpacaEnv } from './alpaca.env';
 
 describe('alpaca env validation', () => {
   it('requires both keys', () => {
@@ -18,7 +18,13 @@ describe('alpaca env validation', () => {
 
     expect(result.data).toMatchObject({
       ALPACA_DATA_URL: 'https://data.alpaca.markets',
+      ALPACA_TRADING_URL: 'https://paper-api.alpaca.markets',
       ALPACA_FEED: 'sip',
     });
+  });
+
+  it('treats a single key as configured, so the api fails loudly on it', () => {
+    expect(hasAlpacaKeys({})).toBe(false);
+    expect(hasAlpacaKeys({ ALPACA_API_SECRET_KEY: 'secret' })).toBe(true);
   });
 });

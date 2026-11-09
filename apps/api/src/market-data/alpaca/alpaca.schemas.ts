@@ -51,6 +51,24 @@ export const alpacaCorporateActionsPageSchema = z.object({
   next_page_token: z.string().nullable(),
 });
 
+/**
+ * One asset from the trading API's `GET /v2/assets`. Only the fields the
+ * symbol universe needs; the rest (fractionable, shortable, ...) are ignored.
+ * `exchange` is Alpaca's own label (NASDAQ, NYSE, ARCA, ...), mapped to a
+ * MIC code by the mapper.
+ */
+export const alpacaAssetSchema = z.object({
+  symbol: z.string(),
+  name: z.string(),
+  exchange: z.string(),
+  status: z.enum(['active', 'inactive']),
+  class: z.string(),
+  tradable: z.boolean(),
+});
+
+export const alpacaAssetsSchema = z.array(alpacaAssetSchema);
+
+export type AlpacaAsset = z.infer<typeof alpacaAssetSchema>;
 export type AlpacaBar = z.infer<typeof alpacaBarSchema>;
 export type AlpacaBarsPage = z.infer<typeof alpacaBarsPageSchema>;
 export type AlpacaCorporateActions = z.infer<

@@ -8,10 +8,101 @@ import type {
   SymbolSeed,
 } from './market-data.types';
 
+/** What a symbol universe sync changed. */
+export type SymbolSyncSummary = {
+  inserted: number;
+  updated: number;
+  deactivated: number;
+};
+
 /** Writes provider market data. Every method is idempotent. */
 @Injectable()
 export class MarketDataRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Makes the active symbols exactly `seeds`, in one transaction:
+   *
+   * 1. One `INSERT ... ON CONFLICT (ticker) DO UPDATE` over the whole list,
+   *    with the rows travelling as three array parameters through `unnest`
+   *    (the same trick as `upsertCandles`), so ~11,000 symbols are one
+   *    round trip instead of 11,000. The `WHERE ... IS DISTINCT FROM` skips
+   *    rows that haven't changed, so a second run reports 0 updates.
+   *    `xmax = 0` tells an inserted row from an updated one: a fresh tuple
+   *    has no deleting transaction id, an updated one carries the id of the
+   *    transaction that replaced its old version.
+   * 2. Every other active symbol is deactivated: it keeps its candles and
+   *    watchlist rows (a delisted stock is still history), but leaves
+   *    search and ingestion. Rerunning after a relisting reactivates it.
+   */
+  async syncSymbols(seeds: SymbolSeed[]): Promise<SymbolSyncSummary> {
+    if (seeds.length === 0) {
+      throw new Error('Refusing to sync an empty symbol list');
+    }
+    const tickers = seeds.map((seed) => seed.ticker);
+    return this.prisma.$transaction(async (tx) => {
+      const [upserted] = await tx.$queryRaw<
+        Array<{ inserted: bigint; updated: bigint }>
+      >`
+        WITH upserted AS (
+          INSERT INTO symbols (ticker, name, exchange, active, updated_at)
+          SELECT t.ticker, t.name, t.exchange, true, now()
+          FROM unnest(
+            ${tickers}::text[],
+            ${seeds.map((seed) => seed.name)}::text[],
+            ${seeds.map((seed) => seed.exchange)}::text[]
+          ) AS t(ticker, name, exchange)
+          ON CONFLICT (ticker) DO UPDATE SET
+            name = EXCLUDED.name,
+            exchange = EXCLUDED.exchange,
+            active = true,
+            updated_at = now()
+          WHERE (symbols.name, symbols.exchange, symbols.active)
+            IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.exchange, true)
+          RETURNING (xmax = 0) AS inserted
+        )
+        SELECT count(*) FILTER (WHERE inserted) AS inserted,
+               count(*) FILTER (WHERE NOT inserted) AS updated
+        FROM upserted
+      `;
+      const deactivated = await tx.$executeRaw`
+        UPDATE symbols
+        SET active = false, updated_at = now()
+        WHERE active AND ticker <> ALL(${tickers}::text[])
+      `;
+      return {
+        inserted: Number(upserted.inserted),
+        updated: Number(upserted.updated),
+        deactivated,
+      };
+    });
+  }
+
+  /** The stored symbols for these tickers, as bootstrap seeds. */
+  async findSeeds(tickers: string[]): Promise<SymbolSeed[]> {
+    return this.prisma.symbol.findMany({
+      where: { ticker: { in: tickers } },
+      select: { ticker: true, name: true, exchange: true },
+      orderBy: { ticker: 'asc' },
+    });
+  }
+
+  /** One stored symbol as a bootstrap seed, or null. */
+  async findSeed(symbolId: number): Promise<SymbolSeed | null> {
+    return this.prisma.symbol.findUnique({
+      where: { id: symbolId },
+      select: { ticker: true, name: true, exchange: true },
+    });
+  }
+
+  /** Whether at least one daily bar is stored for the symbol. */
+  async hasCandles(symbolId: number): Promise<boolean> {
+    const bar = await this.prisma.candleDaily.findFirst({
+      where: { symbolId },
+      select: { symbolId: true },
+    });
+    return bar !== null;
+  }
 
   /** Upserts symbols by ticker and returns their ids by ticker. */
   async upsertSymbols(seeds: SymbolSeed[]): Promise<Map<string, number>> {

@@ -101,6 +101,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
 **For:** finding a symbol and opening its page.
 
 - **Phase 1:** search by ticker or name over the bootstrapped symbols (`GET /api/symbols?query=`). Results show ticker, name, exchange, last close, and day change, best match first (ticker matches, then name matches). Enter opens the top result when it's an exact ticker or the only match; a looser query keeps the list.
+- **Phase 2:** the same search over every listed US equity (`symbols:sync`); a result without candles shows no close until it's watched, which loads its history. The table without a query lists the symbols with candles, not the universe.
 - **Phase 2:** search covers the full active US equity universe. A symbol without stored candles shows "Loading history…" while the on-demand fetch runs. "Add to watchlist" on each result.
 - **Phase 6:** filters (exchange, sector if the provider supplies it) and sortable columns (`DataTable`).
 

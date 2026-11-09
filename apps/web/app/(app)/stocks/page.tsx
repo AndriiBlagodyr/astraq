@@ -9,7 +9,8 @@ export const metadata = {
   title: "Stocks",
 };
 
-// Phase 1: search over the bootstrapped symbols (docs/ui-plan.md § Stocks).
+// Search over every listed US equity (docs/ui-plan.md § Stocks); the table
+// without a query lists the symbols that have candles.
 // A plain GET form, so search works before any JavaScript loads and every
 // result list has a shareable URL.
 export default async function StocksPage({
@@ -58,7 +59,7 @@ export default async function StocksPage({
           {query ? (
             <EmptyState
               title={`No symbols match “${query}”`}
-              description="Search covers the symbols loaded so far, by ticker prefix or part of the name."
+              description="Search covers every listed US equity, by ticker prefix or part of the name."
               action={
                 <Link href="/stocks" className="text-brand-strong-fg underline">
                   Show all symbols
@@ -72,7 +73,7 @@ export default async function StocksPage({
       ) : (
         <SymbolTable
           symbols={symbols}
-          caption={query ? `Symbols matching ${query}` : "All symbols"}
+          caption={query ? `Symbols matching ${query}` : "Symbols with candles"}
         />
       )}
     </main>

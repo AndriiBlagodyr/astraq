@@ -77,7 +77,7 @@ export default async function WatchlistPage({ params }: WatchlistPageProps) {
         ) : (
           <EmptyState
             title="Nothing on this list yet"
-            description="Add a symbol above by ticker or company name. Only symbols loaded so far can be added."
+            description="Add a symbol above by ticker or company name. Any listed US equity works; its history loads when you add it."
             action={
               <Link href="/stocks" className="text-brand-strong-fg underline">
                 Browse stocks
