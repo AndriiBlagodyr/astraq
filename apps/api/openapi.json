@@ -364,6 +364,77 @@
         ]
       }
     },
+    "/api/symbols/{ticker}/returns": {
+      "get": {
+        "operationId": "getDailyReturns",
+        "parameters": [
+          {
+            "name": "ticker",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^[A-Za-z][A-Za-z0-9.-]{0,15}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "adjustment",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "all",
+              "$ref": "#/components/schemas/Adjustment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnSeries_Output"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Daily returns from adjusted closes, with summary statistics",
+        "tags": [
+          "symbols"
+        ]
+      }
+    },
     "/api/watchlists": {
       "get": {
         "operationId": "listWatchlists",
@@ -1105,6 +1176,115 @@
           "adjustment",
           "candles",
           "splits"
+        ],
+        "additionalProperties": false
+      },
+      "DailyReturn_Output": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "return": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          }
+        },
+        "required": [
+          "date",
+          "return"
+        ],
+        "additionalProperties": false
+      },
+      "ReturnStats_Output": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "mean": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "stdDev": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "skew": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "best": {
+            "$ref": "#/components/schemas/DailyReturn_Output"
+          },
+          "worst": {
+            "$ref": "#/components/schemas/DailyReturn_Output"
+          },
+          "upShare": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          }
+        },
+        "required": [
+          "count",
+          "mean",
+          "stdDev",
+          "skew",
+          "best",
+          "worst",
+          "upShare"
+        ],
+        "additionalProperties": false
+      },
+      "ReturnSeries_Output": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string"
+          },
+          "adjustment": {
+            "$ref": "#/components/schemas/Adjustment_Output"
+          },
+          "returns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyReturn_Output"
+            }
+          },
+          "stats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReturnStats_Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "ticker",
+          "adjustment",
+          "returns",
+          "stats"
         ],
         "additionalProperties": false
       },

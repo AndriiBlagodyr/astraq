@@ -5,6 +5,8 @@ import { ApiProblemResponses } from '../common/problem';
 import {
   CandleSeriesDto,
   CandlesQueryDto,
+  ReturnSeriesDto,
+  ReturnsQueryDto,
   SymbolListDto,
   SymbolSearchQueryDto,
   TickerParamDto,
@@ -35,5 +37,15 @@ export class SymbolsController {
   @ZodResponse({ status: 200, type: CandleSeriesDto })
   candles(@Param() { ticker }: TickerParamDto, @Query() query: CandlesQueryDto) {
     return this.symbols.dailyCandles(ticker, query);
+  }
+
+  @Get(':ticker/returns')
+  @ApiOperation({
+    operationId: 'getDailyReturns',
+    summary: 'Daily returns from adjusted closes, with summary statistics',
+  })
+  @ZodResponse({ status: 200, type: ReturnSeriesDto })
+  returns(@Param() { ticker }: TickerParamDto, @Query() query: ReturnsQueryDto) {
+    return this.symbols.dailyReturns(ticker, query);
   }
 }
