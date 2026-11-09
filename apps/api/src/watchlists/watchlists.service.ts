@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Watchlist, WatchlistList } from '@astraq/shared';
+import { OnDemandCandlesService } from '../market-data/on-demand-candles.service';
 import { CandlesRepository } from '../symbols/candles.repository';
 import { SymbolsRepository } from '../symbols/symbols.repository';
 import {
@@ -23,6 +24,7 @@ export class WatchlistsService {
     private readonly watchlists: WatchlistsRepository,
     private readonly symbols: SymbolsRepository,
     private readonly candles: CandlesRepository,
+    private readonly onDemand: OnDemandCandlesService,
   ) {}
 
   async list(userId: string): Promise<WatchlistList> {
@@ -59,7 +61,11 @@ export class WatchlistsService {
     await this.run(() => this.watchlists.delete(userId, id));
   }
 
-  /** Adds a symbol (case-insensitive ticker); 404 for an unknown one. */
+  /**
+   * Adds a symbol (case-insensitive ticker); 404 for an unknown one. A
+   * symbol watched for the first time gets its candles loaded before the
+   * list is returned, so the new row has a close and a sparkline at once.
+   */
   async addItem(
     userId: string,
     id: string,
@@ -67,6 +73,7 @@ export class WatchlistsService {
   ): Promise<Watchlist> {
     const symbolId = await this.resolveTicker(rawTicker);
     await this.run(() => this.watchlists.addItem(userId, id, symbolId));
+    await this.onDemand.ensureCandles(symbolId);
     return this.get(userId, id);
   }
 

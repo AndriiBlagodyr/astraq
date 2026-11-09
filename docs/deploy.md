@@ -32,25 +32,26 @@ Create one Railway project (`veracand`) with two services, in the same region yo
    | `DATABASE_URL` | `postgres://veracand:${{timescaledb.POSTGRES_PASSWORD}}@timescaledb.railway.internal:5432/veracand` |
    | `CORS_ORIGINS` | the Vercel production origin, e.g. `https://veracand.vercel.app` (no trailing slash) |
    | `LOG_LEVEL` | `info` |
-   | `ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY` | Alpaca keys, marked **sealed**. Only the bootstrap reads them |
+   | `ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY` | Alpaca keys, marked **sealed**. The loaders need them; the api uses them to load a newly watched symbol's candles |
 
    `NODE_ENV=production` is baked into the image. Railway sets `PORT`, and `RAILWAY_GIT_COMMIT_SHA`, which `/health` reports as `version`.
 4. **Networking → Generate Domain.** That URL is the web app's `API_URL`.
 
 The first deploy builds the image, runs the migrations against the empty database (the `init` migration creates the `timescaledb` extension and the hypertable), and goes live once `/health/ready` returns 200.
 
-### Load the candles
+### Load the symbols and candles
 
-The database is private, so run the bootstrap inside the API container:
+The database is private, so run the loaders inside the API container:
 
 ```sh
 railway link            # pick the veracand project
 railway ssh --service api
-node dist/market-data/bootstrap/main            # the default ~20 tickers
+node dist/market-data/universe/main             # every listed US equity into `symbols`
+node dist/market-data/bootstrap/main            # candles for the default ~20 tickers
 node dist/market-data/bootstrap/main --tickers NVDA,AAPL
 ```
 
-It's idempotent: run it again to backfill new bars.
+Both are idempotent: rerun the first to pick up listings and delistings, the second to backfill new bars. Any other symbol gets its candles the first time someone adds it to a watchlist.
 
 ## 2. Vercel project
 

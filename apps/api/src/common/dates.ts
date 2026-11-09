@@ -11,3 +11,14 @@ export function utcMidnight(isoDate: string): Date {
 export function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
+
+/**
+ * Yesterday's UTC date: the last session whose daily bar is final. Today's
+ * bar is still forming while the US market is open, and Alpaca's free plan
+ * delays SIP data by 15 minutes anyway.
+ */
+export function yesterdayUtc(): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - 1);
+  return toIsoDate(date);
+}

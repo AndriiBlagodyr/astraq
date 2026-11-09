@@ -2,11 +2,44 @@ import {
   sessionDate,
   toCandleRows,
   toCorporateActionRows,
+  toSymbolSeeds,
 } from './alpaca.mapper';
+import type { AlpacaAsset } from './alpaca.schemas';
 import { alpacaBarsPageSchema } from './alpaca.schemas';
 import { parseJsonExact } from './exact-json';
 
 describe('alpaca mapping', () => {
+  it('keeps listed, tradable equities with a routable ticker, by MIC code', () => {
+    const asset = (overrides: Partial<AlpacaAsset>): AlpacaAsset => ({
+      symbol: 'NVDA',
+      name: 'NVIDIA Corporation',
+      exchange: 'NASDAQ',
+      status: 'active',
+      class: 'us_equity',
+      tradable: true,
+      ...overrides,
+    });
+
+    expect(
+      toSymbolSeeds([
+        asset({ symbol: 'SPY', name: 'SPDR S&P 500 ETF Trust', exchange: 'ARCA' }),
+        asset({}),
+        asset({ symbol: 'BRK.B', name: '  ', exchange: 'NYSE' }),
+        // Dropped: OTC, a non-tradable listing, an inactive one, a warrant
+        // ticker with a slash, and a ticker longer than the column.
+        asset({ symbol: 'TCEHY', exchange: 'OTC' }),
+        asset({ symbol: 'HALT', tradable: false }),
+        asset({ symbol: 'GONE', status: 'inactive' }),
+        asset({ symbol: 'ABC/WS' }),
+        asset({ symbol: 'A'.repeat(17) }),
+      ]),
+    ).toEqual([
+      { ticker: 'BRK.B', name: 'BRK.B', exchange: 'XNYS' },
+      { ticker: 'NVDA', name: 'NVIDIA Corporation', exchange: 'XNAS' },
+      { ticker: 'SPY', name: 'SPDR S&P 500 ETF Trust', exchange: 'ARCX' },
+    ]);
+  });
+
   it('keeps prices as the exact source text, never a float', () => {
     // As floats, 1205.170000 would lose its scale and 121.790000000000001
     // would collapse to 121.79.

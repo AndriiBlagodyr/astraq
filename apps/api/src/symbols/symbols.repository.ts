@@ -22,12 +22,16 @@ export class SymbolsRepository {
    * match first: ticker matches (an exact ticker sorts first among them),
    * then name-only matches, each alphabetical. The web opens the top result
    * on an exact ticker, so the order is part of the contract.
+   *
+   * Without a query: the symbols that have candles. The universe holds
+   * every listed US equity, so "all symbols" would be fifty tickers
+   * starting with A; the loaded ones are the useful table.
    */
   async search(query: string | undefined): Promise<SymbolRow[]> {
     const byTicker = { ticker: 'asc' } as const;
     if (!query) {
       return this.prisma.symbol.findMany({
-        where: { active: true },
+        where: { active: true, candlesDaily: { some: {} } },
         select: summary,
         orderBy: byTicker,
         take: SEARCH_LIMIT,

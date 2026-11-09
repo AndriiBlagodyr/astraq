@@ -35,7 +35,7 @@ export const SymbolSummarySchema = z
 
 /** Query of `GET /api/symbols`. */
 export const SymbolSearchQuerySchema = z.object({
-  /** Ticker prefix or part of the name; omit to list every active symbol. */
+  /** Ticker prefix or part of the name; omit to list the symbols with candles. */
   query: z.string().trim().max(64).optional(),
 });
 

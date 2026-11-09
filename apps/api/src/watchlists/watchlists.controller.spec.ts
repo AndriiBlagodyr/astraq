@@ -7,6 +7,7 @@ import { signJwt } from '../auth/jwt';
 import { env } from '../common/env';
 import { AllExceptionsFilter } from '../common/filters/http-exception.filter';
 import { PrismaService } from '../database/prisma.service';
+import { OnDemandCandlesService } from '../market-data/on-demand-candles.service';
 import { CandlesRepository } from '../symbols/candles.repository';
 import { SymbolsRepository } from '../symbols/symbols.repository';
 import { WatchlistsModule } from './watchlists.module';
@@ -33,6 +34,7 @@ describe('WatchlistsController', () => {
   };
   const symbols = { findIdByTicker: vi.fn() };
   const candles = { findLatestCloses: vi.fn(), findRecentCloses: vi.fn() };
+  const onDemand = { ensureCandles: vi.fn() };
 
   const USER = '019a0000-0000-7000-8000-000000000001';
   const LIST = '019a0000-0000-7000-8000-0000000000aa';
@@ -57,6 +59,8 @@ describe('WatchlistsController', () => {
       .useValue(symbols)
       .overrideProvider(CandlesRepository)
       .useValue(candles)
+      .overrideProvider(OnDemandCandlesService)
+      .useValue(onDemand)
       .compile();
 
     app = module.createNestApplication();
