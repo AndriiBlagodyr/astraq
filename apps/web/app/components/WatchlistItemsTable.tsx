@@ -1,8 +1,9 @@
 "use client";
 
 import { useOptimistic, useTransition } from "react";
+import type { Route } from "next";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BarChart3, X } from "lucide-react";
 import {
   IconButton,
   Table,
@@ -158,6 +159,14 @@ export function WatchlistItemsTable({
                 )}
                 <Td className="text-right">
                   <div className="inline-flex items-center gap-0.5">
+                    <Link
+                      href={`/analysis/returns?symbol=${item.ticker}` as Route}
+                      aria-label={`${item.ticker} returns distribution`}
+                      title="Returns distribution"
+                      className="inline-flex size-9 items-center justify-center rounded-md text-muted hover:text-foreground"
+                    >
+                      <BarChart3 aria-hidden="true" className="size-4" />
+                    </Link>
                     <IconButton
                       label={`Move ${item.ticker} up`}
                       variant="ghost"

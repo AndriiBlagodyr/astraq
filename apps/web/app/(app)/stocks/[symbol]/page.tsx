@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Card, EmptyState } from "@astraq/ui";
+import { Card, EmptyState, buttonVariants } from "@astraq/ui";
 import { AddToWatchlistMenu } from "@/app/components/AddToWatchlistMenu";
 import { CandleChart } from "@/app/components/CandleChart";
 import { CustomRangePicker } from "@/app/components/CustomRangePicker";
@@ -97,7 +97,15 @@ export default async function StockPage({
               <p className="m-0 text-lg text-secondary">{summary.name}</p>
             ) : null}
           </div>
-          <AddToWatchlistMenu ticker={ticker} watchlists={watchlists} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/analysis/returns?symbol=${ticker}` as Route}
+              className={buttonVariants({ variant: "secondary" })}
+            >
+              Returns
+            </Link>
+            <AddToWatchlistMenu ticker={ticker} watchlists={watchlists} />
+          </div>
         </div>
         {last ? (
           <p className="m-0 flex flex-wrap items-center gap-3 tabular-nums">
@@ -126,8 +134,7 @@ export default async function StockPage({
             />
             <CustomRangePicker
               key={custom ? `${custom.from}/${custom.to}` : "preset"}
-              ticker={ticker}
-              adjustment={adjustment}
+              target={{ page: "stock", ticker, adjustment }}
               value={custom}
               max={today}
             />

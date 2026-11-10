@@ -18,8 +18,6 @@ const envSchema = z
     // VERCEL_GIT_COMMIT_SHA; COMMIT_SHA lets any other host pass it.
     COMMIT_SHA: z.string().trim().min(1).optional(),
     VERCEL_GIT_COMMIT_SHA: z.string().trim().min(1).optional(),
-    // Gates every page with HTTP Basic auth until Phase 2 (see proxy.ts).
-    SITE_PASSWORD: z.string().min(12).optional(),
   })
   .transform(({ VERCEL_GIT_COMMIT_SHA, ...value }) => ({
     ...value,

@@ -5,5 +5,7 @@ export const appNavigation = [
   { href: "/", label: "Today" },
   { href: "/watchlists", label: "Watchlists" },
   { href: "/stocks", label: "Stocks" },
+  // Points at the one analysis view until Phase 6 adds the /analysis index.
+  { href: "/analysis/returns", label: "Analysis" },
   { href: "/status", label: "Status" },
 ] as const;

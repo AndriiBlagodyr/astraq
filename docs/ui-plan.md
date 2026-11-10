@@ -114,7 +114,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
   - Candles plus a volume pane (`lightweight-charts`) from `GET /api/symbols/:ticker/candles?from&to&adjusted=true`.
   - A range picker (1M, 6M, 1Y, 5Y, Max, custom via `DateRangePicker`) and an adjusted / raw toggle. Split days are marked when showing raw prices.
   - The draw-in animation runs on first load only, and the crosshair tooltip shows OHLCV.
-- **Phase 2:** "Add to watchlist" in the header, and a "Returns" link to `/analysis/returns?symbol=`.
+- **Phase 2:** "Add to watchlist" in the header, and a "Returns" link to `/analysis/returns?symbol=`. Done.
 - **Phase 3:** "Trade" in the header opens the order ticket (below). Your fills show as markers on the chart. A position summary (quantity, average cost, unrealized PnL) appears when you hold the symbol.
 - **Backtests tab (Phase 5):** runs that included this symbol, plus "Backtest a strategy on this symbol". Strategy signals can be overlaid on the chart.
 - **Phase 6, on the Chart tab:** indicator overlays (SMA, EMA, Bollinger) and RSI / MACD panes with synced crosshairs. Saved chart layouts.
@@ -180,7 +180,7 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
 - `/analysis/compare`: relative performance of several symbols (rebased to 100) over a range.
 - `/analysis/watchlist/[id]`: a performance table for one watchlist.
 - `/analysis/drawdowns`: drawdown chart for a symbol or portfolio.
-- `/analysis/returns` (Phase 2): daily-returns histogram for one symbol over a range, with a normal-curve overlay and a stats table (mean, standard deviation, skew, best and worst day, share of up days). The first `d3` view; see ROADMAP Phase 2 item 7.
+- `/analysis/returns` (Phase 2): daily-returns histogram for one symbol over a range, with a normal-curve overlay and a stats table (mean, standard deviation, skew, best and worst day, share of up days). The first `d3` view; see ROADMAP Phase 2 item 7 and ADR 0007. Done: the range presets and date picker are the stock chart's, the basis toggles total return (dividends included, the default) and price only, and without a symbol the page asks for one.
 - `/analysis/seasonality`: monthly or weekday seasonality heatmap (`d3`).
 
 ### Journal — `/journal`, `/journal/[id]` (Phase 6)
@@ -247,7 +247,7 @@ Done. What the current app needed to match this plan:
 
 ## Decisions
 
-- **Public market data in Phase 1 (resolved 2026-10-09).** Today and the stock page have no auth until Phase 2, and the ROADMAP's data licensing rule says no public redistribution. The Phase 1 deploy sits behind a shared password: with `SITE_PASSWORD` set, `apps/web/proxy.ts` asks for it with HTTP Basic auth on every page. Local dev leaves it unset. Phase 2's sessions replace it. The api's own domain stays reachable without it (the web server calls it server to server); it serves JSON, not pages, and only to someone who knows the URL. Phase 2 puts the data endpoints behind auth.
+- **Public market data in Phase 1 (resolved 2026-10-09).** Today and the stock page have no auth until Phase 2, and the ROADMAP's data licensing rule says no public redistribution. The Phase 1 deploy sat behind a shared password: with `SITE_PASSWORD` set, `apps/web/proxy.ts` asked for it with HTTP Basic auth on every page. Phase 2's sessions replaced it (2026-11-09): the same file now sends visitors without a session to `/login`, and `SITE_PASSWORD` is gone. The api's own domain stays reachable without it (the web server calls it server to server); it serves JSON, not pages, and only to someone who knows the URL. Phase 2 puts the data endpoints behind auth.
 
 ## Open questions
 
