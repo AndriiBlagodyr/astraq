@@ -22,12 +22,21 @@ export type DialogContentProps = Omit<
   title: string;
   description?: string;
   className?: string;
+  /**
+   * Keep the title for assistive technology only: a command palette whose
+   * input is the obvious heading. The dialog still has an accessible name.
+   */
+  hideTitle?: boolean;
+  /** Show the top-right close button. Default true. */
+  closeButton?: boolean;
 };
 
 export function DialogContent({
   title,
   description,
   className,
+  hideTitle = false,
+  closeButton = true,
   children,
   ...props
 }: DialogContentProps) {
@@ -42,7 +51,7 @@ export function DialogContent({
         className={cn(overlay.dialog, "w-[min(92vw,34rem)]", className)}
         {...props}
       >
-        <header className="pr-10">
+        <header className={hideTitle ? "sr-only" : "pr-10"}>
           <DialogPrimitive.Title className={overlay.title}>
             {title}
           </DialogPrimitive.Title>
@@ -53,18 +62,20 @@ export function DialogContent({
           ) : null}
         </header>
         {children}
-        <DialogPrimitive.Close
-          render={
-            <IconButton
-              label="Close dialog"
-              variant="ghost"
-              size="sm"
-              className="absolute top-4 right-4"
-            >
-              <X aria-hidden="true" />
-            </IconButton>
-          }
-        />
+        {closeButton ? (
+          <DialogPrimitive.Close
+            render={
+              <IconButton
+                label="Close dialog"
+                variant="ghost"
+                size="sm"
+                className="absolute top-4 right-4"
+              >
+                <X aria-hidden="true" />
+              </IconButton>
+            }
+          />
+        ) : null}
       </DialogPrimitive.Popup>
     </DialogPrimitive.Portal>
   );

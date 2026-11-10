@@ -47,6 +47,8 @@ export type ComboboxInputProps = Omit<
   InputOptions & {
     /** Show a button that clears the value. Default true. */
     clearable?: boolean;
+    /** Show the chevron that opens the list. Default true; off for an `inline` list. */
+    trigger?: boolean;
   };
 
 export function ComboboxInput({
@@ -54,6 +56,7 @@ export function ComboboxInput({
   size,
   invalid,
   clearable = true,
+  trigger = true,
   ...props
 }: ComboboxInputProps) {
   return (
@@ -72,15 +75,17 @@ export function ComboboxInput({
           <X aria-hidden="true" />
         </ComboboxPrimitive.Clear>
       ) : null}
-      <ComboboxPrimitive.Trigger
-        aria-label="Show options"
-        className={cn(listbox.inputButton, "group/trigger")}
-      >
-        <ChevronDown
-          aria-hidden="true"
-          className="transition-transform duration-(--ds-motion-base) ease-out group-data-popup-open/trigger:rotate-180"
-        />
-      </ComboboxPrimitive.Trigger>
+      {trigger ? (
+        <ComboboxPrimitive.Trigger
+          aria-label="Show options"
+          className={cn(listbox.inputButton, "group/trigger")}
+        >
+          <ChevronDown
+            aria-hidden="true"
+            className="transition-transform duration-(--ds-motion-base) ease-out group-data-popup-open/trigger:rotate-180"
+          />
+        </ComboboxPrimitive.Trigger>
+      ) : null}
     </ComboboxPrimitive.InputGroup>
   );
 }
