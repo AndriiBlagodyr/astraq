@@ -1,5 +1,6 @@
 import type { components } from "@astraq/sdk";
 import { api, apiFailure, fresh } from "./api";
+import type { ReturnsAdjustment, ReturnSeries } from "./returns-view";
 import type { ChartAdjustment } from "./stock-chart";
 
 // Server-side reads of market data through the generated SDK. Server
@@ -42,5 +43,23 @@ export async function getDailyCandles(
   });
   if (response.status === 404) return null;
   if (!data) throw apiFailure(`Candles for ${ticker}`, response.status);
+  return data;
+}
+
+/** Daily returns with their stats, or null when the API doesn't know the ticker. */
+export async function getDailyReturns(
+  ticker: string,
+  {
+    from,
+    to,
+    adjustment,
+  }: { from?: string; to?: string; adjustment: ReturnsAdjustment }
+): Promise<ReturnSeries | null> {
+  const { data, response } = await api.GET("/api/symbols/{ticker}/returns", {
+    params: { path: { ticker }, query: { from, to, adjustment } },
+    ...fresh,
+  });
+  if (response.status === 404) return null;
+  if (!data) throw apiFailure(`Returns for ${ticker}`, response.status);
   return data;
 }
