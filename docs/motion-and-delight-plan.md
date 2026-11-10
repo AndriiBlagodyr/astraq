@@ -72,8 +72,8 @@ These ship with the roadmap phase that builds the screen they belong to. No moti
 | Prefetching | Phase 1 — done | Prefetch on hover or focus, and on viewport entry for primary links. Next's `<Link>` default does both in production; no custom code. |
 | Shared-element morphs | Phase 2 | A watchlist row morphs into the symbol detail header, using `view-transition-name`. |
 | Sparklines | Phase 2 | In watchlists. Static SVG; only the latest point animates on update. |
-| Command palette (⌘K / Ctrl+K) | Phase 2 (with symbol search) | Built in `apps/web` from `packages/ui` Dialog + Combobox. Jump to any symbol, page, or action, with fuzzy search and recent items. |
-| Keyboard shortcuts | Phase 2 | `g` then `s` goes to Stocks, `/` focuses search, `?` opens a shortcut overlay. Every shortcut is listed in the palette too. |
+| Command palette (⌘K / Ctrl+K) | Phase 2 (with symbol search) — done | Built in `apps/web` from `packages/ui` Dialog + Combobox (`CommandPalette.tsx`: the Combobox renders `inline` inside the Dialog, so the dialog's enter and exit are the only motion). Jump to any symbol, page, or action, with fuzzy search (`lib/command-palette.ts`) and recent items. |
+| Keyboard shortcuts | Phase 2 — done | `g` then `s` goes to Stocks, `/` focuses search, `?` opens a shortcut overlay. Every shortcut is listed in the palette too. Built as `lib/shortcuts.ts` (one list, a pure sequence matcher with a one-second prefix timeout) and `ShortcutsDialog.tsx`; the palette rows show each shortcut's keys with ⌘ or Ctrl by platform. |
 | Optimistic updates | Phase 2 (watchlists), Phase 3 (paper orders) | Update instantly, reconcile with the server, and roll back with a toast on failure. |
 | Drag to reorder | Phase 2 (watchlists), Phase 6 (dashboard panels) | Keyboard reordering too: Space to lift, arrows to move. |
 | Backtest as a story | Phase 5 | The equity curve draws progressively while the job runs (streamed progress), not a spinner followed by a result. |

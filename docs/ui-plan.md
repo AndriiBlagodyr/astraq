@@ -31,8 +31,8 @@ A sidebar on desktop, plus a top bar.
 | Bottom of sidebar | **Status** | `/status` | 0 (admin-only from 7) |
 
 - A group header appears only once it has an item. Until Phase 3 the sidebar is Today, Watchlists, Stocks, Analysis, and Status. Analysis points at the returns distribution until Phase 6 adds the `/analysis` index.
-- **Top bar:** symbol search (Phase 1, done: a GET form to `/stocks`), which becomes the ⌘K / Ctrl+K command palette in Phase 2 (pages, symbols, actions, recent items). After that come the theme menu (theme, mode, density) and the user menu (Settings, Sign out; Phase 2).
-- **Keyboard:** `/` focuses search, `g` + a letter jumps to a page, `?` lists the shortcuts (Phase 2, motion plan).
+- **Top bar:** symbol search (Phase 1, done: a GET form to `/stocks`), which became the ⌘K / Ctrl+K command palette in Phase 2 (done: pages, symbols, actions, recent items; the search box is now the palette's trigger, `PaletteTrigger`, and `CommandPaletteProvider` in the app layout owns the palette, the shortcut overlay, and the key listener). After that come the theme menu (theme, mode, density) and the user menu (Settings, Sign out; Phase 2).
+- **Keyboard:** `/` opens the palette with focus in its search, `g` + a letter jumps to a page (t Today, w Watchlists, s Stocks, a Analysis, u Status), `?` lists the shortcuts (Phase 2, motion plan). Done: the list and the matcher are `lib/shortcuts.ts`; plain keys are ignored inside fields, dialogs, and menus.
 - **Phone (Phase 6 mobile pass):** a bottom tab bar with Today, Watchlists, Portfolio, and Search. The rest live in a "More" sheet (`Drawer`).
 
 ### Public shell
