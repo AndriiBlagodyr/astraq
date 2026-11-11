@@ -31,7 +31,7 @@ A sidebar on desktop, plus a top bar.
 | Bottom of sidebar | **Status** | `/status` | 0 (admin-only from 7) |
 
 - A group header appears only once it has an item. Until Phase 3 the sidebar is Today, Watchlists, Stocks, Analysis, and Status. Analysis points at the returns distribution until Phase 6 adds the `/analysis` index.
-- **Top bar:** symbol search (Phase 1, done: a GET form to `/stocks`), which became the ⌘K / Ctrl+K command palette in Phase 2 (done: pages, symbols, actions, recent items; the search box is now the palette's trigger, `PaletteTrigger`, and `CommandPaletteProvider` in the app layout owns the palette, the shortcut overlay, and the key listener). After that come the theme menu (theme, mode, density) and the user menu (Settings, Sign out; Phase 2).
+- **Top bar:** symbol search (Phase 1, done: a GET form to `/stocks`), which became the ⌘K / Ctrl+K command palette in Phase 2 (done: pages, symbols, actions, recent items; the search box is now the palette's trigger, `PaletteTrigger`, and `CommandPaletteProvider` in the app layout owns the palette, the shortcut overlay, and the key listener). After it come the theme menu (theme, mode, density) and the user menu (Settings, Sign out; Phase 2). Done: `ThemeMenu` (a quick light/dark button plus a menu of mode, theme, and density radio groups) sits in both shells, and `UserMenu` (an initials avatar; Settings, Keyboard shortcuts, Sign out) in the app shell, which loads the account for it.
 - **Keyboard:** `/` opens the palette with focus in its search, `g` + a letter jumps to a page (t Today, w Watchlists, s Stocks, a Analysis, u Status), `?` lists the shortcuts (Phase 2, motion plan). Done: the list and the matcher are `lib/shortcuts.ts`; plain keys are ignored inside fields, dialogs, and menus.
 - **Phone (Phase 6 mobile pass):** a bottom tab bar with Today, Watchlists, Portfolio, and Search. The rest live in a "More" sheet (`Drawer`).
 
@@ -137,7 +137,7 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
 **For:** keeping the symbols you follow, grouped your way.
 
 - **List:** your watchlists, each with a symbol count and its best and worst movers today. Create, rename, delete (with undo).
-- **Detail:** a row per symbol with last close, day change, and a sparkline from stored candles. Add symbols by search, remove them, and reorder by drag or keyboard. A row opens the stock page with the shared-element morph, and its menu links to the symbol's returns distribution.
+- **Detail:** a row per symbol with last close, day change, and a sparkline from stored candles. Add symbols by search, remove them, and reorder by drag or keyboard (done: the row's grip; Space lifts, arrows move, Space drops, Escape cancels). A row opens the stock page with the shared-element morph (Phase 6), and its menu links to the symbol's returns distribution.
 - **Phase 6:** a watchlist performance view over a chosen range links to `/analysis/watchlist/[id]`.
 - **Phase 9:** live prices and tick flash in the rows.
 
@@ -202,8 +202,8 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
 
 | Section | Route | Phase | Does |
 |---|---|---|---|
-| Profile | `/settings` | 2 | Name, email (read-only until verification exists). |
-| Sessions | `/settings/sessions` | 2 | Signed-in devices, plus "Log out everywhere". |
+| Profile | `/settings` | 2 | Name, email (read-only until verification exists). Done: a display name form (`PATCH /api/me`), the email, and the member-since date. |
+| Sessions | `/settings/sessions` | 2 | Signed-in devices, plus "Log out everywhere". Done: one row per live session (device from its User-Agent, IP, signed in, last used), the current one marked, sign-out per device, and "Log out everywhere" behind an `AlertDialog`. |
 | Security | `/settings/security` | 7 | Change password, TOTP 2FA setup, and recovery codes. |
 | API keys | `/settings/api-keys` | 7 | Create scoped keys (shown once), list them, and revoke them. |
 

@@ -44,6 +44,9 @@ describe('buildOpenApiDocument', () => {
     const document = buildOpenApiDocument(app);
 
     expect(Object.keys(document.paths)).toEqual([
+      '/api/me',
+      '/api/me/sessions',
+      '/api/me/sessions/{id}',
       '/api/auth/register',
       '/api/auth/login',
       '/api/auth/refresh',

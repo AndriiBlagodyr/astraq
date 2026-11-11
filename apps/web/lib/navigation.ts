@@ -8,6 +8,8 @@ export const appNavigation = [
   { href: "/stocks", label: "Stocks", key: "s" },
   // Points at the one analysis view until Phase 6 adds the /analysis index.
   { href: "/analysis/returns", label: "Analysis", key: "a" },
+  // Bottom of the sidebar: the account, then the system.
+  { href: "/settings", label: "Settings", key: "e" },
   { href: "/status", label: "Status", key: "u" },
 ] as const;
 
