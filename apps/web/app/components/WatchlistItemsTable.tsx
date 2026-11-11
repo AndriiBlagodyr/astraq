@@ -1,9 +1,17 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import {
+  useId,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import type { Route } from "next";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, BarChart3, X } from "lucide-react";
+import { BarChart3, GripVertical, X } from "lucide-react";
 import {
   IconButton,
   Table,
@@ -14,9 +22,16 @@ import {
   Th,
   Thead,
   Tr,
+  cn,
   useToastManager,
 } from "@astraq/ui";
 import { removeSymbol, reorderWatchlist } from "@/app/(app)/watchlists/actions";
+import {
+  dropIndex,
+  moveItem,
+  reorderAnnouncement,
+  stepIndex,
+} from "@/lib/reorder";
 import { sessionChange } from "@/lib/stock-chart";
 import type { WatchlistItem } from "@/lib/watchlists";
 import { DayChange } from "./DayChange";
@@ -24,26 +39,45 @@ import { Sparkline } from "./Sparkline";
 
 type Change =
   | { kind: "remove"; ticker: string }
-  | { kind: "move"; ticker: string; by: -1 | 1 };
+  | { kind: "order"; tickers: string[] };
 
 /** The list after one change, for the optimistic copy; the api does the same. */
 function apply(items: WatchlistItem[], change: Change): WatchlistItem[] {
-  const index = items.findIndex((item) => item.ticker === change.ticker);
-  if (index === -1) return items;
-  if (change.kind === "remove") return items.toSpliced(index, 1);
-  const target = index + change.by;
-  if (target < 0 || target >= items.length) return items;
-  const next = items.slice();
-  [next[index], next[target]] = [next[target]!, next[index]!];
-  return next;
+  if (change.kind === "remove") {
+    return items.filter((item) => item.ticker !== change.ticker);
+  }
+  const byTicker = new Map(items.map((item) => [item.ticker, item]));
+  const ordered = change.tickers.flatMap((ticker) => {
+    const item = byTicker.get(ticker);
+    return item ? [item] : [];
+  });
+  return ordered.length === items.length ? ordered : items;
+}
+
+/** A row being moved: by the pointer, or lifted with the keyboard. */
+type Drag = {
+  ticker: string;
+  /** The preview order, shown while the drag lasts. */
+  order: string[];
+  mode: "pointer" | "keyboard";
+};
+
+function sameOrder(a: readonly string[], b: readonly string[]): boolean {
+  return (
+    a.length === b.length && a.every((ticker, index) => ticker === b[index])
+  );
 }
 
 /**
  * The rows of one watchlist. Removing and reordering show at once through
  * `useOptimistic` and settle when the server action's revalidation brings
- * the real list; a failure snaps back and says why in a toast. Reordering
- * is by the row's arrows (keyboard-friendly); drag comes with the motion
- * plan's Phase 2 row.
+ * the real list; a failure snaps back and says why in a toast.
+ *
+ * Reordering (motion plan "Drag to reorder"): the grip drags with the
+ * pointer, the rows making way as it passes their midpoints; with the
+ * keyboard, Space lifts the row, the arrows move it, Space drops it, and
+ * Escape puts it back, each step read out by a live region. Both end in
+ * the same `commit`, one reorder call with the whole order.
  */
 export function WatchlistItemsTable({
   watchlistId,
@@ -55,24 +89,34 @@ export function WatchlistItemsTable({
   const toast = useToastManager();
   const [, startTransition] = useTransition();
   const [visible, applyChange] = useOptimistic(items, apply);
+  const [drag, setDrag] = useState<Drag | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+  const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  const instructionsId = useId();
 
   function fail(error: string) {
     toast.add({ title: error, type: "danger", priority: "high" });
   }
 
-  function move(ticker: string, by: -1 | 1) {
-    const order = apply(visible, { kind: "move", ticker, by }).map(
-      (item) => item.ticker
-    );
+  const currentOrder = visible.map((item) => item.ticker);
+  const rows = drag
+    ? drag.order.flatMap((ticker) => {
+        const item = visible.find((row) => row.ticker === ticker);
+        return item ? [item] : [];
+      })
+    : visible;
+
+  function commit(order: string[]) {
+    if (sameOrder(order, currentOrder)) return;
     startTransition(async () => {
-      applyChange({ kind: "move", ticker, by });
+      applyChange({ kind: "order", tickers: order });
       const result = await reorderWatchlist(watchlistId, order);
       if (!result.ok) fail(result.error);
     });
   }
 
   function remove(ticker: string) {
-    const order = visible.map((item) => item.ticker);
+    const order = currentOrder;
     startTransition(async () => {
       applyChange({ kind: "remove", ticker });
       const result = await removeSymbol(watchlistId, ticker);
@@ -99,14 +143,126 @@ export function WatchlistItemsTable({
     });
   }
 
+  // Pointer drag: the grip captures the pointer, so moves keep arriving
+  // wherever it goes; the row under the pointer is found from the rows'
+  // on-screen midpoints in their preview order.
+  function onPointerDown(
+    event: PointerEvent<HTMLButtonElement>,
+    ticker: string
+  ) {
+    if (event.button !== 0 || drag) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDrag({ ticker, order: currentOrder, mode: "pointer" });
+  }
+
+  function onPointerMove(event: PointerEvent<HTMLButtonElement>) {
+    if (!drag || drag.mode !== "pointer") return;
+    const midpoints = drag.order.map((ticker) => {
+      const rect = rowRefs.current.get(ticker)?.getBoundingClientRect();
+      return rect ? rect.top + rect.height / 2 : Number.NaN;
+    });
+    const from = drag.order.indexOf(drag.ticker);
+    const to = dropIndex(midpoints, from, event.clientY);
+    if (to !== from)
+      setDrag({ ...drag, order: moveItem(drag.order, from, to) });
+  }
+
+  function onPointerUp() {
+    if (!drag || drag.mode !== "pointer") return;
+    setDrag(null);
+    commit(drag.order);
+  }
+
+  function onPointerCancel() {
+    if (drag?.mode === "pointer") setDrag(null);
+  }
+
+  // Keyboard: Space lifts and drops, arrows move the lifted row, Escape
+  // cancels, and losing focus while lifted cancels too.
+  function onKeyDown(event: KeyboardEvent<HTMLButtonElement>, ticker: string) {
+    const count = visible.length;
+    const lifted = drag?.mode === "keyboard" && drag.ticker === ticker;
+
+    if (event.key === " " || event.key === "Enter") {
+      event.preventDefault();
+      if (!lifted) {
+        setDrag({ ticker, order: currentOrder, mode: "keyboard" });
+        setAnnouncement(
+          reorderAnnouncement({
+            kind: "lift",
+            label: ticker,
+            position: currentOrder.indexOf(ticker) + 1,
+            count,
+          })
+        );
+        return;
+      }
+      setDrag(null);
+      setAnnouncement(
+        reorderAnnouncement({
+          kind: "drop",
+          label: ticker,
+          position: drag.order.indexOf(ticker) + 1,
+          count,
+        })
+      );
+      commit(drag.order);
+      return;
+    }
+
+    if (!lifted) return;
+
+    if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const from = drag.order.indexOf(ticker);
+      const to = stepIndex(from, event.key === "ArrowUp" ? -1 : 1, count);
+      if (to === from) return;
+      setDrag({ ...drag, order: moveItem(drag.order, from, to) });
+      setAnnouncement(
+        reorderAnnouncement({
+          kind: "move",
+          label: ticker,
+          position: to + 1,
+          count,
+        })
+      );
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      setDrag(null);
+      setAnnouncement(reorderAnnouncement({ kind: "cancel", label: ticker }));
+    }
+  }
+
+  function onBlur(ticker: string) {
+    if (drag?.mode === "keyboard" && drag.ticker === ticker) {
+      setDrag(null);
+      setAnnouncement(reorderAnnouncement({ kind: "cancel", label: ticker }));
+    }
+  }
+
   return (
     <TableWrap>
+      <p id={instructionsId} className="sr-only">
+        Press Space to lift a row, the arrow keys to move it, Space again to
+        drop it, and Escape to put it back.
+      </p>
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {announcement}
+      </div>
       <Table>
         <TableCaption className="sr-only">
           Symbols on this watchlist, in your order
         </TableCaption>
         <Thead>
           <Tr>
+            <Th>
+              <span className="sr-only">Reorder</span>
+            </Th>
             <Th>Ticker</Th>
             <Th>Name</Th>
             <Th className="text-right">Last close</Th>
@@ -119,12 +275,48 @@ export function WatchlistItemsTable({
           </Tr>
         </Thead>
         <Tbody>
-          {visible.map((item, index) => {
+          {rows.map((item) => {
             const session = item.latestClose
               ? sessionChange(item.latestClose)
               : null;
+            const dragging = drag?.ticker === item.ticker;
             return (
-              <Tr key={item.ticker}>
+              <Tr
+                key={item.ticker}
+                ref={(node) => {
+                  if (node) rowRefs.current.set(item.ticker, node);
+                  else rowRefs.current.delete(item.ticker);
+                }}
+                data-dragging={dragging || undefined}
+                className={cn(
+                  dragging &&
+                    "relative z-10 bg-brand/10 shadow-soft outline-2 outline-offset-[-2px] outline-focus-ring"
+                )}
+              >
+                <Td className="w-10 pr-0">
+                  <button
+                    type="button"
+                    aria-label={`Reorder ${item.ticker}`}
+                    aria-describedby={instructionsId}
+                    aria-pressed={
+                      drag?.mode === "keyboard" && dragging ? true : undefined
+                    }
+                    onPointerDown={(event) => onPointerDown(event, item.ticker)}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUp}
+                    onPointerCancel={onPointerCancel}
+                    onLostPointerCapture={onPointerCancel}
+                    onKeyDown={(event) => onKeyDown(event, item.ticker)}
+                    onBlur={() => onBlur(item.ticker)}
+                    className={cn(
+                      "inline-flex size-8 cursor-grab touch-none items-center justify-center rounded-md text-muted",
+                      "hover:bg-surface-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                      dragging && "cursor-grabbing text-foreground"
+                    )}
+                  >
+                    <GripVertical aria-hidden="true" className="size-4" />
+                  </button>
+                </Td>
                 <Td>
                   <Link
                     href={`/stocks/${item.ticker}`}
@@ -167,24 +359,6 @@ export function WatchlistItemsTable({
                     >
                       <BarChart3 aria-hidden="true" className="size-4" />
                     </Link>
-                    <IconButton
-                      label={`Move ${item.ticker} up`}
-                      variant="ghost"
-                      size="sm"
-                      aria-disabled={index === 0 || undefined}
-                      onClick={() => move(item.ticker, -1)}
-                    >
-                      <ArrowUp aria-hidden="true" />
-                    </IconButton>
-                    <IconButton
-                      label={`Move ${item.ticker} down`}
-                      variant="ghost"
-                      size="sm"
-                      aria-disabled={index === visible.length - 1 || undefined}
-                      onClick={() => move(item.ticker, 1)}
-                    >
-                      <ArrowDown aria-hidden="true" />
-                    </IconButton>
                     <IconButton
                       label={`Remove ${item.ticker}`}
                       variant="ghost"

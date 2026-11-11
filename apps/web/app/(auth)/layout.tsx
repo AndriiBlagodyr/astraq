@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Card } from "@astraq/ui";
 import { VeracandLogo } from "@/app/components/VeracandLogo";
-import { ThemeToggle } from "@/app/components/ThemeToggle";
+import { ThemeMenu } from "@/app/components/ThemeMenu";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -18,7 +18,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               Veracand
             </span>
           </Link>
-          <ThemeToggle />
+          <ThemeMenu />
         </Card>
       </header>
 

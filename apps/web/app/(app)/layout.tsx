@@ -5,10 +5,20 @@ import { AppNavigation } from "@/app/components/AppNavigation";
 import { CommandPaletteProvider } from "@/app/components/CommandPalette";
 import { PaletteTrigger } from "@/app/components/PaletteTrigger";
 import { RouteTransition } from "@/app/components/RouteTransition";
+import { ThemeMenu } from "@/app/components/ThemeMenu";
+import { UserMenu } from "@/app/components/UserMenu";
 import { VeracandLogo } from "@/app/components/VeracandLogo";
-import { ThemeToggle } from "@/app/components/ThemeToggle";
+import { getAccount } from "@/lib/account";
 
-export default function ProductLayout({ children }: { children: ReactNode }) {
+// The signed-in shell. It loads the account for the user menu, so a page
+// behind it always has a session (userApi sends a visitor to /login).
+export default async function ProductLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const account = await getAccount();
+
   return (
     // The provider owns the ⌘K palette, the `?` overlay, and the key listener.
     <CommandPaletteProvider>
@@ -36,7 +46,10 @@ export default function ProductLayout({ children }: { children: ReactNode }) {
           <header>
             <Card className="flex items-center justify-between gap-4 px-4 py-3">
               <PaletteTrigger />
-              <ThemeToggle />
+              <div className="flex items-center gap-3">
+                <ThemeMenu />
+                <UserMenu account={account} />
+              </div>
             </Card>
           </header>
 
