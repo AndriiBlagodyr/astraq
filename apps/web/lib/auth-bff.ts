@@ -3,9 +3,13 @@ import { problemDetail } from "./api";
 import {
   type AuthTokens,
   COOKIE_ACCESS,
+  COOKIE_REFRESH,
   clearAuthCookies,
+  isAccessTokenFresh,
   setAuthCookies,
 } from "./auth-cookies";
+import { refreshSession } from "./auth-refresh";
+import { bffHeaders, clientIpFrom } from "./bff-headers";
 import { env } from "./env";
 
 // Shared by the sign-in and registration route handlers: both forward the
@@ -38,16 +42,13 @@ export async function forwardCredentials(
     );
   }
 
-  // The api's rate limiter keys on this header; without it every user
-  // behind the web server would share one bucket.
-  const clientIp =
-    request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip");
-
   const upstream = await fetch(`${env.API_URL}/api/auth/${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(clientIp ? { "X-Forwarded-For": clientIp } : {}),
+      // The api's rate limiter keys on the browser's address; without
+      // these every user behind the web server would share one bucket.
+      ...bffHeaders(clientIpFrom(request.headers)),
     },
     body: JSON.stringify(body),
   });
@@ -68,19 +69,53 @@ export async function forwardCredentials(
   return response;
 }
 
-/** Revokes the session (or every session) at the api, then clears the cookies. */
+/**
+ * Revokes the session (or every session) at the api, then clears the cookies.
+ *
+ * proxy.ts skips /api/auth/*, so nothing has refreshed the access token for
+ * this request, and the browser drops that cookie after 10 minutes. Without
+ * the refresh below, signing out from a tab that sat idle would clear the
+ * cookies and leave the session (or all of them) alive at the api.
+ */
 export async function forwardSignOut(
   request: NextRequest,
   path: "logout" | "logout-all"
 ): Promise<NextResponse> {
-  const accessToken = request.cookies.get(COOKIE_ACCESS)?.value;
-  if (accessToken) {
-    // Best effort: the cookies go regardless of whether the api answered.
-    await fetch(`${env.API_URL}/api/auth/${path}`, {
+  let accessToken = request.cookies.get(COOKIE_ACCESS)?.value;
+  const refreshToken = request.cookies.get(COOKIE_REFRESH)?.value;
+  // "rejected" means this session is already over at the api.
+  let sessionOver = !accessToken && !refreshToken;
+
+  if ((!accessToken || !isAccessTokenFresh(accessToken)) && refreshToken) {
+    const refreshed = await refreshSession(env.API_URL, refreshToken);
+    if (refreshed.kind === "ok") accessToken = refreshed.tokens.accessToken;
+    else if (refreshed.kind === "rejected") sessionOver = true;
+  }
+
+  let revoked = false;
+  if (accessToken && !sessionOver) {
+    revoked = await fetch(`${env.API_URL}/api/auth/${path}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
-    }).catch(() => undefined);
+    }).then(
+      (upstream) => upstream.ok,
+      () => false
+    );
   }
+
+  // "Log out everywhere" is a promise about other devices, so it must not
+  // report success unless the api revoked them. A plain sign-out stays best
+  // effort: this device loses its cookies whether or not the api answered.
+  if (path === "logout-all" && !revoked) {
+    const response = NextResponse.json(
+      { error: "Couldn't sign out everywhere" },
+      { status: sessionOver ? 401 : 502 }
+    );
+    // A dead session can't be used to revoke the others; sign in again first.
+    if (sessionOver) clearAuthCookies(response);
+    return response;
+  }
+
   const response = NextResponse.json({ ok: true });
   clearAuthCookies(response);
   return response;

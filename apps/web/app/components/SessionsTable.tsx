@@ -19,6 +19,9 @@ import { revokeSession } from "@/app/(app)/settings/actions";
 import type { AccountSession } from "@/lib/account";
 import { describeUserAgent } from "@/lib/sessions";
 
+// Formatted in the viewer's time zone, so the server's text (its own zone)
+// can differ from the browser's: the <time> elements below opt out of the
+// hydration check, and React keeps the browser's text after hydration.
 const when = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
   timeStyle: "short",
@@ -96,12 +99,12 @@ export function SessionsTable({ sessions }: { sessions: AccountSession[] }) {
                 {session.ip ?? "—"}
               </Td>
               <Td className="text-sm text-muted">
-                <time dateTime={session.createdAt}>
+                <time dateTime={session.createdAt} suppressHydrationWarning>
                   {when.format(new Date(session.createdAt))}
                 </time>
               </Td>
               <Td className="text-sm text-muted">
-                <time dateTime={session.lastUsedAt}>
+                <time dateTime={session.lastUsedAt} suppressHydrationWarning>
                   {when.format(new Date(session.lastUsedAt))}
                 </time>
               </Td>

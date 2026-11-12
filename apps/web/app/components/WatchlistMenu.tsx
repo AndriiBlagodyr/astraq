@@ -66,10 +66,17 @@ export function WatchlistMenu({ id, name, afterDelete }: WatchlistMenuProps) {
             startTransition(async () => {
               const restored = await restoreWatchlist(snapshot);
               if (restored.ok) {
-                toast.add({
-                  title: `Restored ${snapshot.name}`,
-                  type: "success",
-                });
+                const { missing } = restored.value;
+                toast.add(
+                  missing.length === 0
+                    ? { title: `Restored ${snapshot.name}`, type: "success" }
+                    : {
+                        title: `Restored ${snapshot.name}, but not every symbol`,
+                        description: `Couldn't add back ${missing.join(", ")}.`,
+                        type: "danger",
+                        priority: "high",
+                      }
+                );
                 router.refresh();
               } else {
                 toast.add({

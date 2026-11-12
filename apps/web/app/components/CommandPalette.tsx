@@ -167,8 +167,25 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     router.refresh();
   }, [router, toast]);
 
+  // A command whose target is a field on the page already open ("New
+  // watchlist" on /watchlists): nothing remounts, so nothing would focus
+  // it. The dialog hands focus to that element when it closes, instead of
+  // back to the search box.
+  const focusOnClose = useRef<string | null>(null);
+  const finalFocus = useCallback(() => {
+    const id = focusOnClose.current;
+    focusOnClose.current = null;
+    return (id ? document.getElementById(id) : null) ?? true;
+  }, []);
+
   const run = useCallback(
     (command: PaletteCommand) => {
+      if (command.href) {
+        const [path, hash] = command.href.split("#");
+        if (hash && path === window.location.pathname) {
+          focusOnClose.current = hash;
+        }
+      }
       setPaletteOpen(false);
       if (command.href) {
         saveRecent(rememberRecent(recent, command));
@@ -262,6 +279,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
         actions={actionCommands({ mode, nextTheme })}
         apple={apple}
         onRun={run}
+        finalFocus={finalFocus}
       />
       <ShortcutsDialog
         open={shortcutsOpen}
@@ -279,6 +297,8 @@ type CommandPaletteDialogProps = {
   actions: readonly PaletteCommand[];
   apple: boolean;
   onRun: (command: PaletteCommand) => void;
+  /** Where focus goes when the dialog closes; `true` is back to the trigger. */
+  finalFocus: () => HTMLElement | true;
 };
 
 function CommandPaletteDialog({
@@ -288,6 +308,7 @@ function CommandPaletteDialog({
   actions,
   apple,
   onRun,
+  finalFocus,
 }: CommandPaletteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -296,6 +317,7 @@ function CommandPaletteDialog({
         description="Search symbols and pages, or run an action."
         hideTitle
         closeButton={false}
+        finalFocus={finalFocus}
         className="top-[max(1rem,12dvh)] w-[min(92vw,38rem)] translate-y-0 gap-0 overflow-hidden p-0"
       >
         {/* Mounted per opening, so the query and results start clean each time. */}
@@ -317,7 +339,7 @@ function PaletteSearch({
   actions,
   apple,
   onRun,
-}: Omit<CommandPaletteDialogProps, "open" | "onOpenChange">) {
+}: Omit<CommandPaletteDialogProps, "open" | "onOpenChange" | "finalFocus">) {
   const [query, setQuery] = useState("");
   // The last answer and the query it answers. The list shows it only while
   // the query still matches, and "searching" is simply "no answer yet".

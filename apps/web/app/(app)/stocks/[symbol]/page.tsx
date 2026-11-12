@@ -7,12 +7,14 @@ import { CandleChart } from "@/app/components/CandleChart";
 import { CustomRangePicker } from "@/app/components/CustomRangePicker";
 import { DayChange } from "@/app/components/DayChange";
 import { PillLinks } from "@/app/components/PillLinks";
+import { RecordStockView } from "@/app/components/RecentStocks";
 import { findSymbol, getDailyCandles } from "@/lib/market-data";
 import { listWatchlists } from "@/lib/watchlists";
 import {
   chartAdjustments,
   chartHref,
   chartRanges,
+  formatPrice,
   marketDate,
   parseChartParams,
   rangeStart,
@@ -81,6 +83,7 @@ export default async function StockPage({
 
   return (
     <main className="grid gap-5">
+      <RecordStockView ticker={ticker} name={summary?.name ?? null} />
       <Card className="grid gap-3 p-7">
         <p className="m-0 text-sm text-muted">
           <Link href="/stocks" className="underline-offset-4 hover:underline">
@@ -110,7 +113,7 @@ export default async function StockPage({
         {last ? (
           <p className="m-0 flex flex-wrap items-center gap-3 tabular-nums">
             <span className="text-2xl font-semibold text-foreground">
-              {last.close}
+              {formatPrice(last.close)}
             </span>
             <DayChange session={last} />
             <span className="text-sm text-muted">

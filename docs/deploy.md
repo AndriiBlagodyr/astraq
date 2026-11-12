@@ -32,6 +32,7 @@ Create one Railway project (`veracand`) with two services, in the same region yo
    | `DATABASE_URL` | `postgres://veracand:${{timescaledb.POSTGRES_PASSWORD}}@timescaledb.railway.internal:5432/veracand` |
    | `CORS_ORIGINS` | the Vercel production origin, e.g. `https://veracand.vercel.app` (no trailing slash) |
    | `LOG_LEVEL` | `info` |
+   | `BFF_SHARED_SECRET` | a long random string (32 characters or more), marked **sealed**; the same value goes to Vercel. With it the api rate-limits per browser. Without it every user shares the web server's bucket: ten failed sign-ins by anyone block sign-in for all |
    | `ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY` | Alpaca keys, marked **sealed**. The loaders need them; the api uses them to load a newly watched symbol's candles |
 
    `NODE_ENV=production` is baked into the image. Railway sets `PORT`, and `RAILWAY_GIT_COMMIT_SHA`, which `/health` reports as `version`.
@@ -64,6 +65,7 @@ Both are idempotent: rerun the first to pick up listings and delistings, the sec
    |---|---|
    | `API_URL` | the Railway API domain, e.g. `https://api-production-xxxx.up.railway.app` |
    | `NEXT_PUBLIC_APP_URL` | the Vercel production URL |
+   | `BFF_SHARED_SECRET` | the same value as on the api, marked **Sensitive** |
 
    Every page needs a session (`apps/web/proxy.ts` sends visitors to `/login`), and registration is invite-only through the api's `INVITE_EMAILS`, so provider data never sits on a public URL ([ui-plan § Decisions](ui-plan.md#decisions)). The Phase 1 `SITE_PASSWORD` gate is gone.
 

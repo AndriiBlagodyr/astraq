@@ -6,4 +6,6 @@ export const LOCAL_DEFAULTS = {
   REDIS_URL: 'redis://localhost:6379',
   CORS_ORIGINS: 'http://localhost:3000',
   JWT_SECRET: 'dev-secret-at-least-32-bytes-long!',
+  // The same literal is the web's local default (apps/web/lib/env.ts).
+  BFF_SHARED_SECRET: 'dev-bff-secret-at-least-32-bytes-long',
 } as const;

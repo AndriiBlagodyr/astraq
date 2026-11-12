@@ -421,6 +421,7 @@
             "in": "query",
             "schema": {
               "maxLength": 64,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]*$",
               "type": "string"
             }
           }
@@ -563,7 +564,11 @@
             "in": "query",
             "schema": {
               "default": "all",
-              "$ref": "#/components/schemas/Adjustment"
+              "type": "string",
+              "enum": [
+                "split",
+                "all"
+              ]
             }
           }
         ],
@@ -1111,7 +1116,7 @@
           "name": {
             "type": "string",
             "maxLength": 80,
-            "pattern": "^[^\\r\\n\\t]*$"
+            "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
           }
         },
         "required": [
@@ -1629,7 +1634,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 64,
-            "pattern": "^[^\\r\\n\\t]+$"
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
           }
         },
         "required": [

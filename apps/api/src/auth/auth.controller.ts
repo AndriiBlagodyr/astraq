@@ -7,7 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, hours, minutes } from '@nestjs/throttler';
 import { ZodResponse } from 'nestjs-zod';
 import type { Request } from 'express';
 import { ApiProblemResponses } from '../common/problem';
@@ -23,7 +23,7 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(201)
-  @Throttle({ default: { limit: 5, ttl: 3600 } })
+  @Throttle({ default: { limit: 5, ttl: hours(1) } })
   @ApiOperation({ operationId: 'register', summary: 'Register with an invited email' })
   @ZodResponse({ status: 201, type: AuthTokensDto })
   register(@Body() body: RegisterBodyDto, @Req() req: Request) {
@@ -35,7 +35,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
-  @Throttle({ default: { limit: 10, ttl: 900 } })
+  @Throttle({ default: { limit: 10, ttl: minutes(15) } })
   @ApiOperation({ operationId: 'login', summary: 'Sign in with email and password' })
   @ZodResponse({ status: 200, type: AuthTokensDto })
   login(@Body() body: LoginBodyDto, @Req() req: Request) {

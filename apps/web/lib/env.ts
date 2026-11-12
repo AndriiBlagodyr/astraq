@@ -14,6 +14,10 @@ const envSchema = z
     // Unset in production until the ML service deploys; /status then lists it
     // as not deployed. `pnpm dev` runs it locally, hence the default there.
     ML_URL: z.url().optional(),
+    // Shared with the api: sent with every call so the api rate-limits per
+    // browser instead of per web server (lib/bff-headers.ts). The local
+    // default matches the api's.
+    BFF_SHARED_SECRET: z.string().min(32).optional(),
     // The deployed commit, shown on /status. Vercel sets
     // VERCEL_GIT_COMMIT_SHA; COMMIT_SHA lets any other host pass it.
     COMMIT_SHA: z.string().trim().min(1).optional(),
@@ -24,6 +28,11 @@ const envSchema = z
     ML_URL:
       value.ML_URL ??
       (value.NODE_ENV === "production" ? null : "http://localhost:8000"),
+    BFF_SHARED_SECRET:
+      value.BFF_SHARED_SECRET ??
+      (value.NODE_ENV === "production"
+        ? null
+        : "dev-bff-secret-at-least-32-bytes-long"),
     COMMIT_SHA: value.COMMIT_SHA ?? VERCEL_GIT_COMMIT_SHA ?? null,
   }));
 

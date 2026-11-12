@@ -9,7 +9,7 @@ const watchlistName = z
   .trim()
   .min(1, "Name is required")
   .max(64, "At most 64 characters")
-  .regex(/^[^\r\n\t]+$/, "One line");
+  .regex(/^[^\u0000-\u001f\u007f]+$/, "One line, no control characters");
 
 /** Path of `/api/watchlists/{id}/...`. Watchlist ids are UUIDs. */
 export const WatchlistIdParamSchema = z.object({

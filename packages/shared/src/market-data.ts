@@ -45,7 +45,13 @@ export const SymbolSummarySchema = z
 /** Query of `GET /api/symbols`. */
 export const SymbolSearchQuerySchema = z.object({
   /** Ticker prefix or part of the name; omit to list the symbols with candles. */
-  query: z.string().trim().max(64).optional(),
+  query: z
+    .string()
+    .trim()
+    .max(64)
+    // Postgres text rejects NUL; refuse control characters here (400, not 500).
+    .regex(/^[^\u0000-\u001f\u007f]*$/)
+    .optional(),
 });
 
 /**
@@ -131,7 +137,9 @@ export const ReturnsQuerySchema = orderedRange(
   z.object({
     from: z.iso.date().optional(),
     to: z.iso.date().optional(),
-    adjustment: AdjustmentSchema.default("all"),
+    // No `raw`: an unadjusted split day reads as a -90% return and wrecks
+    // every statistic.
+    adjustment: AdjustmentSchema.exclude(["raw"]).default("all"),
   }),
 );
 

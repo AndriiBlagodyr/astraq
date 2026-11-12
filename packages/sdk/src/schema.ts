@@ -886,7 +886,7 @@ export interface operations {
             query?: {
                 from?: string;
                 to?: string;
-                adjustment?: components["schemas"]["Adjustment"];
+                adjustment?: "split" | "all";
             };
             header?: never;
             path: {

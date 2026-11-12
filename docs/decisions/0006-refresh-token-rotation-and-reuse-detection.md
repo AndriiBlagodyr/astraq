@@ -62,7 +62,7 @@ So a token rotated less than 10 seconds ago can be exchanged again. It gets its 
 
 ### 4. Passwords
 
-- **Argon2id** from `node:crypto` (`crypto.argon2`, Node 24.7 and later; the repo pins Node 24 in `.nvmrc`, CI, and the api image). No native dependency to build. If that API changes before it's stable, `@node-rs/argon2` is the drop-in fallback.
+- **Argon2id** from `@node-rs/argon2` (`apps/api/src/auth/password.ts`), a prebuilt native binding. `node:crypto` has its own (`crypto.argon2`, Node 24.7 and later), still experimental when this was built; it's the replacement once stable, and the stored PHC strings work with either.
 - OWASP's minimum: 19 MiB memory, 2 iterations, parallelism 1, a 16-byte random salt. Stored as a PHC string (`$argon2id$v=19$m=19456,t=2,p=1$...`), so the parameters can be raised later: a login that verifies against old parameters rehashes the password.
 - Passwords are 12 to 128 characters. No composition rules (NIST SP 800-63B).
 - A login with an unknown email still runs one Argon2 verification against a fixed dummy hash, so its response time doesn't reveal which emails exist. Errors never do either: "Email or password is incorrect".

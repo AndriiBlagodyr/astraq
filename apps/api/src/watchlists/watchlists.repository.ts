@@ -216,16 +216,24 @@ export class WatchlistsRepository {
     });
   }
 
+  /**
+   * The ownership check, which also locks the list's row until the
+   * transaction ends. Add, remove, and reorder all start here, so they run
+   * one at a time per list: a reorder can't validate its permutation and
+   * then meet a row that an add committed in between (a NULL position), and
+   * two adds can't both take the same next position.
+   */
   private async assertOwned(
     tx: Prisma.TransactionClient,
     userId: string,
     id: string,
   ) {
-    const owned = await tx.watchlist.findFirst({
-      where: { id, userId },
-      select: { id: true },
-    });
-    if (!owned) throw new WatchlistNotFoundError(id);
+    const owned = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM watchlists
+      WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+      FOR UPDATE
+    `;
+    if (owned.length === 0) throw new WatchlistNotFoundError(id);
   }
 
   /** Item changes count as changes to the list. */

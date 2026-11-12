@@ -65,13 +65,7 @@ export function LoginForm() {
         Sign in
       </Button>
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
-        <Link
-          href="/forgot-password"
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
-        >
-          Forgot password?
-        </Link>
+      <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-5">
         <Link href="/register" className={buttonVariants({ variant: "secondary", size: "sm" })}>
           Create account
         </Link>
