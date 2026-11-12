@@ -85,11 +85,18 @@ export async function forwardSignOut(
   const refreshToken = request.cookies.get(COOKIE_REFRESH)?.value;
   // "rejected" means this session is already over at the api.
   let sessionOver = !accessToken && !refreshToken;
+  // The pair a refresh below returned. That refresh spent the cookie's
+  // refresh token, so a response that leaves the user signed in must carry
+  // the new pair: the old token, sent again, reads as reuse at the api and
+  // revokes the session.
+  let rotated: AuthTokens | null = null;
 
   if ((!accessToken || !isAccessTokenFresh(accessToken)) && refreshToken) {
     const refreshed = await refreshSession(env.API_URL, refreshToken);
-    if (refreshed.kind === "ok") accessToken = refreshed.tokens.accessToken;
-    else if (refreshed.kind === "rejected") sessionOver = true;
+    if (refreshed.kind === "ok") {
+      rotated = refreshed.tokens;
+      accessToken = rotated.accessToken;
+    } else if (refreshed.kind === "rejected") sessionOver = true;
   }
 
   let revoked = false;
@@ -113,6 +120,7 @@ export async function forwardSignOut(
     );
     // A dead session can't be used to revoke the others; sign in again first.
     if (sessionOver) clearAuthCookies(response);
+    else if (rotated) setAuthCookies(response, rotated);
     return response;
   }
 

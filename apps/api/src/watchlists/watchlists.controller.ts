@@ -40,7 +40,7 @@ export class WatchlistsController {
   @Get()
   @ApiOperation({
     operationId: 'listWatchlists',
-    summary: "The user's watchlists, in their order",
+    summary: "The user's watchlists in their order, each with its movers",
   })
   @ZodResponse({ status: 200, type: WatchlistListDto })
   list(@Req() req: AuthenticatedRequest) {

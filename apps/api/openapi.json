@@ -631,7 +631,7 @@
             "bearer": []
           }
         ],
-        "summary": "The user's watchlists, in their order",
+        "summary": "The user's watchlists in their order, each with its movers",
         "tags": [
           "watchlists"
         ]
@@ -1592,6 +1592,9 @@
             "minimum": 0,
             "maximum": 9007199254740991
           },
+          "movers": {
+            "$ref": "#/components/schemas/WatchlistMovers_Output"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -1607,8 +1610,55 @@
           "id",
           "name",
           "symbolCount",
+          "movers",
           "createdAt",
           "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "WatchlistMovers_Output": {
+        "type": "object",
+        "properties": {
+          "best": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WatchlistMover_Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "worst": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WatchlistMover_Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "best",
+          "worst"
+        ],
+        "additionalProperties": false
+      },
+      "WatchlistMover_Output": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string"
+          },
+          "latestClose": {
+            "$ref": "#/components/schemas/LatestClose_Output"
+          }
+        },
+        "required": [
+          "ticker",
+          "latestClose"
         ],
         "additionalProperties": false
       },

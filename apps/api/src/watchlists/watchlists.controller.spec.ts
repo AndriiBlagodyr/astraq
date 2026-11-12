@@ -23,6 +23,7 @@ describe('WatchlistsController', () => {
   let app: INestApplication;
   const watchlists = {
     findAll: vi.fn(),
+    findAllItems: vi.fn(),
     findOne: vi.fn(),
     findItems: vi.fn(),
     create: vi.fn(),
@@ -76,6 +77,7 @@ describe('WatchlistsController', () => {
     vi.resetAllMocks();
     candles.findLatestCloses.mockResolvedValue(new Map());
     candles.findRecentCloses.mockResolvedValue(new Map());
+    watchlists.findAllItems.mockResolvedValue([]);
   });
 
   it('rejects requests without a bearer token', async () => {
@@ -85,6 +87,18 @@ describe('WatchlistsController', () => {
 
   it('lists the signed-in user’s watchlists', async () => {
     watchlists.findAll.mockResolvedValueOnce([{ ...row, symbolCount: 2 }]);
+    watchlists.findAllItems.mockResolvedValueOnce([
+      { watchlistId: LIST, symbolId: 7, ticker: 'NVDA' },
+      { watchlistId: LIST, symbolId: 8, ticker: 'AAPL' },
+    ]);
+    const up = { date: '2024-06-10', close: '121.79', previousClose: '120.888' };
+    const down = { date: '2024-06-10', close: '193.12', previousClose: '196.89' };
+    candles.findLatestCloses.mockResolvedValueOnce(
+      new Map([
+        [7, up],
+        [8, down],
+      ]),
+    );
 
     const res = await request(app.getHttpServer())
       .get('/watchlists')
@@ -92,11 +106,17 @@ describe('WatchlistsController', () => {
       .expect(200);
 
     expect(watchlists.findAll).toHaveBeenCalledWith(USER);
+    expect(watchlists.findAllItems).toHaveBeenCalledWith(USER);
+    expect(candles.findLatestCloses).toHaveBeenCalledWith([7, 8]);
     expect(res.body.watchlists).toEqual([
       {
         id: LIST,
         name: 'Core',
         symbolCount: 2,
+        movers: {
+          best: { ticker: 'NVDA', latestClose: up },
+          worst: { ticker: 'AAPL', latestClose: down },
+        },
         createdAt: '2026-10-30T10:00:00.000Z',
         updatedAt: '2026-10-30T10:00:00.000Z',
       },

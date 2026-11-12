@@ -233,7 +233,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The user's watchlists, in their order */
+        /** The user's watchlists in their order, each with its movers */
         get: operations["listWatchlists"];
         put?: never;
         /** Create an empty watchlist after the last one */
@@ -445,10 +445,19 @@ export interface components {
             id: string;
             name: string;
             symbolCount: number;
+            movers: components["schemas"]["WatchlistMovers_Output"];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        WatchlistMovers_Output: {
+            best: components["schemas"]["WatchlistMover_Output"] | null;
+            worst: components["schemas"]["WatchlistMover_Output"] | null;
+        };
+        WatchlistMover_Output: {
+            ticker: string;
+            latestClose: components["schemas"]["LatestClose_Output"];
         };
         WatchlistList_Output: {
             watchlists: components["schemas"]["WatchlistSummary_Output"][];

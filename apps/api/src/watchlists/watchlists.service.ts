@@ -8,6 +8,7 @@ import type { Watchlist, WatchlistList } from '@astraq/shared';
 import { OnDemandCandlesService } from '../market-data/on-demand-candles.service';
 import { CandlesRepository } from '../symbols/candles.repository';
 import { SymbolsRepository } from '../symbols/symbols.repository';
+import { type MoverCandidate, pickMovers } from './movers';
 import {
   WatchlistNameTakenError,
   WatchlistNotFoundError,
@@ -27,13 +28,36 @@ export class WatchlistsService {
     private readonly onDemand: OnDemandCandlesService,
   ) {}
 
+  /**
+   * The index: each list with its symbol count and its movers. Two queries
+   * for the lists and their symbols, one for the closes of every symbol on
+   * any list, however many lists there are.
+   */
   async list(userId: string): Promise<WatchlistList> {
-    const rows = await this.watchlists.findAll(userId);
+    const [rows, items] = await Promise.all([
+      this.watchlists.findAll(userId),
+      this.watchlists.findAllItems(userId),
+    ]);
+    const closes = await this.candles.findLatestCloses([
+      ...new Set(items.map((item) => item.symbolId)),
+    ]);
+
+    const candidates = new Map<string, MoverCandidate[]>();
+    for (const item of items) {
+      const list = candidates.get(item.watchlistId) ?? [];
+      list.push({
+        ticker: item.ticker,
+        latestClose: closes.get(item.symbolId) ?? null,
+      });
+      candidates.set(item.watchlistId, list);
+    }
+
     return {
       watchlists: rows.map((row) => ({
         id: row.id,
         name: row.name,
         symbolCount: row.symbolCount,
+        movers: pickMovers(candidates.get(row.id) ?? []),
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
       })),
