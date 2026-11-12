@@ -8,8 +8,10 @@ import { env } from './common/env';
  * the OpenAPI emitter, so the committed spec has the same paths as the server.
  */
 export function configureApp(app: INestApplication) {
-  // Trust the first hop (Railway LB / BFF server) so req.ip reflects the real
-  // client address. This is what ThrottlerGuard reads for rate-limit keys.
+  // Trust the first hop (the host's load balancer), so req.ip is the address
+  // that reached it. For calls from the web server that is the web server's
+  // own address; rate limits key on the browser's instead when the BFF
+  // vouches for it (common/rate-limit-key.ts).
   (app as NestExpressApplication).set('trust proxy', 1);
 
   app.useGlobalFilters(new AllExceptionsFilter());

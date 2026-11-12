@@ -48,6 +48,11 @@ const envSchema = z
     RAILWAY_GIT_COMMIT_SHA: z.string().trim().min(1).optional(),
     // At least 32 bytes; required in production. Has a local default.
     JWT_SECRET: z.string().min(32).optional(),
+    // Shared with the web server, which sends it to prove a request came
+    // from the BFF, so its client-address header can be trusted for rate
+    // limits (rate-limit-key.ts). Optional: without it in production, limits
+    // key on the address the api sees.
+    BFF_SHARED_SECRET: z.string().min(32).optional(),
     // Comma-separated invited emails; omit or leave empty to allow no registrations.
     INVITE_EMAILS: z
       .string()
@@ -79,6 +84,9 @@ const envSchema = z
     REDIS_URL: value.REDIS_URL ?? LOCAL_DEFAULTS.REDIS_URL,
     CORS_ORIGINS: value.CORS_ORIGINS ?? [LOCAL_DEFAULTS.CORS_ORIGINS],
     JWT_SECRET: value.JWT_SECRET ?? LOCAL_DEFAULTS.JWT_SECRET,
+    BFF_SHARED_SECRET:
+      value.BFF_SHARED_SECRET ??
+      (value.NODE_ENV === 'production' ? null : LOCAL_DEFAULTS.BFF_SHARED_SECRET),
     INVITE_EMAILS: value.INVITE_EMAILS ?? [],
   }));
 

@@ -116,6 +116,9 @@ export class AlpacaClient {
         'APCA-API-SECRET-KEY': this.config.ALPACA_API_SECRET_KEY,
         accept: 'application/json',
       },
+      // One page of one request. Without it a stalled response holds the
+      // caller (a watchlist add waits on this) for undici's 5 minutes.
+      signal: AbortSignal.timeout(30_000),
     });
     const body = await response.text();
     if (!response.ok) {

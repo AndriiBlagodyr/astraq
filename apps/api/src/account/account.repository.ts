@@ -35,18 +35,29 @@ export class AccountRepository {
     });
   }
 
+  /** Null when the user is gone (a valid token that outlived the account). */
   async updateName(userId: string, name: string | null) {
-    return this.prisma.user.update({
+    const { count } = await this.prisma.user.updateMany({
       where: { id: userId },
       data: { name },
-      select: { id: true, email: true, name: true, createdAt: true },
     });
+    return count === 0 ? null : this.findUser(userId);
   }
 
-  /** The user's sessions that are neither revoked nor expired, newest first. */
+  /**
+   * The user's sessions that can still sign in, newest first: not revoked,
+   * not expired, and holding a refresh token that hasn't expired. Sessions
+   * last 90 days but a refresh token 30, so a device idle for longer than
+   * that is signed out already and doesn't belong on the list.
+   */
   async findLiveSessions(userId: string, now: Date): Promise<SessionRow[]> {
     const sessions = await this.prisma.session.findMany({
-      where: { userId, revokedAt: null, expiresAt: { gt: now } },
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: { gt: now },
+        refreshTokens: { some: { expiresAt: { gt: now } } },
+      },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,

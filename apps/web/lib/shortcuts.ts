@@ -131,7 +131,9 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   const tag = target.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
   return (
-    target.closest('[role="dialog"], [role="menu"], [role="listbox"]') !== null
+    target.closest(
+      '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]'
+    ) !== null
   );
 }
 

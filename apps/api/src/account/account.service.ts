@@ -16,6 +16,7 @@ export class AccountService {
   /** An empty name clears it: the column keeps null for "not set". */
   async updateName(userId: string, name: string): Promise<Account> {
     const user = await this.account.updateName(userId, name || null);
+    if (!user) throw new NotFoundException('Account not found');
     return { ...user, createdAt: user.createdAt.toISOString() };
   }
 

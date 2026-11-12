@@ -190,7 +190,9 @@ export class CandlesRepository {
                     (${from}::date::timestamp AT TIME ZONE 'UTC')))
       ),
       returns AS (
-        SELECT ts, close / lag(close) OVER (ORDER BY ts) - 1 AS ret
+        -- A zero previous close (bad provider data) has no return; without
+        -- nullif it would fail the whole request with a division by zero.
+        SELECT ts, close / nullif(lag(close) OVER (ORDER BY ts), 0) - 1 AS ret
         FROM closes
       ),
       in_range AS (

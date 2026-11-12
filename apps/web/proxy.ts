@@ -7,6 +7,7 @@ import {
   isAccessTokenFresh,
   refreshCookieOpts,
 } from "./lib/auth-cookies";
+import { refreshSession } from "./lib/auth-refresh";
 
 // The web's proxy (Next 16's name for middleware): runs before every page
 // and route handler. It keeps the session alive and adds the security
@@ -22,13 +23,17 @@ import {
 // shouldn't rely on shared modules, and lib/env validates API_URL at boot.
 
 // Routes the browser may reach without a session.
-const PUBLIC_PATHS = new Set(["/login", "/register", "/forgot-password"]);
+const PUBLIC_PATHS = new Set(["/login", "/register"]);
 
 // CSP for every response. 'unsafe-inline' is required by the Next.js App
 // Router for its hydration scripts; tighten with nonces in a future phase.
+// 'unsafe-eval' is for development only: React's dev build and Fast Refresh
+// evaluate code; the production bundle doesn't.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  process.env.NODE_ENV === "production"
+    ? "script-src 'self' 'unsafe-inline'"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "connect-src 'self'",
@@ -41,26 +46,6 @@ const CSP = [
 function addSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set("Content-Security-Policy", CSP);
   return response;
-}
-
-interface RefreshResult {
-  accessToken: string;
-  refreshToken: string;
-}
-
-async function tryRefresh(refreshToken: string): Promise<RefreshResult | null> {
-  const apiUrl = process.env.API_URL ?? "http://localhost:4000";
-  try {
-    const res = await fetch(`${apiUrl}/api/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as RefreshResult;
-  } catch {
-    return null;
-  }
 }
 
 export async function proxy(request: NextRequest) {
@@ -88,23 +73,33 @@ export async function proxy(request: NextRequest) {
 
   // Access token expired or missing: try a silent refresh.
   if (refreshToken) {
-    const refreshed = await tryRefresh(refreshToken);
+    const refreshed = await refreshSession(
+      process.env.API_URL ?? "http://localhost:4000",
+      refreshToken
+    );
 
-    if (refreshed) {
+    if (refreshed.kind === "ok") {
       const response = isPublic
         ? NextResponse.redirect(new URL("/", request.url))
         : NextResponse.next();
       response.cookies.set(
         COOKIE_ACCESS,
-        refreshed.accessToken,
+        refreshed.tokens.accessToken,
         accessCookieOpts()
       );
       response.cookies.set(
         COOKIE_REFRESH,
-        refreshed.refreshToken,
+        refreshed.tokens.refreshToken,
         refreshCookieOpts()
       );
       return addSecurityHeaders(response);
+    }
+
+    // The api didn't answer (a redeploy, a network blip). The session may
+    // well be alive, so keep the cookies: the next request retries. Clearing
+    // them here would sign everyone out on every api restart.
+    if (refreshed.kind === "unavailable") {
+      return addSecurityHeaders(NextResponse.next());
     }
 
     // The refresh token is invalid or expired: clear the stale cookies.

@@ -107,6 +107,21 @@ export function sessionChange({
   };
 }
 
+const price = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
+});
+
+/**
+ * A price for display: "150.10", "1,234.50", "0.0125". The api trims
+ * trailing zeros ("150.1"), which reads ragged in a column of closes.
+ * Anything that isn't a number comes back as it was.
+ */
+export function formatPrice(value: string): string {
+  const number = Number(value);
+  return Number.isFinite(number) ? price.format(number) : value;
+}
+
 const newYorkDate = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/New_York",
 });

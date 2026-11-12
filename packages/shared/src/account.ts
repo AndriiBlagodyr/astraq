@@ -9,7 +9,7 @@ const displayName = z
   .string()
   .trim()
   .max(80, "At most 80 characters")
-  .regex(/^[^\r\n\t]*$/, "One line");
+  .regex(/^[^\u0000-\u001f\u007f]*$/, "One line, no control characters");
 
 /** Body of `GET /api/me`. */
 export const AccountSchema = z

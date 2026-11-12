@@ -32,7 +32,7 @@ A sidebar on desktop, plus a top bar.
 
 - A group header appears only once it has an item. Until Phase 3 the sidebar is Today, Watchlists, Stocks, Analysis, and Status. Analysis points at the returns distribution until Phase 6 adds the `/analysis` index.
 - **Top bar:** symbol search (Phase 1, done: a GET form to `/stocks`), which became the ⌘K / Ctrl+K command palette in Phase 2 (done: pages, symbols, actions, recent items; the search box is now the palette's trigger, `PaletteTrigger`, and `CommandPaletteProvider` in the app layout owns the palette, the shortcut overlay, and the key listener). After it come the theme menu (theme, mode, density) and the user menu (Settings, Sign out; Phase 2). Done: `ThemeMenu` (a quick light/dark button plus a menu of mode, theme, and density radio groups) sits in both shells, and `UserMenu` (an initials avatar; Settings, Keyboard shortcuts, Sign out) in the app shell, which loads the account for it.
-- **Keyboard:** `/` opens the palette with focus in its search, `g` + a letter jumps to a page (t Today, w Watchlists, s Stocks, a Analysis, u Status), `?` lists the shortcuts (Phase 2, motion plan). Done: the list and the matcher are `lib/shortcuts.ts`; plain keys are ignored inside fields, dialogs, and menus.
+- **Keyboard:** `/` opens the palette with focus in its search, `g` + a letter jumps to a page (t Today, w Watchlists, s Stocks, a Analysis, e Settings, u Status), `?` lists the shortcuts (Phase 2, motion plan). Done: the list and the matcher are `lib/shortcuts.ts`; plain keys are ignored inside fields, dialogs, and menus.
 - **Phone (Phase 6 mobile pass):** a bottom tab bar with Today, Watchlists, Portfolio, and Search. The rest live in a "More" sheet (`Drawer`).
 
 ### Public shell
@@ -87,7 +87,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
 |---|---|
 | 0 | No data yet. A short text page: what Veracand is and what's being built. No mock charts or metrics. |
 | 1 | Symbol search, plus a table of the bootstrapped tickers (~20) with last close, day change, and as-of date, each linking to its chart. |
-| 2 | Watchlist summary: each watchlist's symbols with sparklines and day change. Recently viewed stocks. |
+| 2 | Watchlist summary: each watchlist's symbols with sparklines and day change. Recently viewed stocks. Done: a card per watchlist (`WatchlistSummaryCard`, read-only, in the user's order) replaces the table of loaded symbols, which stays with the search as the view for an account without a watchlist; "Recently viewed" lists the last eight stock pages opened in this browser (localStorage, `lib/recent-stocks.ts`). |
 | 3 | Portfolio card: equity, day PnL, cash, open orders. Market status: open or closed, and the next session from the exchange calendar. |
 | 4 | Data freshness: "Updated after Tuesday's close", or a warning that links to Status. |
 | 5 | Strategies trading on paper, with their latest signals. Recent backtest runs, each next to its buy-and-hold benchmark. |
@@ -242,7 +242,7 @@ Done. What the current app needed to match this plan:
 5. **Navigation:** `apps/web/lib/navigation.ts` is a flat list, Today and Status. The "Current focus" card and the header's Home and Experiments links are gone.
 6. **Status:** the hand-written phase table is replaced by live checks of the API (`/health/ready`) and the ML service (`/health`), with response and latency, rendered per request. The deployed version joins it with the first deployment in Phase 1.
 7. **Env:** `apps/web/lib/env.ts` validates `NEXT_PUBLIC_APP_URL`, `API_URL`, and `ML_URL` with Zod. `instrumentation.ts` imports it at server start, so an invalid value stops the server.
-8. **Auth screens:** `/login`, `/register`, and `/forgot-password` stay, as the ROADMAP says, with their copy updated to the current phases. Nothing links to them until Phase 2 makes them work.
+8. **Auth screens:** `/login`, `/register`, and `/forgot-password` stay, as the ROADMAP says, with their copy updated to the current phases. Nothing links to them until Phase 2 makes them work. Since 2026-11-11 `/forgot-password` is gone: it explained a reset that doesn't exist, which the no-placeholder-routes rule forbids, and the sign-in form linked to it. It returns in Phase 7 with email delivery.
 9. **CSS:** `(app)/layout.module.css` keeps only the shell's classes (374 → 83 lines), and the 815 lines of marketing CSS are deleted with their pages. New pages use Tailwind and `@astraq/ui`. Later in Phase 0 the shells, navigation, and the error, not-found, and loading screens moved to `Card`, `Button`, and `Spinner` compositions, and their CSS modules were deleted. Only `VeracandLogo.module.css` stays, for the logo's SVG keyframes and per-mode colors.
 
 ## Decisions

@@ -10,7 +10,7 @@ import {
   Tr,
 } from "@astraq/ui";
 import type { SymbolSummary } from "@/lib/market-data";
-import { sessionChange } from "@/lib/stock-chart";
+import { formatPrice, sessionChange } from "@/lib/stock-chart";
 import { DayChange } from "./DayChange";
 
 /**
@@ -59,7 +59,9 @@ export function SymbolTable({
                 </Td>
                 {session ? (
                   <>
-                    <Td className="text-right tabular-nums">{session.close}</Td>
+                    <Td className="text-right tabular-nums">
+                      {formatPrice(session.close)}
+                    </Td>
                     <Td className="tabular-nums">
                       <DayChange session={session} />
                     </Td>

@@ -110,6 +110,7 @@ export async function deleteWatchlist(
   const { response } = await client.DELETE("/api/watchlists/{id}", {
     params: { path: { id } },
   });
+  if (response.status === 401) redirect("/login");
   if (!response.ok) {
     return failed(await problemDetail(response, "Couldn't delete the list"));
   }
@@ -123,10 +124,14 @@ export async function deleteWatchlist(
   };
 }
 
-/** The undo of `deleteWatchlist`. */
+/**
+ * The undo of `deleteWatchlist`. `missing` names the symbols that couldn't
+ * be put back (delisted since, or the api failed), so the toast doesn't
+ * claim a full restore.
+ */
 export async function restoreWatchlist(
   snapshot: WatchlistSnapshot
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string; missing: string[] }>> {
   const parsed = WatchlistNameBodySchema.extend(
     ReorderWatchlistBodySchema.shape
   ).safeParse(snapshot);
@@ -143,14 +148,16 @@ export async function restoreWatchlist(
     );
   }
   // Each add appends, so adding in the saved order restores it.
+  const missing: string[] = [];
   for (const ticker of parsed.data.tickers) {
-    await client.POST("/api/watchlists/{id}/items", {
+    const added = await client.POST("/api/watchlists/{id}/items", {
       params: { path: { id: created.data.id } },
       body: { ticker },
     });
+    if (!added.response.ok) missing.push(ticker);
   }
   revalidatePath(indexPath);
-  return { ok: true, value: { id: created.data.id } };
+  return { ok: true, value: { id: created.data.id, missing } };
 }
 
 export async function addSymbol(
@@ -203,7 +210,11 @@ export async function removeSymbol(
 
 /**
  * Puts the list in `tickers` order. Also the undo of `removeSymbol`: the row
- * is re-added (which appends it) and the list put back in its old order.
+ * is re-added (which appends it) and moved back to the place it had in
+ * `tickers`, the order when it was removed. The rest of the list keeps
+ * whatever order it has now: the api only accepts an order that names
+ * exactly the current symbols, and the list may have changed since (another
+ * removal, an add, a reorder), so the old order can't be sent as it was.
  */
 export async function reorderWatchlist(
   id: string,
@@ -216,21 +227,32 @@ export async function reorderWatchlist(
   if (!parsed.success) return failed(firstIssue(parsed.error));
 
   const client = await userApi();
+  let order = parsed.data.tickers;
   if (restore) {
     const added = await client.POST("/api/watchlists/{id}/items", {
       params: { path: { id } },
       body: { ticker: restore },
     });
     if (added.response.status === 401) redirect("/login");
-    if (!added.response.ok) {
+    if (!added.data) {
       return failed(
         await problemDetail(added.response, `Couldn't restore ${restore}`)
       );
     }
+    // The row is back (at the end) whatever happens to the reorder below.
+    revalidatePath(indexPath);
+    revalidatePath(detailPath(id));
+
+    const others = added.data.items
+      .map((item) => item.ticker)
+      .filter((ticker) => ticker !== restore);
+    const before = order.indexOf(restore);
+    const index = before === -1 ? others.length : Math.min(before, others.length);
+    order = [...others.slice(0, index), restore, ...others.slice(index)];
   }
   const { response } = await client.PUT("/api/watchlists/{id}/items/order", {
     params: { path: { id } },
-    body: { tickers: parsed.data.tickers },
+    body: { tickers: order },
   });
   if (response.status === 401) redirect("/login");
   if (!response.ok) {

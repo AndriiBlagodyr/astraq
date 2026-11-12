@@ -32,7 +32,7 @@ import {
   reorderAnnouncement,
   stepIndex,
 } from "@/lib/reorder";
-import { sessionChange } from "@/lib/stock-chart";
+import { formatPrice, sessionChange } from "@/lib/stock-chart";
 import type { WatchlistItem } from "@/lib/watchlists";
 import { DayChange } from "./DayChange";
 import { Sparkline } from "./Sparkline";
@@ -92,6 +92,7 @@ export function WatchlistItemsTable({
   const [drag, setDrag] = useState<Drag | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  const bodyRef = useRef<HTMLTableSectionElement>(null);
   const instructionsId = useId();
 
   function fail(error: string) {
@@ -143,20 +144,23 @@ export function WatchlistItemsTable({
     });
   }
 
-  // Pointer drag: the grip captures the pointer, so moves keep arriving
-  // wherever it goes; the row under the pointer is found from the rows'
-  // on-screen midpoints in their preview order.
+  // Pointer drag: the table body captures the pointer, so moves keep
+  // arriving wherever it goes; the row under the pointer is found from the
+  // rows' on-screen midpoints in their preview order. The body and not the
+  // grip, because a row that moves down is re-inserted in the DOM, and an
+  // element taken out of the document, even for an instant, loses its
+  // capture: the drag would end at the first swap. The body never moves.
   function onPointerDown(
     event: PointerEvent<HTMLButtonElement>,
     ticker: string
   ) {
-    if (event.button !== 0 || drag) return;
+    if (event.button !== 0 || drag || !bodyRef.current) return;
     event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
+    bodyRef.current.setPointerCapture(event.pointerId);
     setDrag({ ticker, order: currentOrder, mode: "pointer" });
   }
 
-  function onPointerMove(event: PointerEvent<HTMLButtonElement>) {
+  function onPointerMove(event: PointerEvent<HTMLTableSectionElement>) {
     if (!drag || drag.mode !== "pointer") return;
     const midpoints = drag.order.map((ticker) => {
       const rect = rowRefs.current.get(ticker)?.getBoundingClientRect();
@@ -274,7 +278,13 @@ export function WatchlistItemsTable({
             </Th>
           </Tr>
         </Thead>
-        <Tbody>
+        <Tbody
+          ref={bodyRef}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          onLostPointerCapture={onPointerCancel}
+        >
           {rows.map((item) => {
             const session = item.latestClose
               ? sessionChange(item.latestClose)
@@ -302,10 +312,6 @@ export function WatchlistItemsTable({
                       drag?.mode === "keyboard" && dragging ? true : undefined
                     }
                     onPointerDown={(event) => onPointerDown(event, item.ticker)}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={onPointerUp}
-                    onPointerCancel={onPointerCancel}
-                    onLostPointerCapture={onPointerCancel}
                     onKeyDown={(event) => onKeyDown(event, item.ticker)}
                     onBlur={() => onBlur(item.ticker)}
                     className={cn(
@@ -333,7 +339,9 @@ export function WatchlistItemsTable({
                 </Td>
                 {session ? (
                   <>
-                    <Td className="text-right tabular-nums">{session.close}</Td>
+                    <Td className="text-right tabular-nums">
+                      {formatPrice(session.close)}
+                    </Td>
                     <Td className="tabular-nums">
                       <DayChange session={session} />
                     </Td>
