@@ -66,12 +66,35 @@ export const WatchlistItemSchema = z
   })
   .meta({ id: "WatchlistItem" });
 
+/** A symbol named as one of a list's movers, with the session that made it one. */
+export const WatchlistMoverSchema = z
+  .object({
+    ticker: z.string(),
+    latestClose: LatestCloseSchema,
+  })
+  .meta({ id: "WatchlistMover" });
+
+/**
+ * A list's biggest gain and biggest loss of its latest session, by day
+ * change (close against the split-adjusted previous close). Only symbols
+ * whose last bar is that session count, so a symbol that stopped trading
+ * isn't a mover forever. `best` is null when no symbol has a day change;
+ * `worst` is null too when only one does.
+ */
+export const WatchlistMoversSchema = z
+  .object({
+    best: WatchlistMoverSchema.nullable(),
+    worst: WatchlistMoverSchema.nullable(),
+  })
+  .meta({ id: "WatchlistMovers" });
+
 /** A watchlist as the index lists it. */
 export const WatchlistSummarySchema = z
   .object({
     id: z.uuid(),
     name: z.string(),
     symbolCount: z.int().nonnegative(),
+    movers: WatchlistMoversSchema,
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   })
@@ -102,6 +125,8 @@ export type AddWatchlistItemBody = z.infer<typeof AddWatchlistItemBodySchema>;
 export type ReorderWatchlistBody = z.infer<typeof ReorderWatchlistBodySchema>;
 export type SparklinePoint = z.infer<typeof SparklinePointSchema>;
 export type WatchlistItem = z.infer<typeof WatchlistItemSchema>;
-export type WatchlistSummary = z.infer<typeof WatchlistSummarySchema>;
+export type WatchlistMover = z.infer<typeof WatchlistMoverSchema>;
+export type WatchlistMovers = z.infer<typeof WatchlistMoversSchema>;
+export type WatchlistSummary =z.infer<typeof WatchlistSummarySchema>;
 export type WatchlistList = z.infer<typeof WatchlistListSchema>;
 export type Watchlist = z.infer<typeof WatchlistSchema>;

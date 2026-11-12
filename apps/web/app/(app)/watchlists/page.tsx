@@ -13,6 +13,7 @@ import {
 } from "@astraq/ui";
 import { CreateWatchlistForm } from "@/app/components/CreateWatchlistForm";
 import { WatchlistMenu } from "@/app/components/WatchlistMenu";
+import { WatchlistMovers } from "@/app/components/WatchlistMovers";
 import { listWatchlists } from "@/lib/watchlists";
 
 export const metadata = {
@@ -25,8 +26,9 @@ const updatedAt = new Intl.DateTimeFormat("en-US", {
 });
 
 // The watchlist index (docs/ui-plan.md § Watchlists): every list with its
-// symbol count, plus create, rename, and delete with undo. Rendered per
-// request for the signed-in user; the rows are links to the detail page.
+// symbol count and the best and worst movers of its latest session, plus
+// create, rename, and delete with undo. Rendered per request for the
+// signed-in user; the rows are links to the detail page.
 export default async function WatchlistsPage() {
   const watchlists = await listWatchlists();
 
@@ -62,6 +64,7 @@ export default async function WatchlistsPage() {
               <Tr>
                 <Th>Name</Th>
                 <Th className="text-right">Symbols</Th>
+                <Th>Best and worst, last session</Th>
                 <Th>Updated</Th>
                 <Th>
                   <span className="sr-only">Actions</span>
@@ -81,6 +84,9 @@ export default async function WatchlistsPage() {
                   </Td>
                   <Td className="text-right tabular-nums">
                     {watchlist.symbolCount}
+                  </Td>
+                  <Td>
+                    <WatchlistMovers movers={watchlist.movers} />
                   </Td>
                   <Td className="text-sm text-muted">
                     <time dateTime={watchlist.updatedAt}>

@@ -42,6 +42,12 @@ export interface WatchlistItemRow {
   addedAt: Date;
 }
 
+export interface WatchlistSymbolRow {
+  watchlistId: string;
+  symbolId: number;
+  ticker: string;
+}
+
 const watchlistColumns = {
   id: true,
   name: true,
@@ -70,6 +76,24 @@ export class WatchlistsRepository {
       ...row,
       symbolCount: _count.items,
     }));
+  }
+
+  /**
+   * Every symbol on every one of the user's lists, each list's in its own
+   * order: what the index needs to name each list's movers in one query
+   * instead of one per list.
+   */
+  async findAllItems(userId: string): Promise<WatchlistSymbolRow[]> {
+    const items = await this.prisma.watchlistItem.findMany({
+      where: { watchlist: { userId } },
+      select: {
+        watchlistId: true,
+        symbolId: true,
+        symbol: { select: { ticker: true } },
+      },
+      orderBy: [{ position: 'asc' }, { addedAt: 'asc' }],
+    });
+    return items.map(({ symbol, ...item }) => ({ ...item, ...symbol }));
   }
 
   /** One of the user's lists, or null. */

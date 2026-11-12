@@ -28,11 +28,16 @@ function sameSecret(offered: string, secret: string): boolean {
 }
 
 /**
- * The client address to rate-limit by: the one the BFF vouches for, or the
- * request's own (`req.ip`, the nearest proxy's view) for anyone else.
+ * The address a request was made from: the browser's when the BFF vouches
+ * for it, or the request's own (`req.ip`, the nearest proxy's view) for
+ * anyone else. Also what a session records as its device's address: without
+ * it every device on the Sessions page would show the web server's.
  */
-export function rateLimitKey(request: RequestLike, secret: string | null): string {
-  const own = request.ip ?? 'unknown';
+export function clientAddress(
+  request: RequestLike,
+  secret: string | null,
+): string | null {
+  const own = request.ip ?? null;
   if (!secret) return own;
 
   const offered = request.headers[BFF_SECRET_HEADER];
@@ -40,4 +45,9 @@ export function rateLimitKey(request: RequestLike, secret: string | null): strin
   if (typeof offered !== 'string' || typeof clientIp !== 'string') return own;
   if (!sameSecret(offered, secret) || isIP(clientIp) === 0) return own;
   return clientIp;
+}
+
+/** The bucket a request's rate limits count against: its client address. */
+export function rateLimitKey(request: RequestLike, secret: string | null): string {
+  return clientAddress(request, secret) ?? 'unknown';
 }

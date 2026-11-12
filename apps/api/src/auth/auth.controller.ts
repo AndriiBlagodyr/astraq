@@ -10,7 +10,9 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle, Throttle, hours, minutes } from '@nestjs/throttler';
 import { ZodResponse } from 'nestjs-zod';
 import type { Request } from 'express';
+import { env } from '../common/env';
 import { ApiProblemResponses } from '../common/problem';
+import { clientAddress } from '../common/rate-limit-key';
 import { AuthTokensDto, LoginBodyDto, RefreshBodyDto, RegisterBodyDto } from './auth.dto';
 import { AuthService } from './auth.service';
 import { type AuthenticatedRequest, JwtAuthGuard } from './jwt-auth.guard';
@@ -28,7 +30,7 @@ export class AuthController {
   @ZodResponse({ status: 201, type: AuthTokensDto })
   register(@Body() body: RegisterBodyDto, @Req() req: Request) {
     return this.authService.register(body, {
-      ip: req.ip ?? null,
+      ip: clientAddress(req, env.BFF_SHARED_SECRET),
       userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
     });
   }
@@ -40,7 +42,7 @@ export class AuthController {
   @ZodResponse({ status: 200, type: AuthTokensDto })
   login(@Body() body: LoginBodyDto, @Req() req: Request) {
     return this.authService.login(body, {
-      ip: req.ip ?? null,
+      ip: clientAddress(req, env.BFF_SHARED_SECRET),
       userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
     });
   }

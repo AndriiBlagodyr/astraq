@@ -136,7 +136,7 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
 
 **For:** keeping the symbols you follow, grouped your way.
 
-- **List:** your watchlists, each with a symbol count and its best and worst movers today. Create, rename, delete (with undo).
+- **List:** your watchlists, each with a symbol count and its best and worst movers today. Create, rename, delete (with undo). Done: the movers column shows the biggest gain and the biggest loss of the list's latest session as ticker and day change (`WatchlistMovers`, from `movers` on `GET /api/watchlists`); a list with one moving symbol shows that one, and a list without candles a dash.
 - **Detail:** a row per symbol with last close, day change, and a sparkline from stored candles. Add symbols by search, remove them, and reorder by drag or keyboard (done: the row's grip; Space lifts, arrows move, Space drops, Escape cancels). A row opens the stock page with the shared-element morph (Phase 6), and its menu links to the symbol's returns distribution.
 - **Phase 6:** a watchlist performance view over a chosen range links to `/analysis/watchlist/[id]`.
 - **Phase 9:** live prices and tick flash in the rows.

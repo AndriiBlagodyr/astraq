@@ -72,6 +72,11 @@ describe('WatchlistsRepository (database) — ownership', () => {
 
     const summaries = await repo.findAll(owner);
     expect(summaries).toEqual([expect.objectContaining({ id: list.id, symbolCount: 2 })]);
+    // The index's rows for the movers: every list's symbols, in list order.
+    expect(await repo.findAllItems(owner)).toEqual([
+      { watchlistId: list.id, symbolId: symbolIds[2], ticker: TICKERS[2] },
+      { watchlistId: list.id, symbolId: symbolIds[1], ticker: TICKERS[1] },
+    ]);
 
     await expect(repo.create(owner, 'Core')).rejects.toBeInstanceOf(WatchlistNameTakenError);
   });
@@ -81,6 +86,7 @@ describe('WatchlistsRepository (database) — ownership', () => {
     await repo.addItem(owner, list.id, symbolIds[0]!);
 
     expect(await repo.findAll(other)).toEqual([]);
+    expect(await repo.findAllItems(other)).toEqual([]);
     expect(await repo.findOne(other, list.id)).toBeNull();
     expect(await repo.findItems(other, list.id)).toEqual([]);
 
