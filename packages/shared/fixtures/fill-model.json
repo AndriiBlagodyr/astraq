@@ -1,0 +1,129 @@
+{
+  "description": "The fill model's contract (ADR 0008). apps/api/src/trading/fill-model.ts and the Python backtester must both reproduce every case. A case has `bar` (fillOnBar) or `lastPrice` (fillAtLastPrice); `expected` is null when the order doesn't fill.",
+  "costs": {
+    "free": {
+      "slippageBps": 0,
+      "commissionPerOrder": "0",
+      "commissionPerShare": "0"
+    },
+    "priced": {
+      "slippageBps": 5,
+      "commissionPerOrder": "1.00",
+      "commissionPerShare": "0.005"
+    }
+  },
+  "cases": [
+    {
+      "name": "market buy fills at the open",
+      "order": { "side": "buy", "type": "market", "quantity": "10", "limitPrice": null },
+      "bar": { "open": "100.00", "high": "102.00", "low": "99.00", "close": "101.00" },
+      "costs": "free",
+      "expected": { "rule": "market_open", "price": "100.000000", "notional": "1000.00", "commission": "0.00" }
+    },
+    {
+      "name": "market buy pays slippage and commission",
+      "order": { "side": "buy", "type": "market", "quantity": "10", "limitPrice": null },
+      "bar": { "open": "100.00", "high": "102.00", "low": "99.00", "close": "101.00" },
+      "costs": "priced",
+      "expected": { "rule": "market_open", "price": "100.050000", "notional": "1000.50", "commission": "1.05" }
+    },
+    {
+      "name": "market sell receives less by the slippage",
+      "order": { "side": "sell", "type": "market", "quantity": "10", "limitPrice": null },
+      "bar": { "open": "100.00", "high": "102.00", "low": "99.00", "close": "101.00" },
+      "costs": "priced",
+      "expected": { "rule": "market_open", "price": "99.950000", "notional": "999.50", "commission": "1.05" }
+    },
+    {
+      "name": "a slipped buy price rounds up; commission rounds half up to the cent",
+      "order": { "side": "buy", "type": "market", "quantity": "3", "limitPrice": null },
+      "bar": { "open": "33.3333", "high": "34.00", "low": "33.00", "close": "33.50" },
+      "costs": "priced",
+      "expected": { "rule": "market_open", "price": "33.349967", "notional": "100.05", "commission": "1.02" }
+    },
+    {
+      "name": "a slipped sell price rounds down",
+      "order": { "side": "sell", "type": "market", "quantity": "3", "limitPrice": null },
+      "bar": { "open": "33.3333", "high": "34.00", "low": "33.00", "close": "33.50" },
+      "costs": "priced",
+      "expected": { "rule": "market_open", "price": "33.316633", "notional": "99.95", "commission": "1.02" }
+    },
+    {
+      "name": "a fractional quantity rounds the notional half up to the cent",
+      "order": { "side": "buy", "type": "market", "quantity": "0.5", "limitPrice": null },
+      "bar": { "open": "101.01", "high": "102.00", "low": "100.00", "close": "101.50" },
+      "costs": "free",
+      "expected": { "rule": "market_open", "price": "101.010000", "notional": "50.51", "commission": "0.00" }
+    },
+    {
+      "name": "limit buy: an open below the limit fills at the open",
+      "order": { "side": "buy", "type": "limit", "quantity": "10", "limitPrice": "100.00" },
+      "bar": { "open": "98.00", "high": "99.00", "low": "97.00", "close": "98.50" },
+      "costs": "free",
+      "expected": { "rule": "limit_open", "price": "98.000000", "notional": "980.00", "commission": "0.00" }
+    },
+    {
+      "name": "limit buy: slippage at the open never passes the limit",
+      "order": { "side": "buy", "type": "limit", "quantity": "10", "limitPrice": "100.00" },
+      "bar": { "open": "99.98", "high": "101.00", "low": "99.50", "close": "100.50" },
+      "costs": "priced",
+      "expected": { "rule": "limit_open", "price": "100.000000", "notional": "1000.00", "commission": "1.05" }
+    },
+    {
+      "name": "limit buy: a session that trades through the limit fills at the limit, without slippage",
+      "order": { "side": "buy", "type": "limit", "quantity": "10", "limitPrice": "100.00" },
+      "bar": { "open": "101.00", "high": "102.00", "low": "99.50", "close": "101.50" },
+      "costs": "priced",
+      "expected": { "rule": "limit_cross", "price": "100.000000", "notional": "1000.00", "commission": "1.05" }
+    },
+    {
+      "name": "limit buy: a session above the limit doesn't fill",
+      "order": { "side": "buy", "type": "limit", "quantity": "10", "limitPrice": "100.00" },
+      "bar": { "open": "101.00", "high": "103.00", "low": "100.01", "close": "102.00" },
+      "costs": "free",
+      "expected": null
+    },
+    {
+      "name": "limit buy: a low that only touches the limit doesn't fill",
+      "order": { "side": "buy", "type": "limit", "quantity": "10", "limitPrice": "100.00" },
+      "bar": { "open": "101.00", "high": "103.00", "low": "100.00", "close": "102.00" },
+      "costs": "free",
+      "expected": null
+    },
+    {
+      "name": "limit sell: an open above the limit fills at the open",
+      "order": { "side": "sell", "type": "limit", "quantity": "10", "limitPrice": "50.00" },
+      "bar": { "open": "52.00", "high": "53.00", "low": "51.00", "close": "52.50" },
+      "costs": "free",
+      "expected": { "rule": "limit_open", "price": "52.000000", "notional": "520.00", "commission": "0.00" }
+    },
+    {
+      "name": "limit sell: a session that trades through the limit fills at the limit",
+      "order": { "side": "sell", "type": "limit", "quantity": "10", "limitPrice": "50.00" },
+      "bar": { "open": "49.00", "high": "50.50", "low": "48.50", "close": "49.50" },
+      "costs": "free",
+      "expected": { "rule": "limit_cross", "price": "50.000000", "notional": "500.00", "commission": "0.00" }
+    },
+    {
+      "name": "limit sell: a high that only touches the limit doesn't fill",
+      "order": { "side": "sell", "type": "limit", "quantity": "10", "limitPrice": "50.00" },
+      "bar": { "open": "49.00", "high": "50.00", "low": "48.50", "close": "49.50" },
+      "costs": "free",
+      "expected": null
+    },
+    {
+      "name": "market buy mid-session fills at the latest price plus slippage",
+      "order": { "side": "buy", "type": "market", "quantity": "4", "limitPrice": null },
+      "lastPrice": "250.00",
+      "costs": "priced",
+      "expected": { "rule": "market_last", "price": "250.125000", "notional": "1000.50", "commission": "1.02" }
+    },
+    {
+      "name": "a limit order never fills on the latest price",
+      "order": { "side": "buy", "type": "limit", "quantity": "4", "limitPrice": "260.00" },
+      "lastPrice": "250.00",
+      "costs": "free",
+      "expected": null
+    }
+  ]
+}

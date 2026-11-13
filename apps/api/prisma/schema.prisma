@@ -31,6 +31,7 @@ model Symbol {
   candlesDaily     CandleDaily[]
   corporateActions CorporateAction[]
   watchlistItems   WatchlistItem[]
+  ledgerEntries    LedgerEntry[]
 
   @@map("symbols")
 }
@@ -105,6 +106,7 @@ model User {
   sessions   Session[]
   auditLogs  AuditLog[]
   watchlists Watchlist[]
+  portfolios Portfolio[]
 
   @@map("users")
 }
@@ -236,4 +238,96 @@ model WatchlistItem {
   @@id([watchlistId, symbolId])
   @@index([watchlistId, position])
   @@map("watchlist_items")
+}
+
+/// A paper-trading account. Its cash and positions are never stored: they
+/// are derived from its ledger (ADR 0009). The cost columns are the fill
+/// model's per-portfolio settings (ADR 0008).
+model Portfolio {
+  id                 String   @id @default(uuid(7)) @db.Uuid
+  userId             String   @map("user_id") @db.Uuid
+  /// Trimmed, one line; unique per user.
+  name               String   @db.VarChar(64)
+  /// Slippage on market-priced fills, in basis points.
+  slippageBps        Int      @default(0) @map("slippage_bps")
+  commissionPerOrder Decimal  @default(0) @map("commission_per_order") @db.Decimal(18, 2)
+  commissionPerShare Decimal  @default(0) @map("commission_per_share") @db.Decimal(18, 6)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledgerTransactions LedgerTransaction[]
+
+  @@unique([userId, name])
+  @@map("portfolios")
+}
+
+enum LedgerTransactionKind {
+  DEPOSIT    @map("deposit")
+  WITHDRAWAL @map("withdrawal")
+  BUY        @map("buy")
+  SELL       @map("sell")
+
+  @@map("ledger_transaction_kind")
+}
+
+/// One event in a portfolio's books: a deposit, a fill. Its entries sum to
+/// zero, checked by a constraint trigger at commit. Rows are never updated,
+/// and deleted only together with their portfolio (triggers in the
+/// migration).
+model LedgerTransaction {
+  id          String                @id @default(uuid(7)) @db.Uuid
+  portfolioId String                @map("portfolio_id") @db.Uuid
+  /// The transaction's place in the portfolio's history, from 1, without
+  /// gaps. Replaying in this order rebuilds every balance and lot.
+  seq         Int
+  kind        LedgerTransactionKind
+  /// When the event took effect (a fill's time), not when the row was written.
+  occurredAt  DateTime              @map("occurred_at") @db.Timestamptz(6)
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  portfolio Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  entries   LedgerEntry[]
+
+  @@unique([portfolioId, seq])
+  @@map("ledger_transactions")
+}
+
+enum LedgerAccount {
+  /// Asset: cash in the portfolio.
+  CASH         @map("cash")
+  /// Asset: shares held, at cost.
+  SECURITIES   @map("securities")
+  /// Equity: what the owner paid in, less what they took out.
+  CAPITAL      @map("capital")
+  /// Expense: commissions.
+  FEES         @map("fees")
+  /// Income: gains (credits) and losses (debits) on closed lots.
+  REALIZED_PNL @map("realized_pnl")
+
+  @@map("ledger_account")
+}
+
+/// One leg of a transaction: an amount moved into (positive, a debit) or
+/// out of (negative, a credit) an account.
+model LedgerEntry {
+  id            BigInt        @id @default(autoincrement())
+  transactionId String        @map("transaction_id") @db.Uuid
+  account       LedgerAccount
+  /// Set on securities and realized_pnl entries, null on the others (CHECK
+  /// constraint in the migration).
+  symbolId      Int?          @map("symbol_id")
+  /// In cents. Debits are positive, credits negative.
+  amount        Decimal       @db.Decimal(20, 2)
+  /// Shares bought (positive) or sold (negative); zero off the securities
+  /// account.
+  quantity      Decimal       @default(0) @db.Decimal(24, 6)
+
+  transaction LedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  /// A symbol with ledger history is deactivated, never deleted.
+  symbol      Symbol?           @relation(fields: [symbolId], references: [id], onDelete: Restrict)
+
+  @@index([transactionId])
+  @@index([symbolId])
+  @@map("ledger_entries")
 }
