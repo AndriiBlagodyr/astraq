@@ -1,5 +1,6 @@
 import {
   CASH_PLACES,
+  PRICE_PLACES,
   QUANTITY_PLACES,
   ZERO,
   add,
@@ -18,10 +19,10 @@ import {
 } from '../common/decimal';
 
 // Double-entry accounting for a paper portfolio (ADR 0009, ROADMAP Phase 3
-// item 2), as pure functions. A portfolio's history is a list of
+// items 2 and 4), as pure functions. A portfolio's history is a list of
 // transactions; each one's entries sum to zero. Nothing else is stored:
-// `replay` folds the history into cash, lots, and realized PnL, and the
-// builders below produce the next transaction from that state.
+// `replay` folds the history into cash, lots, realized PnL, and dividends,
+// and the builders below produce the next transaction from that state.
 //
 // Amounts are decimal strings in cents. A debit is positive, a credit
 // negative: buying shares debits securities and credits cash.
@@ -31,29 +32,52 @@ export type LedgerAccount =
   | 'securities'
   | 'capital'
   | 'fees'
-  | 'realized_pnl';
+  | 'realized_pnl'
+  | 'dividends_receivable'
+  | 'dividend_income';
 
-export type LedgerKind = 'deposit' | 'withdrawal' | 'buy' | 'sell';
+export type LedgerKind =
+  | 'deposit'
+  | 'withdrawal'
+  | 'buy'
+  | 'sell'
+  | 'split'
+  | 'dividend'
+  | 'dividend_payment';
 
 export interface LedgerEntry {
   account: LedgerAccount;
-  /** Set on securities and realized_pnl entries, null on the others. */
+  /** Null on cash, capital, and fees entries; set on the others. */
   symbolId: number | null;
   /** Cents, 2 decimal places. Debit positive, credit negative. */
   amount: string;
-  /** Shares bought (positive) or sold (negative), 6 places; "0.000000" off securities. */
+  /** Shares bought or added by a split (positive) or sold (negative), 6 places; "0.000000" off securities. */
   quantity: string;
+}
+
+/** `from` old shares became `to` new ones (NVDA 2024: 1, 10). */
+export interface SplitRatio {
+  from: string;
+  to: string;
 }
 
 /** A transaction about to be written: balanced entries and their label. */
 export interface Posting {
   kind: LedgerKind;
   entries: LedgerEntry[];
+  /** Set on a split, and only there. */
+  split?: SplitRatio;
 }
 
 export interface LedgerTransaction extends Posting {
   /** Its place in the portfolio's history, from 1. */
   seq: number;
+  /**
+   * The session the event belongs to, `YYYY-MM-DD` (the New York date of
+   * `occurred_at`): the day a lot was bought, a split's or a dividend's
+   * ex-date.
+   */
+  date: string;
 }
 
 /** Shares from one buy that haven't been sold yet, and what they cost. */
@@ -61,9 +85,26 @@ export interface Lot {
   symbolId: number;
   /** The buy that opened the lot. */
   openedSeq: number;
+  /** The session of that buy. Shares bought before an ex-date earn its dividend. */
+  openedOn: string;
+  /**
+   * The session whose shares `quantity` counts: the buy's, then the ex-date
+   * of the last split applied. A split converts the lots that are behind it.
+   */
+  unitsAsOf: string;
   quantity: Decimal;
   /** Cost of the remaining shares, in cents. */
   cost: Decimal;
+}
+
+/** A dividend the portfolio earned by holding shares into the ex-date. */
+export interface BookedDividend {
+  symbolId: number;
+  exDate: string;
+  /** In cents. */
+  amount: Decimal;
+  /** False from the ex-date until the cash arrives on the pay date. */
+  paid: boolean;
 }
 
 /** Everything derived from a ledger. */
@@ -75,8 +116,14 @@ export interface LedgerState {
   fees: Decimal;
   /** Gains less losses on sold shares, before fees. */
   realizedPnl: Decimal;
+  /** Dividends earned, paid or not. */
+  dividendIncome: Decimal;
+  /** Dividends earned and not yet paid: the unpaid ones in `dividends`. */
+  receivable: Decimal;
   /** Open lots per symbol, oldest first. A symbol without shares has no key. */
   lots: ReadonlyMap<number, readonly Lot[]>;
+  /** Every dividend booked, in booking order. */
+  dividends: readonly BookedDividend[];
 }
 
 export type LedgerErrorCode =
@@ -101,7 +148,10 @@ export const EMPTY_LEDGER: LedgerState = {
   capital: ZERO,
   fees: ZERO,
   realizedPnl: ZERO,
+  dividendIncome: ZERO,
+  receivable: ZERO,
   lots: new Map(),
+  dividends: [],
 };
 
 function parse(value: string, name: string, places: number): Decimal {
@@ -184,11 +234,54 @@ export function consumeFifo(
   return { cost, remaining };
 }
 
+/** The smallest share count the database keeps: a millionth of a share. */
+const ONE_MICRO_SHARE: Decimal = { digits: 1n, scale: QUANTITY_PLACES };
+
+function parseRatio(ratio: SplitRatio) {
+  return {
+    from: positive(ratio.from, 'split from', PRICE_PLACES),
+    to: positive(ratio.to, 'split to', PRICE_PLACES),
+  };
+}
+
+/**
+ * A split applied to a symbol's lots: every lot still counted in shares
+ * from before `exDate` gets `quantity × to / from` shares, rounded half up
+ * to a millionth, and keeps its cost. Lots bought on or after the ex-date
+ * were bought in the new shares and stay as they are, so applying the same
+ * split again changes nothing.
+ *
+ * A lot never rounds to nothing: it keeps at least a millionth of a share,
+ * so its cost always has shares to belong to. (A broker would pay cash for
+ * the fraction instead.)
+ */
+export function splitLots(
+  lots: readonly Lot[],
+  ratio: { from: Decimal; to: Decimal },
+  exDate: string,
+): { lots: Lot[]; added: Decimal } {
+  let added = ZERO;
+  const next = lots.map((lot) => {
+    if (lot.unitsAsOf >= exDate) return lot;
+    const scaled = divide(
+      multiply(lot.quantity, ratio.to),
+      ratio.from,
+      QUANTITY_PLACES,
+    );
+    const quantity = isZero(scaled) ? ONE_MICRO_SHARE : scaled;
+    added = add(added, subtract(quantity, lot.quantity));
+    return { ...lot, quantity, unitsAsOf: exDate };
+  });
+  return { lots: next, added };
+}
+
 /**
  * The state after one more transaction. Throws `inconsistent` when the
  * transaction can't follow this state: its entries don't sum to zero, a
- * sell's cost isn't what FIFO gives, or cash would go negative. That makes
- * `replay` an audit of the whole history, not only a sum.
+ * sell's cost isn't what FIFO gives, a split adds a different number of
+ * shares than its ratio does, a dividend is paid that isn't owed, or cash
+ * would go negative. That makes `replay` an audit of the whole history,
+ * not only a sum.
  */
 export function apply(
   state: LedgerState,
@@ -201,7 +294,8 @@ export function apply(
     );
   };
 
-  let { cash, capital, fees, realizedPnl } = state;
+  let { cash, capital, fees, realizedPnl, dividendIncome, receivable } = state;
+  let dividends = state.dividends;
   const lots = new Map(state.lots);
   let total = ZERO;
 
@@ -212,21 +306,67 @@ export function apply(
 
     if (item.account !== 'securities') {
       if (!isZero(quantity)) fail(`${item.account} entry carries shares`);
-      // Capital and realized PnL grow with credits, so their balances flip the sign.
+      // Capital and the income accounts grow with credits, so their
+      // balances flip the sign.
       if (item.account === 'cash') cash = add(cash, amount);
       else if (item.account === 'fees') fees = add(fees, amount);
       else if (item.account === 'capital') capital = subtract(capital, amount);
-      else realizedPnl = subtract(realizedPnl, amount);
+      else if (item.account === 'realized_pnl') {
+        realizedPnl = subtract(realizedPnl, amount);
+      } else if (item.account === 'dividend_income') {
+        dividendIncome = subtract(dividendIncome, amount);
+      } else {
+        // dividends_receivable: a debit books a dividend on its ex-date, a
+        // credit pays the symbol's oldest unpaid one, in full.
+        const symbolId =
+          item.symbolId ?? fail('dividend entry without a symbol');
+        receivable = add(receivable, amount);
+        if (sign(amount) > 0) {
+          const exDate = transaction.date;
+          if (dividends.some((d) => d.symbolId === symbolId && d.exDate === exDate)) {
+            fail(`books the dividend of ${exDate} twice`);
+          }
+          dividends = [...dividends, { symbolId, exDate, amount, paid: false }];
+        } else {
+          const index = dividends.findIndex(
+            (d) => d.symbolId === symbolId && !d.paid,
+          );
+          const owed = dividends[index];
+          if (!owed || compare(owed.amount, negate(amount)) !== 0) {
+            fail(`pays a dividend of ${cents(negate(amount))} that isn't owed`);
+          }
+          dividends = dividends.map((d, i) =>
+            i === index ? { ...d, paid: true } : d,
+          );
+        }
+      }
       continue;
     }
 
     const symbolId = item.symbolId ?? fail('securities entry without a symbol');
     const held = lots.get(symbolId) ?? [];
-    if (sign(quantity) > 0) {
+    if (transaction.kind === 'split') {
+      const ratio = transaction.split ?? fail('split without a ratio');
+      if (!isZero(amount)) fail('a split moves no money');
+      const result = splitLots(held, parseRatio(ratio), transaction.date);
+      if (compare(result.added, quantity) !== 0) {
+        fail(
+          `the split adds ${shares(result.added)} shares, the entry says ${shares(quantity)}`,
+        );
+      }
+      lots.set(symbolId, result.lots);
+    } else if (sign(quantity) > 0) {
       if (sign(amount) < 0) fail('a buy with a negative cost');
       lots.set(symbolId, [
         ...held,
-        { symbolId, openedSeq: transaction.seq, quantity, cost: amount },
+        {
+          symbolId,
+          openedSeq: transaction.seq,
+          openedOn: transaction.date,
+          unitsAsOf: transaction.date,
+          quantity,
+          cost: amount,
+        },
       ]);
     } else if (sign(quantity) < 0) {
       let sold: ReturnType<typeof consumeFifo>;
@@ -249,7 +389,16 @@ export function apply(
 
   if (!isZero(total)) fail(`entries are unbalanced by ${cents(total)}`);
   if (sign(cash) < 0) fail('cash goes below zero');
-  return { cash, capital, fees, realizedPnl, lots };
+  return {
+    cash,
+    capital,
+    fees,
+    realizedPnl,
+    dividendIncome,
+    receivable,
+    lots,
+    dividends,
+  };
 }
 
 /** The state a whole history adds up to. Transactions must be in `seq` order. */
@@ -368,6 +517,100 @@ export function sell(state: LedgerState, trade: Trade): Posting {
         ? []
         : [entry('realized_pnl', negate(gain), trade.symbolId)]),
       ...commissionEntries(commission),
+    ],
+  };
+}
+
+/** A split as the market data reports it. */
+export interface Split extends SplitRatio {
+  symbolId: number;
+  /** First session priced after the split, YYYY-MM-DD. */
+  exDate: string;
+}
+
+/**
+ * A split's effect on the portfolio's lots: one securities entry that adds
+ * (or, for a reverse split, takes) shares and moves no money, so the lots
+ * keep their cost. Null when no lot changes: nothing was held from before
+ * the ex-date, or the split was already applied. The transaction must be
+ * dated `exDate`.
+ */
+export function split(state: LedgerState, action: Split): Posting | null {
+  const ratio = parseRatio(action);
+  const { added } = splitLots(
+    state.lots.get(action.symbolId) ?? [],
+    ratio,
+    action.exDate,
+  );
+  if (isZero(added)) return null;
+  return {
+    kind: 'split',
+    split: { from: format(ratio.from), to: format(ratio.to) },
+    entries: [entry('securities', ZERO, action.symbolId, added)],
+  };
+}
+
+/** A cash dividend as the market data reports it. */
+export interface Dividend {
+  symbolId: number;
+  exDate: string;
+  /** Cash per share, up to 6 decimal places. */
+  cashPerShare: string;
+}
+
+/**
+ * A dividend going ex: the shares bought before the ex-date earn
+ * `shares × cashPerShare`, rounded half up to the cent. It's income now and
+ * cash later, so it is booked as a receivable. Null when the portfolio
+ * earns nothing or the dividend is already booked. The transaction must be
+ * dated `exDate`, and a split on the same date applied first: the amount
+ * per share is quoted in the shares that trade that day.
+ */
+export function dividend(state: LedgerState, action: Dividend): Posting | null {
+  const rate = positive(action.cashPerShare, 'cashPerShare', PRICE_PLACES);
+  const booked = state.dividends.some(
+    (d) => d.symbolId === action.symbolId && d.exDate === action.exDate,
+  );
+  if (booked) return null;
+  const entitled = (state.lots.get(action.symbolId) ?? [])
+    .filter((lot) => lot.openedOn < action.exDate)
+    .reduce((sum, lot) => add(sum, lot.quantity), ZERO);
+  const amount = round(multiply(entitled, rate), CASH_PLACES);
+  if (isZero(amount)) return null;
+  return {
+    kind: 'dividend',
+    entries: [
+      entry('dividends_receivable', amount, action.symbolId),
+      entry('dividend_income', negate(amount), action.symbolId),
+    ],
+  };
+}
+
+/** The symbol's oldest dividend that is booked and not yet paid. */
+export function oldestUnpaidDividend(
+  state: LedgerState,
+  symbolId: number,
+): BookedDividend | null {
+  return (
+    state.dividends.find((d) => d.symbolId === symbolId && !d.paid) ?? null
+  );
+}
+
+/**
+ * The symbol's oldest unpaid dividend arriving in cash, or null when
+ * nothing is owed.
+ */
+export function dividendPayment(
+  state: LedgerState,
+  symbolId: number,
+): Posting | null {
+  const owed = oldestUnpaidDividend(state, symbolId);
+  if (!owed) return null;
+  return {
+    kind: 'dividend_payment',
+    entries: [
+      entry('cash', owed.amount),
+      entry('dividends_receivable', negate(owed.amount), symbolId),
     ],
   };
 }

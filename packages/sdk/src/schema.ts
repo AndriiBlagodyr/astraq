@@ -175,6 +175,96 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The user's paper portfolios, oldest first */
+        get: operations["listPortfolios"];
+        put?: never;
+        /** Create a paper portfolio with its starting cash and trading costs */
+        post: operations["createPortfolio"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolios/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A portfolio with its cash, positions at cost, and PnL, from its ledger */
+        get: operations["getPortfolio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolios/{id}/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deposit cash into a portfolio or withdraw it */
+        post: operations["transferCash"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolios/{id}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A portfolio's orders with their fills, newest first */
+        get: operations["listOrders"];
+        put?: never;
+        /**
+         * Place an order, at most once per Idempotency-Key
+         * @description A market order placed during the session fills at once at the latest known price; every other order waits for the next session it can fill in. Repeating the request with the same Idempotency-Key returns the order the first one placed, with the response header `Idempotency-Replayed: true`; the same key with a different order is a 409.
+         */
+        post: operations["placeOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolios/{id}/orders/{orderId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an open order; 409 once it has filled or been rejected */
+        post: operations["cancelOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/symbols": {
         parameters: {
             query?: never;
@@ -381,6 +471,110 @@ export interface components {
             status: "ok";
             /** @description The git commit the running build came from, or null outside a deploy. */
             version: string | null;
+        };
+        PortfolioSummary_Output: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slippageBps: number;
+            commissionPerOrder: string;
+            commissionPerShare: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PortfolioList_Output: {
+            portfolios: components["schemas"]["PortfolioSummary_Output"][];
+        };
+        CreatePortfolioBody: {
+            name: string;
+            startingCash: string;
+            /** @default 0 */
+            slippageBps: number;
+            /** @default 0 */
+            commissionPerOrder: string;
+            /** @default 0 */
+            commissionPerShare: string;
+        };
+        Position_Output: {
+            ticker: string;
+            name: string;
+            quantity: string;
+            cost: string;
+        };
+        Portfolio_Output: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slippageBps: number;
+            commissionPerOrder: string;
+            commissionPerShare: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            cash: string;
+            capital: string;
+            fees: string;
+            realizedPnl: string;
+            dividendIncome: string;
+            dividendsReceivable: string;
+            positions: components["schemas"]["Position_Output"][];
+        };
+        CashTransferBody: {
+            /** @enum {string} */
+            type: "deposit" | "withdrawal";
+            amount: string;
+        };
+        Order_Output: {
+            /** Format: uuid */
+            id: string;
+            ticker: string;
+            side: components["schemas"]["OrderSide_Output"];
+            type: components["schemas"]["OrderType_Output"];
+            quantity: string;
+            limitPrice: string | null;
+            status: components["schemas"]["OrderStatus_Output"];
+            closeReason: components["schemas"]["OrderCloseReason_Output"] | null;
+            /** Format: date-time */
+            placedAt: string;
+            closedAt: string | null;
+            fill: components["schemas"]["OrderFill_Output"] | null;
+        };
+        /** @enum {string} */
+        OrderSide_Output: "buy" | "sell";
+        /** @enum {string} */
+        OrderType_Output: "market" | "limit";
+        /** @enum {string} */
+        OrderStatus_Output: "open" | "filled" | "cancelled" | "rejected";
+        /** @enum {string} */
+        OrderCloseReason_Output: "user" | "split" | "insufficient_cash" | "insufficient_shares" | "too_small";
+        OrderFill_Output: {
+            rule: components["schemas"]["FillRule_Output"];
+            price: string;
+            notional: string;
+            commission: string;
+            /** Format: date */
+            sessionDate: string;
+            /** Format: date-time */
+            filledAt: string;
+        };
+        /** @enum {string} */
+        FillRule_Output: "market_open" | "market_last" | "limit_open" | "limit_cross";
+        OrderList_Output: {
+            orders: components["schemas"]["Order_Output"][];
+        };
+        /** @enum {string} */
+        OrderSide: "buy" | "sell";
+        /** @enum {string} */
+        OrderType: "market" | "limit";
+        PlaceOrderBody: {
+            ticker: string;
+            side: components["schemas"]["OrderSide"];
+            type: components["schemas"]["OrderType"];
+            quantity: string;
+            limitPrice?: string | null;
         };
         SymbolSummary_Output: {
             ticker: string;
@@ -813,6 +1007,228 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthStatus_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    listPortfolios: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioList_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    createPortfolio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePortfolioBody"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Portfolio_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    getPortfolio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Portfolio_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    transferCash: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CashTransferBody"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Portfolio_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    listOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderList_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    placeOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A value the client makes up for this placement (a UUID is fine): 1 to 128 printable ASCII characters. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceOrderBody"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Order_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    cancelOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Order_Output"];
                 };
             };
             /** @description Any error, as an RFC 9457 problem detail */

@@ -181,8 +181,18 @@ export class MarketDataRepository {
       for (const row of rows) {
         const values =
           row.type === 'SPLIT'
-            ? { splitFrom: row.splitFrom, splitTo: row.splitTo, cashAmount: null }
-            : { splitFrom: null, splitTo: null, cashAmount: row.cashAmount };
+            ? {
+                splitFrom: row.splitFrom,
+                splitTo: row.splitTo,
+                cashAmount: null,
+                payDate: null,
+              }
+            : {
+                splitFrom: null,
+                splitTo: null,
+                cashAmount: row.cashAmount,
+                payDate: row.payDate && utcMidnight(row.payDate),
+              };
         const exDate = utcMidnight(row.exDate);
         await tx.corporateAction.upsert({
           where: {

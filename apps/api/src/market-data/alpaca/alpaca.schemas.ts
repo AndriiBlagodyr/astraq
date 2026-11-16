@@ -39,6 +39,8 @@ const cashDividendSchema = z.object({
   /** Cash per share. */
   rate: decimal,
   ex_date: z.iso.date(),
+  /** When the cash is paid. Missing on some older rows. */
+  payable_date: z.iso.date().nullish(),
 });
 
 /** `GET /v1/corporate-actions`. A type with no rows on a page is omitted. */

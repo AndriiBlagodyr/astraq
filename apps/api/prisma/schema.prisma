@@ -32,6 +32,7 @@ model Symbol {
   corporateActions CorporateAction[]
   watchlistItems   WatchlistItem[]
   ledgerEntries    LedgerEntry[]
+  orders           Order[]
 
   @@map("symbols")
 }
@@ -76,6 +77,9 @@ model CorporateAction {
   splitTo    Decimal?            @map("split_to") @db.Decimal(18, 6)
   /// Dividend: cash paid per share, in the listing currency.
   cashAmount Decimal?            @map("cash_amount") @db.Decimal(18, 6)
+  /// Dividend: the day the cash is paid. Null on a split, and on a dividend
+  /// the provider gave no pay date for (it is then paid on the ex-date).
+  payDate    DateTime?           @map("pay_date") @db.Date
   createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
 
   symbol Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
@@ -257,16 +261,23 @@ model Portfolio {
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   ledgerTransactions LedgerTransaction[]
+  orders             Order[]
 
   @@unique([userId, name])
   @@map("portfolios")
 }
 
 enum LedgerTransactionKind {
-  DEPOSIT    @map("deposit")
-  WITHDRAWAL @map("withdrawal")
-  BUY        @map("buy")
-  SELL       @map("sell")
+  DEPOSIT          @map("deposit")
+  WITHDRAWAL       @map("withdrawal")
+  BUY              @map("buy")
+  SELL             @map("sell")
+  /// A split changed the share count of open lots; their cost is unchanged.
+  SPLIT            @map("split")
+  /// A dividend went ex: the cash is owed to the portfolio from this day.
+  DIVIDEND         @map("dividend")
+  /// The owed dividend arrived in cash on its pay date.
+  DIVIDEND_PAYMENT @map("dividend_payment")
 
   @@map("ledger_transaction_kind")
 }
@@ -284,10 +295,16 @@ model LedgerTransaction {
   kind        LedgerTransactionKind
   /// When the event took effect (a fill's time), not when the row was written.
   occurredAt  DateTime              @map("occurred_at") @db.Timestamptz(6)
+  /// Set on a split and only there (CHECK constraint in the migration):
+  /// `split_from` old shares became `split_to` new ones. Replay needs the
+  /// ratio to redo the split lot by lot.
+  splitFrom   Decimal?              @map("split_from") @db.Decimal(18, 6)
+  splitTo     Decimal?              @map("split_to") @db.Decimal(18, 6)
   createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
 
   portfolio Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   entries   LedgerEntry[]
+  fill      Fill?
 
   @@unique([portfolioId, seq])
   @@map("ledger_transactions")
@@ -295,15 +312,19 @@ model LedgerTransaction {
 
 enum LedgerAccount {
   /// Asset: cash in the portfolio.
-  CASH         @map("cash")
+  CASH                 @map("cash")
   /// Asset: shares held, at cost.
-  SECURITIES   @map("securities")
+  SECURITIES           @map("securities")
   /// Equity: what the owner paid in, less what they took out.
-  CAPITAL      @map("capital")
+  CAPITAL              @map("capital")
   /// Expense: commissions.
-  FEES         @map("fees")
+  FEES                 @map("fees")
   /// Income: gains (credits) and losses (debits) on closed lots.
-  REALIZED_PNL @map("realized_pnl")
+  REALIZED_PNL         @map("realized_pnl")
+  /// Asset: dividends that have gone ex and aren't paid yet.
+  DIVIDENDS_RECEIVABLE @map("dividends_receivable")
+  /// Income: dividends earned, booked on the ex-date.
+  DIVIDEND_INCOME      @map("dividend_income")
 
   @@map("ledger_account")
 }
@@ -314,8 +335,8 @@ model LedgerEntry {
   id            BigInt        @id @default(autoincrement())
   transactionId String        @map("transaction_id") @db.Uuid
   account       LedgerAccount
-  /// Set on securities and realized_pnl entries, null on the others (CHECK
-  /// constraint in the migration).
+  /// Set on securities, realized_pnl, and both dividend accounts, null on
+  /// the others (CHECK constraint in the migration).
   symbolId      Int?          @map("symbol_id")
   /// In cents. Debits are positive, credits negative.
   amount        Decimal       @db.Decimal(20, 2)
@@ -330,4 +351,117 @@ model LedgerEntry {
   @@index([transactionId])
   @@index([symbolId])
   @@map("ledger_entries")
+}
+
+enum OrderSide {
+  BUY  @map("buy")
+  SELL @map("sell")
+
+  @@map("order_side")
+}
+
+enum OrderType {
+  MARKET @map("market")
+  LIMIT  @map("limit")
+
+  @@map("order_type")
+}
+
+enum OrderStatus {
+  /// Waiting for a session that fills it.
+  OPEN      @map("open")
+  FILLED    @map("filled")
+  CANCELLED @map("cancelled")
+  /// It met a fill and the ledger refused it.
+  REJECTED  @map("rejected")
+
+  @@map("order_status")
+}
+
+/// Why an order ended without a fill.
+enum OrderCloseReason {
+  /// Cancelled by its owner.
+  USER                @map("user")
+  /// Cancelled because the symbol split while the order was waiting: its
+  /// quantity and limit were in the old shares.
+  SPLIT               @map("split")
+  INSUFFICIENT_CASH   @map("insufficient_cash")
+  INSUFFICIENT_SHARES @map("insufficient_shares")
+  /// The fill came to less than a cent.
+  TOO_SMALL           @map("too_small")
+
+  @@map("order_close_reason")
+}
+
+/// An instruction to buy or sell in a paper portfolio (ADR 0009 section 7).
+/// It fills whole or not at all (ADR 0008), so it has at most one fill.
+model Order {
+  id             String            @id @default(uuid(7)) @db.Uuid
+  portfolioId    String            @map("portfolio_id") @db.Uuid
+  symbolId       Int               @map("symbol_id")
+  side           OrderSide
+  type           OrderType
+  /// Shares, above zero.
+  quantity       Decimal           @db.Decimal(24, 6)
+  /// Set on a limit order and only there (CHECK constraint in the migration).
+  limitPrice     Decimal?          @map("limit_price") @db.Decimal(18, 6)
+  status         OrderStatus       @default(OPEN)
+  /// Set when the order was cancelled or rejected.
+  closeReason    OrderCloseReason? @map("close_reason")
+  /// The client's key for this placement: sending it again returns this
+  /// order instead of placing a second one.
+  idempotencyKey String            @map("idempotency_key") @db.VarChar(128)
+  /// When the api accepted the order. Decides which session it may first
+  /// fill in: only one that opened after this instant.
+  placedAt       DateTime          @map("placed_at") @db.Timestamptz(6)
+  /// When it filled, was cancelled, or was rejected; null while open.
+  closedAt       DateTime?         @map("closed_at") @db.Timestamptz(6)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  /// A symbol with orders is deactivated, never deleted.
+  symbol    Symbol    @relation(fields: [symbolId], references: [id], onDelete: Restrict)
+  fill      Fill?
+
+  @@unique([portfolioId, idempotencyKey])
+  // A portfolio's orders newest first, and its open ones for settlement.
+  @@index([portfolioId, placedAt(sort: Desc)])
+  @@index([portfolioId, status])
+  @@map("orders")
+}
+
+/// Which fill-model rule priced a fill (ADR 0008).
+enum FillRule {
+  MARKET_OPEN @map("market_open")
+  MARKET_LAST @map("market_last")
+  LIMIT_OPEN  @map("limit_open")
+  LIMIT_CROSS @map("limit_cross")
+
+  @@map("fill_rule")
+}
+
+/// An order's fill: what the fill model decided, and the ledger transaction
+/// that booked it. Written once, in the same database transaction as that
+/// ledger transaction and the order's status.
+model Fill {
+  id                  String   @id @default(uuid(7)) @db.Uuid
+  orderId             String   @unique @map("order_id") @db.Uuid
+  ledgerTransactionId String   @unique @map("ledger_transaction_id") @db.Uuid
+  rule                FillRule
+  /// Per share.
+  price               Decimal  @db.Decimal(18, 6)
+  quantity            Decimal  @db.Decimal(24, 6)
+  /// `quantity × price` in cents; never includes the commission.
+  notional            Decimal  @db.Decimal(20, 2)
+  commission          Decimal  @db.Decimal(20, 2)
+  /// The session whose bar priced the fill.
+  sessionDate         DateTime @map("session_date") @db.Date
+  filledAt            DateTime @map("filled_at") @db.Timestamptz(6)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order             Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ledgerTransaction LedgerTransaction @relation(fields: [ledgerTransactionId], references: [id], onDelete: Cascade)
+
+  @@map("fills")
 }

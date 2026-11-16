@@ -5,11 +5,13 @@ import { LedgerService } from './ledger.service';
 
 /**
  * Portfolio accounting (ADR 0009). No controller of its own: the portfolio
- * and order endpoints (ROADMAP Phase 3 item 3) post through `LedgerService`.
+ * endpoints post cash moves through `LedgerService`, and the order path
+ * appends fills, splits, and dividends through `LedgerRepository` inside
+ * its own transaction (`src/portfolios`).
  */
 @Module({
   imports: [DatabaseModule],
   providers: [LedgerService, LedgerRepository],
-  exports: [LedgerService],
+  exports: [LedgerService, LedgerRepository],
 })
 export class LedgerModule {}

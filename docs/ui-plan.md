@@ -131,6 +131,7 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
 - **Preview before submitting:** estimated cost, commission, and when it fills under the shared fill model, e.g. "Market closed — fills at Wednesday's open".
 - **Guards shown inline:** insufficient cash, max order notional, short selling not allowed.
 - **Submitting:** an idempotency key is created when the ticket opens, so a double submit places one order. The order appears optimistically and rolls back with a toast if rejected.
+- **Api (done):** `POST /api/portfolios/{id}/orders` with an `Idempotency-Key` header. The response is the order, already `filled` or `rejected` (with `closeReason`) for a market order placed during the session, `open` otherwise. The preview and the inline guards wait for the risk rules (ROADMAP Phase 3 item 5).
 
 ### Watchlists — `/watchlists`, `/watchlists/[id]` (Phase 2)
 
@@ -149,6 +150,7 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
 - **Holdings tab:** positions (quantity, average cost, market value, unrealized PnL, weight), cash, and totals. An equity curve over time. Realized PnL uses FIFO lots, and expanding a row shows its lots.
 - **Orders tab:** open and past orders with status (pending, filled, cancelled, rejected) and the reason for any rejection. Cancel an open order.
 - **Activity tab:** the ledger as a readable timeline of fills, cash deposits, commissions, dividends, and split adjustments. Every balance on the Holdings tab can be traced to entries here.
+- **Api so far:** `GET` / `POST /api/portfolios`, `GET /api/portfolios/{id}` (cash, positions at cost, realized PnL, fees, dividends), `POST /api/portfolios/{id}/transfers`, and `GET /api/portfolios/{id}/orders` with `POST .../orders/{orderId}/cancel`. Still to add for these tabs: market value and unrealized PnL per position, the equity curve, lots per position, and the Activity timeline.
 - **Phase 5:** strategies attached to the portfolio, and which orders they placed.
 
 ### Strategies — `/strategies` (Phase 5)

@@ -18,7 +18,15 @@ export type CandleRow = {
   volume: string;
 };
 
-/** A split (both ratio sides) or a dividend (cash amount); `exDate` is YYYY-MM-DD. */
+/**
+ * A split (both ratio sides) or a dividend (cash amount, and the day it is
+ * paid when the provider says); dates are YYYY-MM-DD.
+ */
 export type CorporateActionRow =
   | { type: 'SPLIT'; exDate: string; splitFrom: string; splitTo: string }
-  | { type: 'DIVIDEND'; exDate: string; cashAmount: string };
+  | {
+      type: 'DIVIDEND';
+      exDate: string;
+      cashAmount: string;
+      payDate: string | null;
+    };

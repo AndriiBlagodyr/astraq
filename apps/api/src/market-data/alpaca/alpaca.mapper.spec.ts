@@ -86,21 +86,41 @@ describe('alpaca mapping', () => {
         { symbol: 'GE', old_rate: '8', new_rate: '1', ex_date: '2021-08-02' },
       ],
       cash_dividends: [
-        { symbol: 'COST', rate: '1.13', ex_date: '2024-01-03' },
-        { symbol: 'COST', rate: '15', ex_date: '2024-01-03' },
+        {
+          symbol: 'COST',
+          rate: '1.13',
+          ex_date: '2024-01-03',
+          payable_date: '2024-01-12',
+        },
+        {
+          symbol: 'COST',
+          rate: '15',
+          ex_date: '2024-01-03',
+          payable_date: '2024-01-19',
+        },
         { symbol: 'NVDA', rate: '0.01', ex_date: '2024-06-11' },
       ],
     });
 
     expect(rows.get('NVDA')).toEqual([
       { type: 'SPLIT', exDate: '2024-06-10', splitFrom: '1', splitTo: '10' },
-      { type: 'DIVIDEND', exDate: '2024-06-11', cashAmount: '0.01' },
+      {
+        type: 'DIVIDEND',
+        exDate: '2024-06-11',
+        cashAmount: '0.01',
+        payDate: null,
+      },
     ]);
     expect(rows.get('GE')).toEqual([
       { type: 'SPLIT', exDate: '2021-08-02', splitFrom: '8', splitTo: '1' },
     ]);
     expect(rows.get('COST')).toEqual([
-      { type: 'DIVIDEND', exDate: '2024-01-03', cashAmount: '16.13' },
+      {
+        type: 'DIVIDEND',
+        exDate: '2024-01-03',
+        cashAmount: '16.13',
+        payDate: '2024-01-19',
+      },
     ]);
   });
 
