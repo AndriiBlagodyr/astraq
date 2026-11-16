@@ -84,7 +84,8 @@ export function toCandleRows(bars: AlpacaBar[]): CandleRow[] {
  * Alpaca's `old_rate -> new_rate` is our `split_from -> split_to` (NVDA 2024:
  * 1 -> 10, a reverse split runs the other way). Two dividends on one ex-date
  * (a regular plus a special) become one row with the summed amount, since
- * `(symbol, type, ex_date)` is unique and adjustment only needs the total.
+ * `(symbol, type, ex_date)` is unique and adjustment only needs the total;
+ * the row takes the later of their pay dates, so no cash is credited early.
  */
 export function toCorporateActionRows(
   actions: AlpacaCorporateActions,
@@ -105,15 +106,30 @@ export function toCorporateActionRows(
     });
   }
 
-  const dividends = new Map<string, Prisma.Decimal>();
+  const dividends = new Map<
+    string,
+    { total: Prisma.Decimal; payDate: string | null }
+  >();
   for (const dividend of actions.cash_dividends) {
     const key = `${dividend.symbol}|${dividend.ex_date}`;
-    const total = dividends.get(key) ?? new Prisma.Decimal(0);
-    dividends.set(key, total.plus(dividend.rate));
+    const known = dividends.get(key);
+    const payDate = dividend.payable_date ?? null;
+    dividends.set(key, {
+      total: (known?.total ?? new Prisma.Decimal(0)).plus(dividend.rate),
+      payDate:
+        known?.payDate && (!payDate || known.payDate > payDate)
+          ? known.payDate
+          : payDate,
+    });
   }
-  for (const [key, total] of dividends) {
+  for (const [key, { total, payDate }] of dividends) {
     const [ticker, exDate] = key.split('|');
-    add(ticker, { type: 'DIVIDEND', exDate, cashAmount: total.toFixed() });
+    add(ticker, {
+      type: 'DIVIDEND',
+      exDate,
+      cashAmount: total.toFixed(),
+      payDate,
+    });
   }
 
   return byTicker;

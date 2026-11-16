@@ -13,6 +13,7 @@ import { RedisService } from './common/redis.service';
 import { assignRequestId } from './common/request-id';
 import { HealthModule } from './health/health.module';
 import { LedgerModule } from './ledger/ledger.module';
+import { PortfoliosModule } from './portfolios/portfolios.module';
 import { SymbolsModule } from './symbols/symbols.module';
 import { WatchlistsModule } from './watchlists/watchlists.module';
 
@@ -50,6 +51,7 @@ import { WatchlistsModule } from './watchlists/watchlists.module';
     AuthModule,
     HealthModule,
     LedgerModule,
+    PortfoliosModule,
     SymbolsModule,
     WatchlistsModule,
   ],

@@ -81,7 +81,7 @@ Half up means a tie rounds away from zero, which is Python's `ROUND_HALF_UP`. Na
 
 - **Quantity.** An order fills whole or not at all. No partial fills, no volume cap.
 - **Prices.** Bars are raw (unadjusted) prices, because those are the prices that traded. Adjusted prices are for signals; fills and cash use raw prices plus corporate actions (Phase 3 item 4, Phase 5).
-- **Which orders are live.** Time in force, cancellation, and what a split does to a resting limit order belong to the order lifecycle (Phase 3 items 3 and 4), not to the fill model.
+- **Which orders are live.** Time in force, cancellation, and what a split does to a resting limit order belong to the order lifecycle, not to the fill model. Decided in [ADR 0009](0009-ledger-accounting-and-order-transaction-boundaries.md), sections 7 and 8: orders wait until filled or cancelled, and a split cancels the orders placed before it.
 - **Whether the order is allowed.** Cash, short-selling, and notional guards are the ledger's and the risk rules' (ADR 0009, Phase 3 item 5).
 
 ### 7. The fixtures are the contract

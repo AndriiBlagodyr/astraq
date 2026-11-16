@@ -12,10 +12,12 @@ import {
   type Trade,
 } from './ledger';
 import { LedgerRepository } from './ledger.repository';
+import { sessionDate } from '../trading/market-hours';
 
 /**
  * A portfolio's books: derives its state from the ledger and appends to it.
- * The only writer of the ledger tables. Rule violations surface as
+ * Cash moves post here; fills, splits, and dividends post through the order
+ * path (`OrdersRepository`), under the same lock. Rule violations surface as
  * `LedgerError` (insufficient cash or shares), for the caller to turn into
  * an order rejection or a 4xx.
  */
@@ -56,7 +58,11 @@ export class LedgerService {
       const posting = build(state);
       // Run the new transaction through the same audit a later replay
       // will, so nothing is stored that couldn't be read back.
-      apply(state, { seq: history.length + 1, ...posting });
+      apply(state, {
+        seq: history.length + 1,
+        date: sessionDate(occurredAt),
+        ...posting,
+      });
       return posting;
     });
   }

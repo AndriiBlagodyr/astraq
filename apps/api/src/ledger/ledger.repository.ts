@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { sessionDate } from '../trading/market-hours';
 import type {
   LedgerAccount as DbAccount,
   LedgerTransactionKind as DbKind,
@@ -58,29 +59,49 @@ export class LedgerRepository {
       const history = await this.read(tx, portfolioId);
       const posting = decide(history);
       const seq = history.length + 1;
-      await tx.ledgerTransaction.create({
-        data: {
-          portfolioId,
-          seq,
-          kind: posting.kind.toUpperCase() as DbKind,
-          occurredAt,
-          // Nested creates insert in array order, which is the order
-          // `read` returns them in (by id).
-          entries: {
-            create: posting.entries.map((entry) => ({
-              account: entry.account.toUpperCase() as DbAccount,
-              symbolId: entry.symbolId,
-              amount: entry.amount,
-              quantity: entry.quantity,
-            })),
-          },
-        },
-      });
-      return { seq, ...posting };
+      await this.insert(tx, portfolioId, seq, occurredAt, posting);
+      return { seq, date: sessionDate(occurredAt), ...posting };
     });
   }
 
-  private async read(
+  /**
+   * Writes one transaction at `seq` and returns its id. For callers that
+   * already hold the portfolio's row lock in `tx` and have read the history
+   * there (the order path posts several transactions under one lock).
+   */
+  async insert(
+    tx: Prisma.TransactionClient,
+    portfolioId: string,
+    seq: number,
+    occurredAt: Date,
+    posting: Posting,
+  ): Promise<string> {
+    const created = await tx.ledgerTransaction.create({
+      data: {
+        portfolioId,
+        seq,
+        kind: posting.kind.toUpperCase() as DbKind,
+        occurredAt,
+        splitFrom: posting.split?.from,
+        splitTo: posting.split?.to,
+        // Nested creates insert in array order, which is the order
+        // `read` returns them in (by id).
+        entries: {
+          create: posting.entries.map((entry) => ({
+            account: entry.account.toUpperCase() as DbAccount,
+            symbolId: entry.symbolId,
+            amount: entry.amount,
+            quantity: entry.quantity,
+          })),
+        },
+      },
+      select: { id: true },
+    });
+    return created.id;
+  }
+
+  /** The portfolio's history in `seq` order, as `client` sees it. */
+  async read(
     client: Prisma.TransactionClient,
     portfolioId: string,
   ): Promise<LedgerTransaction[]> {
@@ -90,6 +111,9 @@ export class LedgerRepository {
       select: {
         seq: true,
         kind: true,
+        occurredAt: true,
+        splitFrom: true,
+        splitTo: true,
         entries: {
           orderBy: { id: 'asc' },
           select: { account: true, symbolId: true, amount: true, quantity: true },
@@ -98,7 +122,12 @@ export class LedgerRepository {
     });
     return rows.map((row) => ({
       seq: row.seq,
+      date: sessionDate(row.occurredAt),
       kind: row.kind.toLowerCase() as LedgerKind,
+      ...(row.splitFrom &&
+        row.splitTo && {
+          split: { from: row.splitFrom.toFixed(), to: row.splitTo.toFixed() },
+        }),
       entries: row.entries.map((entry) => ({
         account: entry.account.toLowerCase() as LedgerAccount,
         symbolId: entry.symbolId,
