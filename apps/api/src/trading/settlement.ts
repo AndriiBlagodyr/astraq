@@ -10,12 +10,14 @@ import {
   LedgerError,
   apply,
   buy,
+  deposit,
   dividend,
   dividendPayment,
   oldestUnpaidDividend,
   replay,
   sell,
   split,
+  withdrawal,
   type LedgerErrorCode,
   type LedgerState,
   type LedgerTransaction,
@@ -41,7 +43,9 @@ import {
 // the open orders, and the market data that has arrived, `settle` walks the
 // sessions in order and decides what to write: splits on held shares,
 // dividends going ex and being paid, and orders meeting the bars that fill
-// them. `place` and `cancel` settle first, then add their own step.
+// them. `place`, `cancel`, and `transfer` settle first, then add their own
+// step: whatever a portfolio's owner does today meets books in which
+// everything earlier has already happened.
 //
 // Nothing here reads a clock or a database. The repository loads a `Book`
 // under the portfolio's row lock, calls one of these, and writes the `Plan`
@@ -135,6 +139,12 @@ export interface Plan {
 /** An order as the client asks for it. */
 export interface OrderRequest extends FillOrder {
   symbolId: number;
+}
+
+/** Cash paid in or taken out, as the client asks for it. */
+export interface CashTransfer {
+  type: 'deposit' | 'withdrawal';
+  amount: string;
 }
 
 /** The symbol's latest stored session. */
@@ -461,4 +471,26 @@ export function cancel(
   const order = settlement.open.find((open) => open.id === orderId);
   if (order) settlement.close(order, 'cancelled', 'user', now);
   return { plan: settlement.plan(), cancelled: order !== undefined };
+}
+
+/**
+ * Settles, then pays cash in or takes it out. Settling first keeps the
+ * order of events honest: a deposit made today can't pay for an order that
+ * met its bar yesterday, and a withdrawal can't take cash a fill has
+ * already spent. Throws the ledger's `insufficient_cash` for a withdrawal
+ * the settled cash doesn't cover.
+ */
+export function transfer(
+  book: Book,
+  request: CashTransfer,
+  now: Date,
+): { plan: Plan; state: LedgerState } {
+  const settlement = run(book, now);
+  settlement.post(
+    request.type === 'deposit'
+      ? deposit(request.amount)
+      : withdrawal(settlement.state, request.amount),
+    now,
+  );
+  return { plan: settlement.plan(), state: settlement.state };
 }

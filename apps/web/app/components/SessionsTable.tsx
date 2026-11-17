@@ -17,6 +17,7 @@ import {
 } from "@astraq/ui";
 import { revokeSession } from "@/app/(app)/settings/actions";
 import type { AccountSession } from "@/lib/account";
+import { postAuth } from "@/lib/auth-client";
 import { describeUserAgent } from "@/lib/sessions";
 
 // Formatted in the viewer's time zone, so the server's text (its own zone)
@@ -52,8 +53,10 @@ export function SessionsTable({ sessions }: { sessions: AccountSession[] }) {
         return;
       }
       if (session.current) {
-        // The api has revoked it; the BFF clears the cookies.
-        await fetch("/api/auth/logout", { method: "POST" });
+        // The api has revoked it; the BFF clears the cookies. If that call
+        // never arrives the cookies stay, and the next page finds the
+        // session revoked and clears them itself.
+        await postAuth("logout");
         router.push("/login");
         router.refresh();
         return;

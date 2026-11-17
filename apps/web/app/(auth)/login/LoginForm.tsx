@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, Feedback, FormField, Input, buttonVariants } from "@astraq/ui";
 import { LoginBodySchema, type LoginBody } from "@astraq/shared";
+import { postAuth } from "@/lib/auth-client";
 
 export function LoginForm() {
   const router = useRouter();
@@ -22,15 +23,9 @@ export function LoginForm() {
 
   const onSubmit = async (data: LoginBody) => {
     setServerError(null);
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { error?: string };
-      setServerError(body.error ?? "Sign-in failed. Please try again.");
+    const result = await postAuth("login", data);
+    if (!result.ok) {
+      setServerError(result.error ?? "Sign-in failed. Please try again.");
       return;
     }
 

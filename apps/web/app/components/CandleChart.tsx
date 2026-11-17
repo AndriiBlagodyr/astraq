@@ -23,6 +23,7 @@ import {
   type ChartPalette,
 } from "@/lib/chart-theme";
 import { utcMidnight } from "@/lib/dates";
+import { formatPrice } from "@/lib/format";
 import { splitLabel, type Candle, type Split } from "@/lib/stock-chart";
 
 type CandleChartProps = {
@@ -236,10 +237,10 @@ export function CandleChart({
           <time dateTime={shown.time} className="text-foreground">
             {shown.time}
           </time>
-          <span>O {shown.open}</span>
-          <span>H {shown.high}</span>
-          <span>L {shown.low}</span>
-          <span>C {shown.close}</span>
+          <span>O {formatPrice(shown.open)}</span>
+          <span>H {formatPrice(shown.high)}</span>
+          <span>L {formatPrice(shown.low)}</span>
+          <span>C {formatPrice(shown.close)}</span>
           <span>V {volumeFormat.format(Number(shown.volume))}</span>
         </p>
       ) : null}

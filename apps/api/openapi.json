@@ -535,7 +535,7 @@
             "bearer": []
           }
         ],
-        "summary": "A portfolio with its cash, positions at cost, and PnL, from its ledger",
+        "summary": "A portfolio with its cash, PnL, and positions at cost and at their latest close",
         "tags": [
           "portfolios"
         ]
@@ -1761,13 +1761,62 @@
           "cost": {
             "type": "string",
             "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "lastPrice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "priceDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "marketValue": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unrealizedPnl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "ticker",
           "name",
           "quantity",
-          "cost"
+          "cost",
+          "lastPrice",
+          "priceDate",
+          "marketValue",
+          "unrealizedPnl"
         ],
         "additionalProperties": false
       },
@@ -1811,7 +1860,7 @@
           },
           "capital": {
             "type": "string",
-            "pattern": "^\\d+(\\.\\d+)?$"
+            "pattern": "^-?\\d+(\\.\\d+)?$"
           },
           "fees": {
             "type": "string",
@@ -1828,6 +1877,39 @@
           "dividendsReceivable": {
             "type": "string",
             "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "marketValue": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unrealizedPnl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "equity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "positions": {
             "type": "array",
@@ -1850,6 +1932,9 @@
           "realizedPnl",
           "dividendIncome",
           "dividendsReceivable",
+          "marketValue",
+          "unrealizedPnl",
+          "equity",
           "positions"
         ],
         "additionalProperties": false

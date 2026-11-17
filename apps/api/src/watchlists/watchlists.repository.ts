@@ -1,21 +1,23 @@
 import { Injectable } from '@nestjs/common';
+import { ConflictError, NotFoundError } from '../common/domain-errors';
+import { isUniqueViolation } from '../common/prisma-errors';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../database/prisma.service';
 
 /**
  * Thrown by writes that touch a list the user doesn't own, or that doesn't
  * exist: the two cases are deliberately the same, so a guessed id learns
- * nothing. The service maps it to a 404.
+ * nothing. A 404 (`common/domain-errors.ts`).
  */
-export class WatchlistNotFoundError extends Error {
+export class WatchlistNotFoundError extends NotFoundError {
   constructor(readonly watchlistId: string) {
     super(`Watchlist ${watchlistId} not found`);
     this.name = 'WatchlistNotFoundError';
   }
 }
 
-/** Thrown when a rename or create would reuse one of the user's names. */
-export class WatchlistNameTakenError extends Error {
+/** Thrown when a rename or create would reuse one of the user's names: a 409. */
+export class WatchlistNameTakenError extends ConflictError {
   constructor(readonly watchlistName: string) {
     super(`A watchlist named "${watchlistName}" already exists`);
     this.name = 'WatchlistNameTakenError';
@@ -272,11 +274,5 @@ export class WatchlistsRepository {
 
 /** The unique (user_id, name) index rejected the name. */
 function translateNameConflict(error: unknown, name: string): unknown {
-  if (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === 'P2002'
-  ) {
-    return new WatchlistNameTakenError(name);
-  }
-  return error;
+  return isUniqueViolation(error) ? new WatchlistNameTakenError(name) : error;
 }

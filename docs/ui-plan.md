@@ -150,7 +150,7 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
 - **Holdings tab:** positions (quantity, average cost, market value, unrealized PnL, weight), cash, and totals. An equity curve over time. Realized PnL uses FIFO lots, and expanding a row shows its lots.
 - **Orders tab:** open and past orders with status (pending, filled, cancelled, rejected) and the reason for any rejection. Cancel an open order.
 - **Activity tab:** the ledger as a readable timeline of fills, cash deposits, commissions, dividends, and split adjustments. Every balance on the Holdings tab can be traced to entries here.
-- **Api so far:** `GET` / `POST /api/portfolios`, `GET /api/portfolios/{id}` (cash, positions at cost, realized PnL, fees, dividends), `POST /api/portfolios/{id}/transfers`, and `GET /api/portfolios/{id}/orders` with `POST .../orders/{orderId}/cancel`. Still to add for these tabs: market value and unrealized PnL per position, the equity curve, lots per position, and the Activity timeline.
+- **Api so far:** `GET` / `POST /api/portfolios`, `GET /api/portfolios/{id}` (cash, realized PnL, fees, dividends, and each position at cost and at its latest close: last price, market value, unrealized PnL, with the portfolio's market value and equity), `POST /api/portfolios/{id}/transfers`, and `GET /api/portfolios/{id}/orders` with `POST .../orders/{orderId}/cancel`. That is enough for the list and the Holdings tab without the curve. Still to add: day PnL, the equity curve, lots per position, and the Activity timeline.
 - **Phase 5:** strategies attached to the portfolio, and which orders they placed.
 
 ### Strategies — `/strategies` (Phase 5)

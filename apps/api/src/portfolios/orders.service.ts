@@ -3,16 +3,22 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Order, OrderList, PlaceOrderBody } from '@astraq/shared';
+import type {
+  CashTransferBody,
+  Order,
+  OrderList,
+  PlaceOrderBody,
+} from '@astraq/shared';
 import { compare, decimal } from '../common/decimal';
 import type { LedgerState } from '../ledger/ledger';
-import { PortfolioNotFoundError } from '../ledger/ledger.repository';
 import { OnDemandCandlesService } from '../market-data/on-demand-candles.service';
+import { resolveTicker } from '../symbols/resolve-ticker';
 import { SymbolsRepository } from '../symbols/symbols.repository';
 import {
   cancel,
   place,
   settle,
+  transfer,
   type OrderRequest,
 } from '../trading/settlement';
 import { type OrderRow, OrdersRepository } from './orders.repository';
@@ -64,11 +70,33 @@ export class OrdersService {
     portfolioId: string,
     now = new Date(),
   ): Promise<LedgerState> {
-    const { result } = await this.run(() =>
-      this.orders.transact({ userId, portfolioId }, ({ book }) => {
+    const { result } = await this.orders.transact(
+      { userId, portfolioId },
+      ({ book }) => {
         const { plan, state } = settle(book, now);
         return { plan, result: state };
-      }),
+      },
+    );
+    return result;
+  }
+
+  /**
+   * Pays cash in or takes it out, after settling, and returns the books.
+   * A withdrawal the cash doesn't cover throws the ledger's
+   * `insufficient_cash` and writes nothing.
+   */
+  async transfer(
+    userId: string,
+    portfolioId: string,
+    body: CashTransferBody,
+    now = new Date(),
+  ): Promise<LedgerState> {
+    const { result } = await this.orders.transact(
+      { userId, portfolioId },
+      ({ book }) => {
+        const { plan, state } = transfer(book, body, now);
+        return { plan, result: state };
+      },
     );
     return result;
   }
@@ -92,11 +120,7 @@ export class OrdersService {
     body: PlaceOrderBody,
     now = new Date(),
   ): Promise<{ order: Order; replayed: boolean }> {
-    const ticker = body.ticker.toUpperCase();
-    const symbolId = await this.symbols.findIdByTicker(ticker);
-    if (symbolId === null) {
-      throw new NotFoundException(`Unknown symbol ${ticker}`);
-    }
+    const { symbolId } = await resolveTicker(this.symbols, body.ticker);
     // A symbol nobody has watched yet has no bars to fill on.
     await this.onDemand.ensureCandles(symbolId);
 
@@ -107,27 +131,25 @@ export class OrdersService {
       quantity: body.quantity,
       limitPrice: body.limitPrice ?? null,
     };
-    const { result: existingId, placedId } = await this.run(() =>
-      this.orders.transact(
-        { userId, portfolioId, idempotencyKey, symbolId },
-        ({ book, lastBar, existing }) => {
-          if (!existing) {
-            return { plan: place(book, request, lastBar, now), result: null };
-          }
-          const same =
-            existing.symbolId === request.symbolId &&
-            existing.side === request.side &&
-            existing.type === request.type &&
-            sameNumber(existing.quantity, request.quantity) &&
-            sameNumber(existing.limitPrice, request.limitPrice);
-          if (!same) {
-            throw new ConflictException(
-              'This Idempotency-Key was already used for a different order',
-            );
-          }
-          return { plan: null, result: existing.id };
-        },
-      ),
+    const { result: existingId, placedId } = await this.orders.transact(
+      { userId, portfolioId, idempotencyKey, symbolId },
+      ({ book, lastBar, existing }) => {
+        if (!existing) {
+          return { plan: place(book, request, lastBar, now), result: null };
+        }
+        const same =
+          existing.symbolId === request.symbolId &&
+          existing.side === request.side &&
+          existing.type === request.type &&
+          sameNumber(existing.quantity, request.quantity) &&
+          sameNumber(existing.limitPrice, request.limitPrice);
+        if (!same) {
+          throw new ConflictException(
+            'This Idempotency-Key was already used for a different order',
+          );
+        }
+        return { plan: null, result: existing.id };
+      },
     );
 
     const row = await this.orders.findOne(portfolioId, (existingId ?? placedId)!);
@@ -144,11 +166,12 @@ export class OrdersService {
     orderId: string,
     now = new Date(),
   ): Promise<Order> {
-    const { result: cancelled } = await this.run(() =>
-      this.orders.transact({ userId, portfolioId }, ({ book }) => {
+    const { result: cancelled } = await this.orders.transact(
+      { userId, portfolioId },
+      ({ book }) => {
         const outcome = cancel(book, orderId, now);
         return { plan: outcome.plan, result: outcome.cancelled };
-      }),
+      },
     );
     const row = await this.orders.findOne(portfolioId, orderId);
     if (!row) throw new NotFoundException(`Order ${orderId} not found`);
@@ -156,16 +179,5 @@ export class OrdersService {
       throw new ConflictException(`The order is already ${row.status}`);
     }
     return toOrder(row);
-  }
-
-  private async run<T>(action: () => Promise<T>): Promise<T> {
-    try {
-      return await action();
-    } catch (error) {
-      if (error instanceof PortfolioNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      throw error;
-    }
   }
 }

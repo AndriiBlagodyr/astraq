@@ -2,12 +2,13 @@ import type { components } from "@astraq/sdk";
 import { bin, max } from "d3-array";
 import { scaleLinear } from "d3-scale";
 import { line } from "d3-shape";
-import { isIsoDate } from "./dates";
+import { TickerParamSchema } from "@astraq/shared";
+import { plainPercent, tickPercent } from "./format";
 import {
-  chartRanges,
-  defaultRange,
-  type ChartRange,
-  type CustomRange,
+  parseRangeParams,
+  rangeQuery,
+  type RangeView,
+  type SearchParams,
 } from "./stock-chart";
 
 // The returns distribution view (docs/ui-plan.md § Analysis, ROADMAP Phase 2
@@ -23,69 +24,33 @@ export type DailyReturn = components["schemas"]["DailyReturn_Output"];
 export const returnsAdjustments = ["all", "split"] as const;
 export type ReturnsAdjustment = (typeof returnsAdjustments)[number];
 
-// The api's TickerParam rule (packages/shared), so a bad `?symbol=` is caught
-// before a request goes out.
-const tickerPattern = /^[A-Za-z][A-Za-z0-9.-]{0,15}$/;
-
 /**
  * Reads `?symbol=&range=&adjustment=&from=&to=` leniently, like the stock
  * chart: unknown values fall back to the default, a valid custom range wins
  * over a preset, and a symbol that can't be a ticker reads as none.
  */
-export function parseReturnsParams(
-  params: Record<string, string | string[] | undefined>
-) {
+export function parseReturnsParams(params: SearchParams) {
   const raw = typeof params.symbol === "string" ? params.symbol.trim() : "";
-  const symbol = tickerPattern.test(raw) ? raw.toUpperCase() : null;
-  const range =
-    chartRanges.find((value) => value === params.range) ?? defaultRange;
+  // The api's own rule, so a bad `?symbol=` is caught before a request.
+  const symbol = TickerParamSchema.shape.ticker.safeParse(raw).success
+    ? raw.toUpperCase()
+    : null;
   const adjustment =
     returnsAdjustments.find((value) => value === params.adjustment) ?? "all";
-  const { from, to } = params;
-  const custom: CustomRange | null =
-    isIsoDate(from) && isIsoDate(to) && from <= to ? { from, to } : null;
-  return { symbol, range, adjustment, custom };
+  return { symbol, ...parseRangeParams(params), adjustment };
 }
 
 /** The view's URL for a preset range or a custom one. */
 export function returnsHref(
-  view: { symbol: string; adjustment: ReturnsAdjustment } & (
-    | { range: ChartRange }
-    | { custom: CustomRange }
-  )
+  view: { symbol: string; adjustment: ReturnsAdjustment } & RangeView
 ): string {
-  const query = new URLSearchParams({ symbol: view.symbol });
-  if ("custom" in view) {
-    query.set("from", view.custom.from);
-    query.set("to", view.custom.to);
-  } else {
-    query.set("range", view.range);
-  }
-  query.set("adjustment", view.adjustment);
+  const query = new URLSearchParams({
+    symbol: view.symbol,
+    ...rangeQuery(view),
+    adjustment: view.adjustment,
+  });
   return `/analysis/returns?${query}`;
 }
-
-/** "+1.23%" / "-0.45%" / "0.00%": a return or a statistic for display. */
-export const signedPercent = new Intl.NumberFormat("en-US", {
-  style: "percent",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-  signDisplay: "exceptZero",
-});
-
-/** "60.0%": a share or a deviation, which have no sign. */
-export const plainPercent = new Intl.NumberFormat("en-US", {
-  style: "percent",
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 2,
-});
-
-/** Axis ticks: short, signed, one decimal at most. */
-export const tickPercent = new Intl.NumberFormat("en-US", {
-  style: "percent",
-  maximumFractionDigits: 1,
-  signDisplay: "exceptZero",
-});
 
 export type HistogramBar = {
   /** The bucket's return range, lower edge inclusive. */

@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { TickerParamSchema } from "./market-data";
+import {
+  decimalString,
+  oneLineName,
+  signedDecimalString,
+} from "./primitives";
 
 // Paper portfolios and their orders (ROADMAP Phase 3). Every amount crosses
 // the wire as a decimal string: money is never a float.
@@ -12,8 +17,8 @@ const cashString = z
   .regex(/^\d{1,13}(\.\d{1,2})?$/, "A cash amount with at most 2 decimal places");
 /** Cash that can't be zero. */
 const positiveCashString = cashString.refine(isAboveZero, "Must be above zero");
-/** A balance that can be negative: realized PnL. */
-const signedCashString = z.string().regex(/^-?\d+(\.\d+)?$/);
+/** A balance that can be negative: realized PnL, or capital once gains are withdrawn. */
+const signedCashString = signedDecimalString;
 /** A share count: up to 6 decimal places, above zero. */
 const quantityString = z
   .string()
@@ -24,15 +29,9 @@ const priceString = z
   .string()
   .regex(/^\d{1,10}(\.\d{1,6})?$/, "A price with at most 6 decimal places")
   .refine(isAboveZero, "Must be above zero");
-const decimalString = z.string().regex(/^\d+(\.\d+)?$/);
 
 /** A portfolio's name, trimmed; one line, up to 64 characters. */
-const portfolioName = z
-  .string()
-  .trim()
-  .min(1, "Name is required")
-  .max(64, "At most 64 characters")
-  .regex(/^[^\u0000-\u001f\u007f]+$/, "One line, no control characters");
+const portfolioName = oneLineName(64);
 
 /** Path of `/api/portfolios/{id}/...`. */
 export const PortfolioIdParamSchema = z.object({
@@ -157,7 +156,11 @@ export const PortfolioListSchema = z
   })
   .meta({ id: "PortfolioList" });
 
-/** Shares held in one symbol, summed over its lots. */
+/**
+ * Shares held in one symbol, summed over its lots, at cost and at the
+ * symbol's latest stored close. The price fields are null for a symbol
+ * with no bars.
+ */
 export const PositionSchema = z
   .object({
     ticker: z.string(),
@@ -165,6 +168,14 @@ export const PositionSchema = z
     quantity: decimalString,
     /** What the shares still held cost, in cents. */
     cost: decimalString,
+    /** The latest close per share, in the shares that trade today. */
+    lastPrice: decimalString.nullable(),
+    /** The session `lastPrice` is from, YYYY-MM-DD. */
+    priceDate: z.iso.date().nullable(),
+    /** `quantity × lastPrice`, in cents. */
+    marketValue: decimalString.nullable(),
+    /** `marketValue - cost`. */
+    unrealizedPnl: signedCashString.nullable(),
   })
   .meta({ id: "Position" });
 
@@ -172,11 +183,15 @@ export const PositionSchema = z
  * A portfolio with its books, all derived from its ledger (ADR 0009):
  * `cash + cost of positions + dividendsReceivable` always equals
  * `capital + realizedPnl + dividendIncome - fees`.
+ *
+ * `marketValue`, `unrealizedPnl`, and `equity` price the positions at their
+ * latest closes instead. They are null when a position has no price, since
+ * a total that leaves one out would read as the whole.
  */
 export const PortfolioSchema = PortfolioSummarySchema.extend({
   cash: decimalString,
-  /** Paid in by the owner, less withdrawals. */
-  capital: decimalString,
+  /** Paid in by the owner, less withdrawals: negative once more is taken out than was put in. */
+  capital: signedCashString,
   /** Commissions paid. */
   fees: decimalString,
   /** Gains less losses on sold shares (FIFO), before fees. */
@@ -185,7 +200,13 @@ export const PortfolioSchema = PortfolioSummarySchema.extend({
   dividendIncome: decimalString,
   /** Dividends that have gone ex and aren't paid yet. */
   dividendsReceivable: decimalString,
-  /** By ticker. Positions are at cost; market value arrives with the portfolio screens. */
+  /** The positions at their latest closes, in cents. */
+  marketValue: decimalString.nullable(),
+  /** `marketValue` less what the positions cost. */
+  unrealizedPnl: signedCashString.nullable(),
+  /** `cash + dividendsReceivable + marketValue`: what the portfolio is worth. */
+  equity: decimalString.nullable(),
+  /** By ticker. */
   positions: z.array(PositionSchema),
 }).meta({ id: "Portfolio" });
 

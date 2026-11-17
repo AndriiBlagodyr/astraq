@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type {
   CandleSeries,
   CandlesQuery,
@@ -7,6 +7,7 @@ import type {
   SymbolList,
 } from '@astraq/shared';
 import { CandlesRepository } from './candles.repository';
+import { resolveTicker } from './resolve-ticker';
 import { SymbolsRepository } from './symbols.repository';
 
 @Injectable()
@@ -59,12 +60,7 @@ export class SymbolsService {
     return { ticker, adjustment: query.adjustment, ...series };
   }
 
-  private async resolve(rawTicker: string) {
-    const ticker = rawTicker.toUpperCase();
-    const symbolId = await this.symbols.findIdByTicker(ticker);
-    if (symbolId === null) {
-      throw new NotFoundException(`Unknown symbol ${ticker}`);
-    }
-    return { ticker, symbolId };
+  private resolve(rawTicker: string) {
+    return resolveTicker(this.symbols, rawTicker);
   }
 }

@@ -8,5 +8,7 @@ import { AuthService } from './auth.service';
   imports: [DatabaseModule],
   controllers: [AuthController],
   providers: [AuthService, AuthRepository],
+  // Settings signs a device out through the same revocation as logout.
+  exports: [AuthRepository],
 })
 export class AuthModule {}

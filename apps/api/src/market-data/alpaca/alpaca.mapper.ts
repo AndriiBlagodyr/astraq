@@ -1,5 +1,6 @@
 import { utcMidnight } from '../../common/dates';
 import { Prisma } from '../../generated/prisma/client';
+import { sessionDate } from '../../trading/market-hours';
 import type {
   CandleRow,
   CorporateActionRow,
@@ -53,24 +54,20 @@ export function toSymbolSeeds(assets: AlpacaAsset[]): SymbolSeed[] {
   return seeds.sort((a, b) => (a.ticker < b.ticker ? -1 : 1));
 }
 
-// Alpaca stamps a daily bar with the start of its session day in New York
-// (04:00 or 05:00 UTC, depending on DST). `en-CA` formats as YYYY-MM-DD.
-const newYorkDate = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'America/New_York',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
-
-/** The bar's session date at 00:00 UTC, the `candles_daily.ts` convention. */
-export function sessionDate(barStart: string): Date {
-  return utcMidnight(newYorkDate.format(new Date(barStart)));
+/**
+ * The bar's session date at 00:00 UTC, the `candles_daily.ts` convention.
+ * Alpaca stamps a daily bar with the start of its session day in New York
+ * (04:00 or 05:00 UTC, depending on DST); `sessionDate` is the api's one
+ * reading of the New York calendar, shared with order settlement.
+ */
+export function barSessionTs(barStart: string): Date {
+  return utcMidnight(sessionDate(new Date(barStart)));
 }
 
 /** Raw bars to `candles_daily` rows. Prices stay decimal strings throughout. */
 export function toCandleRows(bars: AlpacaBar[]): CandleRow[] {
   return bars.map((bar) => ({
-    ts: sessionDate(bar.t),
+    ts: barSessionTs(bar.t),
     open: bar.o,
     high: bar.h,
     low: bar.l,

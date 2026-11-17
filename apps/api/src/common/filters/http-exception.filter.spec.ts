@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { createZodDto, ZodValidationPipe } from 'nestjs-zod';
 import request from 'supertest';
 import { z } from 'zod';
+import { ConflictError, NotFoundError } from '../domain-errors';
 import { AllExceptionsFilter } from './http-exception.filter';
 
 class RangeQueryDto extends createZodDto(
@@ -15,6 +16,21 @@ class RangeController {
   @Get()
   range(@Query() query: RangeQueryDto) {
     return query;
+  }
+
+  @Get('gone')
+  gone() {
+    throw new NotFoundError('List 7 not found');
+  }
+
+  @Get('taken')
+  taken() {
+    throw new ConflictError('A list named "Core" already exists');
+  }
+
+  @Get('broken')
+  broken() {
+    throw new Error('connection string postgres://secret');
   }
 }
 
@@ -47,6 +63,18 @@ describe('AllExceptionsFilter', () => {
       instance: '/range?from=yesterday',
       errors: [{ path: ['from'], message: expect.any(String) }],
     });
+  });
+
+  it('gives a domain error its status and its own message', async () => {
+    const gone = await request(app.getHttpServer()).get('/range/gone').expect(404);
+    expect(gone.body.detail).toBe('List 7 not found');
+    const taken = await request(app.getHttpServer()).get('/range/taken').expect(409);
+    expect(taken.body.detail).toBe('A list named "Core" already exists');
+  });
+
+  it('hides the message of anything else behind a 500', async () => {
+    const res = await request(app.getHttpServer()).get('/range/broken').expect(500);
+    expect(res.body.detail).toBe('Internal server error');
   });
 
   it('leaves errors out of other problems', async () => {

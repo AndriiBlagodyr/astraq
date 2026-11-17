@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { AuditAction, SessionRevokedReason } from '../generated/prisma/enums';
+import { isUniqueViolation } from '../common/prisma-errors';
 import { PrismaService } from '../database/prisma.service';
 
 const GRACE_WINDOW_MS = 10_000;
@@ -26,8 +27,14 @@ export class AuthRepository {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
+  /** The new user, or null when the email was registered in the meantime. */
   async createUser(email: string, passwordHash: string) {
-    return this.prisma.user.create({ data: { email, passwordHash } });
+    try {
+      return await this.prisma.user.create({ data: { email, passwordHash } });
+    } catch (error) {
+      if (isUniqueViolation(error)) return null;
+      throw error;
+    }
   }
 
   async updatePasswordHash(userId: string, passwordHash: string) {
@@ -110,30 +117,17 @@ export class AuthRepository {
           });
           return { kind: 'reuse_detected' as const };
         }
-        // Grace window: issue a sibling with the same parent.
-        const effectiveExpiry = cap(newTokenExpiresAt);
-        await tx.refreshToken.create({
-          data: {
-            sessionId: rt.session_id,
-            tokenHash: newTokenHash,
-            parentId: rt.id,
-            expiresAt: effectiveExpiry,
-          },
+        // Inside the grace window: the token stays rotated as it was, and
+        // the child below is a sibling of the one issued the first time.
+      } else {
+        // Normal rotation: mark this token rotated.
+        await tx.refreshToken.update({
+          where: { id: rt.id },
+          data: { rotatedAt: now },
         });
-        return {
-          kind: 'rotated' as const,
-          sessionId: rt.session_id,
-          userId: rt.user_id,
-          newTokenExpiresAt: effectiveExpiry,
-        };
       }
 
-      // Normal rotation: mark this token rotated, insert child.
       const effectiveExpiry = cap(newTokenExpiresAt);
-      await tx.refreshToken.update({
-        where: { id: rt.id },
-        data: { rotatedAt: now },
-      });
       await tx.refreshToken.create({
         data: {
           sessionId: rt.session_id,
@@ -156,16 +150,31 @@ export class AuthRepository {
     return outcome;
   }
 
-  async revokeSession(sessionId: string, reason: SessionRevokedReason, userId: string) {
-    await this.prisma.$transaction([
-      this.prisma.session.update({
-        where: { id: sessionId },
+  /**
+   * Revokes the user's session if it is still live. One that is already
+   * revoked keeps its first reason and time: a logout sent with an access
+   * token that outlived a `REUSE_DETECTED` revocation mustn't rewrite it.
+   *
+   * The WHERE carries the user id, so a foreign session changes nothing.
+   * Returns whether a session was revoked: logout doesn't care, and
+   * "sign this device out" reports false as not found.
+   */
+  async revokeSession(
+    sessionId: string,
+    reason: SessionRevokedReason,
+    userId: string,
+  ): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.session.updateMany({
+        where: { id: sessionId, userId, revokedAt: null },
         data: { revokedAt: new Date(), revokedReason: reason },
-      }),
-      this.prisma.auditLog.create({
+      });
+      if (count === 0) return false;
+      await tx.auditLog.create({
         data: { userId, action: AuditAction.LOGOUT, metadata: { sessionId } },
-      }),
-    ]);
+      });
+      return true;
+    });
   }
 
   async revokeAllUserSessions(userId: string) {

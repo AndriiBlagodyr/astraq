@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  useId,
-  useOptimistic,
-  useRef,
-  useState,
-  useTransition,
-  type KeyboardEvent,
-  type PointerEvent,
-} from "react";
+import { useId, useOptimistic, useTransition } from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { BarChart3, GripVertical, X } from "lucide-react";
@@ -26,16 +18,9 @@ import {
   useToastManager,
 } from "@astraq/ui";
 import { removeSymbol, reorderWatchlist } from "@/app/(app)/watchlists/actions";
-import {
-  dropIndex,
-  moveItem,
-  reorderAnnouncement,
-  stepIndex,
-} from "@/lib/reorder";
-import { formatPrice, sessionChange } from "@/lib/stock-chart";
+import { useReorder } from "@/lib/use-reorder";
 import type { WatchlistItem } from "@/lib/watchlists";
-import { DayChange } from "./DayChange";
-import { Sparkline } from "./Sparkline";
+import { QuoteCells } from "./QuoteCells";
 
 type Change =
   | { kind: "remove"; ticker: string }
@@ -54,30 +39,14 @@ function apply(items: WatchlistItem[], change: Change): WatchlistItem[] {
   return ordered.length === items.length ? ordered : items;
 }
 
-/** A row being moved: by the pointer, or lifted with the keyboard. */
-type Drag = {
-  ticker: string;
-  /** The preview order, shown while the drag lasts. */
-  order: string[];
-  mode: "pointer" | "keyboard";
-};
-
-function sameOrder(a: readonly string[], b: readonly string[]): boolean {
-  return (
-    a.length === b.length && a.every((ticker, index) => ticker === b[index])
-  );
-}
-
 /**
  * The rows of one watchlist. Removing and reordering show at once through
  * `useOptimistic` and settle when the server action's revalidation brings
  * the real list; a failure snaps back and says why in a toast.
  *
- * Reordering (motion plan "Drag to reorder"): the grip drags with the
- * pointer, the rows making way as it passes their midpoints; with the
- * keyboard, Space lifts the row, the arrows move it, Space drops it, and
- * Escape puts it back, each step read out by a live region. Both end in
- * the same `commit`, one reorder call with the whole order.
+ * Reordering (motion plan "Drag to reorder") is `useReorder`: the grip
+ * drags with the pointer or lifts with the keyboard, and either way it ends
+ * in one reorder call with the whole order.
  */
 export function WatchlistItemsTable({
   watchlistId,
@@ -89,10 +58,6 @@ export function WatchlistItemsTable({
   const toast = useToastManager();
   const [, startTransition] = useTransition();
   const [visible, applyChange] = useOptimistic(items, apply);
-  const [drag, setDrag] = useState<Drag | null>(null);
-  const [announcement, setAnnouncement] = useState("");
-  const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
-  const bodyRef = useRef<HTMLTableSectionElement>(null);
   const instructionsId = useId();
 
   function fail(error: string) {
@@ -100,21 +65,21 @@ export function WatchlistItemsTable({
   }
 
   const currentOrder = visible.map((item) => item.ticker);
-  const rows = drag
-    ? drag.order.flatMap((ticker) => {
-        const item = visible.find((row) => row.ticker === ticker);
-        return item ? [item] : [];
-      })
-    : visible;
-
-  function commit(order: string[]) {
-    if (sameOrder(order, currentOrder)) return;
-    startTransition(async () => {
-      applyChange({ kind: "order", tickers: order });
-      const result = await reorderWatchlist(watchlistId, order);
-      if (!result.ok) fail(result.error);
-    });
-  }
+  const reorder = useReorder<HTMLTableSectionElement>({
+    order: currentOrder,
+    onCommit: (order) => {
+      startTransition(async () => {
+        applyChange({ kind: "order", tickers: order });
+        const result = await reorderWatchlist(watchlistId, order);
+        if (!result.ok) fail(result.error);
+      });
+    },
+  });
+  const byTicker = new Map(visible.map((item) => [item.ticker, item]));
+  const rows = reorder.order.flatMap((ticker) => {
+    const item = byTicker.get(ticker);
+    return item ? [item] : [];
+  });
 
   function remove(ticker: string) {
     const order = currentOrder;
@@ -144,111 +109,6 @@ export function WatchlistItemsTable({
     });
   }
 
-  // Pointer drag: the table body captures the pointer, so moves keep
-  // arriving wherever it goes; the row under the pointer is found from the
-  // rows' on-screen midpoints in their preview order. The body and not the
-  // grip, because a row that moves down is re-inserted in the DOM, and an
-  // element taken out of the document, even for an instant, loses its
-  // capture: the drag would end at the first swap. The body never moves.
-  function onPointerDown(
-    event: PointerEvent<HTMLButtonElement>,
-    ticker: string
-  ) {
-    if (event.button !== 0 || drag || !bodyRef.current) return;
-    event.preventDefault();
-    bodyRef.current.setPointerCapture(event.pointerId);
-    setDrag({ ticker, order: currentOrder, mode: "pointer" });
-  }
-
-  function onPointerMove(event: PointerEvent<HTMLTableSectionElement>) {
-    if (!drag || drag.mode !== "pointer") return;
-    const midpoints = drag.order.map((ticker) => {
-      const rect = rowRefs.current.get(ticker)?.getBoundingClientRect();
-      return rect ? rect.top + rect.height / 2 : Number.NaN;
-    });
-    const from = drag.order.indexOf(drag.ticker);
-    const to = dropIndex(midpoints, from, event.clientY);
-    if (to !== from)
-      setDrag({ ...drag, order: moveItem(drag.order, from, to) });
-  }
-
-  function onPointerUp() {
-    if (!drag || drag.mode !== "pointer") return;
-    setDrag(null);
-    commit(drag.order);
-  }
-
-  function onPointerCancel() {
-    if (drag?.mode === "pointer") setDrag(null);
-  }
-
-  // Keyboard: Space lifts and drops, arrows move the lifted row, Escape
-  // cancels, and losing focus while lifted cancels too.
-  function onKeyDown(event: KeyboardEvent<HTMLButtonElement>, ticker: string) {
-    const count = visible.length;
-    const lifted = drag?.mode === "keyboard" && drag.ticker === ticker;
-
-    if (event.key === " " || event.key === "Enter") {
-      event.preventDefault();
-      if (!lifted) {
-        setDrag({ ticker, order: currentOrder, mode: "keyboard" });
-        setAnnouncement(
-          reorderAnnouncement({
-            kind: "lift",
-            label: ticker,
-            position: currentOrder.indexOf(ticker) + 1,
-            count,
-          })
-        );
-        return;
-      }
-      setDrag(null);
-      setAnnouncement(
-        reorderAnnouncement({
-          kind: "drop",
-          label: ticker,
-          position: drag.order.indexOf(ticker) + 1,
-          count,
-        })
-      );
-      commit(drag.order);
-      return;
-    }
-
-    if (!lifted) return;
-
-    if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-      event.preventDefault();
-      const from = drag.order.indexOf(ticker);
-      const to = stepIndex(from, event.key === "ArrowUp" ? -1 : 1, count);
-      if (to === from) return;
-      setDrag({ ...drag, order: moveItem(drag.order, from, to) });
-      setAnnouncement(
-        reorderAnnouncement({
-          kind: "move",
-          label: ticker,
-          position: to + 1,
-          count,
-        })
-      );
-      return;
-    }
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      setDrag(null);
-      setAnnouncement(reorderAnnouncement({ kind: "cancel", label: ticker }));
-    }
-  }
-
-  function onBlur(ticker: string) {
-    if (drag?.mode === "keyboard" && drag.ticker === ticker) {
-      setDrag(null);
-      setAnnouncement(reorderAnnouncement({ kind: "cancel", label: ticker }));
-    }
-  }
-
   return (
     <TableWrap>
       <p id={instructionsId} className="sr-only">
@@ -256,7 +116,7 @@ export function WatchlistItemsTable({
         drop it, and Escape to put it back.
       </p>
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {announcement}
+        {reorder.announcement}
       </div>
       <Table>
         <TableCaption className="sr-only">
@@ -278,25 +138,13 @@ export function WatchlistItemsTable({
             </Th>
           </Tr>
         </Thead>
-        <Tbody
-          ref={bodyRef}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
-          onLostPointerCapture={onPointerCancel}
-        >
+        <Tbody {...reorder.bodyProps}>
           {rows.map((item) => {
-            const session = item.latestClose
-              ? sessionChange(item.latestClose)
-              : null;
-            const dragging = drag?.ticker === item.ticker;
+            const dragging = reorder.draggingId === item.ticker;
             return (
               <Tr
                 key={item.ticker}
-                ref={(node) => {
-                  if (node) rowRefs.current.set(item.ticker, node);
-                  else rowRefs.current.delete(item.ticker);
-                }}
+                ref={reorder.rowRef(item.ticker)}
                 data-dragging={dragging || undefined}
                 className={cn(
                   dragging &&
@@ -308,12 +156,7 @@ export function WatchlistItemsTable({
                     type="button"
                     aria-label={`Reorder ${item.ticker}`}
                     aria-describedby={instructionsId}
-                    aria-pressed={
-                      drag?.mode === "keyboard" && dragging ? true : undefined
-                    }
-                    onPointerDown={(event) => onPointerDown(event, item.ticker)}
-                    onKeyDown={(event) => onKeyDown(event, item.ticker)}
-                    onBlur={() => onBlur(item.ticker)}
+                    {...reorder.gripProps(item.ticker)}
                     className={cn(
                       "inline-flex size-8 cursor-grab touch-none items-center justify-center rounded-md text-muted",
                       "hover:bg-surface-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
@@ -337,26 +180,12 @@ export function WatchlistItemsTable({
                     {item.exchange}
                   </span>
                 </Td>
-                {session ? (
-                  <>
-                    <Td className="text-right tabular-nums">
-                      {formatPrice(session.close)}
-                    </Td>
-                    <Td className="tabular-nums">
-                      <DayChange session={session} />
-                    </Td>
-                    <Td>
-                      <Sparkline ticker={item.ticker} points={item.sparkline} />
-                    </Td>
-                    <Td className="text-sm text-muted">
-                      <time dateTime={session.date}>{session.date}</time>
-                    </Td>
-                  </>
-                ) : (
-                  <Td colSpan={4} className="text-sm text-muted">
-                    No candles yet
-                  </Td>
-                )}
+                <QuoteCells
+                  ticker={item.ticker}
+                  latestClose={item.latestClose}
+                  sparkline={item.sparkline}
+                  showDate
+                />
                 <Td className="text-right">
                   <div className="inline-flex items-center gap-0.5">
                     <Link

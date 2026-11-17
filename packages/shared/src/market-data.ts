@@ -1,12 +1,9 @@
 import { z } from "zod";
+import { decimalString, signedDecimalString } from "./primitives";
 
-// Prices and volumes cross the wire as decimal strings: JSON numbers are
-// binary floats, and money is never a float (AGENTS.md). Parse at the edge
-// that needs a number, e.g. the chart.
-const decimalString = z.string().regex(/^\d+(\.\d+)?$/);
+// Prices and volumes cross the wire as decimal strings (see primitives.ts);
+// a return or a statistic is a ratio, so it can be negative.
 const integerString = z.string().regex(/^\d+$/);
-/** A return or a statistic: a ratio, so it can be negative. */
-const signedDecimalString = z.string().regex(/^-?\d+(\.\d+)?$/);
 
 /** Adds the rule that an optional `from` must not be after an optional `to`. */
 const orderedRange = <T extends { from?: string; to?: string }>(schema: z.ZodType<T>) =>

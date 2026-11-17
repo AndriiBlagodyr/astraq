@@ -1,20 +1,14 @@
 import Link from "next/link";
-import { Badge } from "@astraq/ui";
 import { sessionChange } from "@/lib/stock-chart";
 import type { WatchlistSummary } from "@/lib/watchlists";
+import { DayChange } from "./DayChange";
 
 type Movers = WatchlistSummary["movers"];
 type Mover = NonNullable<Movers["best"]>;
 
-const percent = new Intl.NumberFormat("en-US", {
-  signDisplay: "always",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 function MoverChip({ mover }: { mover: Mover }) {
-  const { changePercent } = sessionChange(mover.latestClose);
-  if (changePercent === null) return null;
+  const session = sessionChange(mover.latestClose);
+  if (session.changePercent === null) return null;
   return (
     <span className="inline-flex items-center gap-1.5">
       <Link
@@ -23,9 +17,7 @@ function MoverChip({ mover }: { mover: Mover }) {
       >
         {mover.ticker}
       </Link>
-      <Badge tone={changePercent >= 0 ? "positive" : "negative"}>
-        {percent.format(changePercent)}%
-      </Badge>
+      <DayChange session={session} percentOnly />
     </span>
   );
 }

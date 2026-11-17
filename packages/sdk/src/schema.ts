@@ -200,7 +200,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A portfolio with its cash, positions at cost, and PnL, from its ledger */
+        /** A portfolio with its cash, PnL, and positions at cost and at their latest close */
         get: operations["getPortfolio"];
         put?: never;
         post?: never;
@@ -502,6 +502,10 @@ export interface components {
             name: string;
             quantity: string;
             cost: string;
+            lastPrice: string | null;
+            priceDate: string | null;
+            marketValue: string | null;
+            unrealizedPnl: string | null;
         };
         Portfolio_Output: {
             /** Format: uuid */
@@ -520,6 +524,9 @@ export interface components {
             realizedPnl: string;
             dividendIncome: string;
             dividendsReceivable: string;
+            marketValue: string | null;
+            unrealizedPnl: string | null;
+            equity: string | null;
             positions: components["schemas"]["Position_Output"][];
         };
         CashTransferBody: {

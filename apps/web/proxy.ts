@@ -121,8 +121,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything but build assets, icons, and robots.txt, which carry no data.
+  // Everything but build assets, icons, the manifest, and robots.txt, which
+  // carry no data. Browsers fetch the manifest without cookies, so behind
+  // the gate it would always be the login page.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|robots.txt).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|manifest.webmanifest|robots.txt).*)",
   ],
 };

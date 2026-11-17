@@ -18,6 +18,7 @@ import {
   useToastManager,
 } from "@astraq/ui";
 import type { Account } from "@/lib/account";
+import { postAuth } from "@/lib/auth-client";
 import { displayName, initials } from "@/lib/sessions";
 import { useCommandPalette } from "./CommandPalette";
 
@@ -35,10 +36,11 @@ export function UserMenu({ account }: { account: Account }) {
 
   function signOut() {
     startTransition(async () => {
-      const response = await fetch("/api/auth/logout", { method: "POST" });
-      if (!response.ok) {
+      const result = await postAuth("logout");
+      if (!result.ok) {
         toast.add({
           title: "Couldn't sign out",
+          description: result.error ?? undefined,
           type: "danger",
           priority: "high",
         });

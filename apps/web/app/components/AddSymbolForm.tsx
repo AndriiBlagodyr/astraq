@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import {
   Autocomplete,
@@ -12,10 +12,9 @@ import {
   Button,
   useToastManager,
 } from "@astraq/ui";
-import { addSymbol, suggestSymbols } from "@/app/(app)/watchlists/actions";
+import { addSymbol } from "@/app/(app)/watchlists/actions";
 import type { SymbolSummary } from "@/lib/market-data";
-
-const SUGGEST_DELAY_MS = 150;
+import { useSymbolSuggestions } from "@/lib/use-symbol-suggestions";
 
 /**
  * Adds a symbol to a watchlist by ticker or name. Suggestions come from the
@@ -32,23 +31,11 @@ export function AddSymbolForm({
 }) {
   const toast = useToastManager();
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<SymbolSummary[]>([]);
   const [pending, startTransition] = useTransition();
-  const latest = useRef(0);
-
-  // Suggestions follow the query after a short pause. An emptied box clears
-  // them in the change handler, so this effect only ever waits and fetches.
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    const request = ++latest.current;
-    const timer = setTimeout(async () => {
-      const found = await suggestSymbols(trimmed);
-      // A slower, older answer must not overwrite a newer query's.
-      if (request === latest.current) setSuggestions(found);
-    }, SUGGEST_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [query]);
+  // The last answer stays on screen while the next query's loads, so the
+  // list doesn't blink empty between keystrokes; an emptied box has none.
+  const { latest: suggestions, failed: searchFailed } =
+    useSymbolSuggestions(query);
 
   function add(ticker: string) {
     const symbol = ticker.trim().toUpperCase();
@@ -57,7 +44,6 @@ export function AddSymbolForm({
       const result = await addSymbol(watchlistId, symbol);
       if (result.ok) {
         setQuery("");
-        setSuggestions([]);
         toast.add({
           title: `Added ${symbol} to ${watchlistName}`,
           type: "success",
@@ -81,10 +67,6 @@ export function AddSymbolForm({
         value={query}
         onValueChange={(value, details) => {
           setQuery(value);
-          if (!value.trim()) {
-            latest.current++;
-            setSuggestions([]);
-          }
           if (details.reason === "item-press") add(value);
         }}
         itemToStringValue={(symbol: SymbolSummary) => symbol.ticker}
@@ -101,9 +83,11 @@ export function AddSymbolForm({
         />
         <AutocompleteContent>
           <AutocompleteEmpty>
-            {query.trim()
-              ? "No loaded symbol matches. Enter adds an exact ticker."
-              : "Type a ticker or company name."}
+            {!query.trim()
+              ? "Type a ticker or company name."
+              : searchFailed
+                ? "Symbol search isn’t answering. Enter still adds an exact ticker."
+                : "No loaded symbol matches. Enter adds an exact ticker."}
           </AutocompleteEmpty>
           <AutocompleteList>
             {(symbol: SymbolSummary) => (

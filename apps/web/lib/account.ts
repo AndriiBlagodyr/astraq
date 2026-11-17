@@ -1,7 +1,6 @@
 import { cache } from "react";
 import type { components } from "@astraq/sdk";
-import { redirect } from "next/navigation";
-import { apiFailure, fresh, userApi } from "./api";
+import { apiFailure, fresh, requireSession, userApi } from "./api";
 
 // Server-side reads of the signed-in user's account (docs/ui-plan.md
 // § Settings). Server components only; the writes are server actions in
@@ -17,7 +16,7 @@ export type AccountSession = components["schemas"]["AccountSession_Output"];
 export const getAccount = cache(async (): Promise<Account> => {
   const api = await userApi();
   const { data, response } = await api.GET("/api/me", fresh);
-  if (response.status === 401) redirect("/login");
+  requireSession(response);
   if (!data) throw apiFailure("Loading the account", response.status);
   return data;
 });
@@ -26,7 +25,7 @@ export const getAccount = cache(async (): Promise<Account> => {
 export async function listSessions(): Promise<AccountSession[]> {
   const api = await userApi();
   const { data, response } = await api.GET("/api/me/sessions", fresh);
-  if (response.status === 401) redirect("/login");
+  requireSession(response);
   if (!data) throw apiFailure("Listing sessions", response.status);
   return data.sessions;
 }

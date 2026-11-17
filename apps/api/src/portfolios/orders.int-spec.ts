@@ -1,10 +1,12 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { format } from '../common/decimal';
 import { utcMidnight } from '../common/dates';
 import { PrismaService } from '../database/prisma.service';
 import { positions } from '../ledger/ledger';
-import { LedgerRepository } from '../ledger/ledger.repository';
-import { LedgerService } from '../ledger/ledger.service';
+import {
+  LedgerRepository,
+  PortfolioNotFoundError,
+} from '../ledger/ledger.repository';
 import type { OnDemandCandlesService } from '../market-data/on-demand-candles.service';
 import { SymbolsRepository } from '../symbols/symbols.repository';
 import { OrdersRepository } from './orders.repository';
@@ -18,7 +20,7 @@ import { PortfoliosService } from './portfolios.service';
 // order, its fill, and its ledger transaction are written together.
 describe('Orders (database)', () => {
   const prisma = new PrismaService();
-  const ledgerRepository = new LedgerRepository(prisma);
+  const ledgerRepository = new LedgerRepository();
   const orders = new OrdersService(
     new OrdersRepository(prisma, ledgerRepository),
     new SymbolsRepository(prisma),
@@ -26,7 +28,6 @@ describe('Orders (database)', () => {
   );
   const portfolios = new PortfoliosService(
     new PortfoliosRepository(prisma, ledgerRepository),
-    new LedgerService(ledgerRepository),
     orders,
   );
 
@@ -130,18 +131,24 @@ describe('Orders (database)', () => {
     // Another user can't reach the portfolio at all.
     await expect(
       orders.place(otherUserId, portfolio.id, 'key-2', buyTen, at(TUE, '15:03')),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toBeInstanceOf(PortfolioNotFoundError);
     expect(await prisma.order.count({ where: { portfolioId: portfolio.id } })).toBe(1);
   });
 
   it('settles a split, a resting order, and a dividend from stored market data', async () => {
-    const portfolio = await portfolios.create(userId, {
-      name: 'Corporate actions',
-      startingCash: '10000',
-      slippageBps: 0,
-      commissionPerOrder: '0',
-      commissionPerShare: '0',
-    });
+    // Opened on Monday: corporate actions are read from the ledger's first
+    // day on, so the portfolio must be older than the ones below.
+    const portfolio = await portfolios.create(
+      userId,
+      {
+        name: 'Corporate actions',
+        startingCash: '10000',
+        slippageBps: 0,
+        commissionPerOrder: '0',
+        commissionPerShare: '0',
+      },
+      at(MON, '12:00'),
+    );
     await orders.place(userId, portfolio.id, 'buy', buyTen, at(TUE, '15:00'));
     // Resting from Tuesday evening, in Tuesday's shares.
     const { order: resting } = await orders.place(
@@ -154,18 +161,27 @@ describe('Orders (database)', () => {
     expect(resting.status).toBe('open');
 
     // Wednesday: a 10-for-1 split goes ex and the price is a tenth.
+    // On the ex-date before its bar is stored, the last close is still
+    // Monday's 100 in the old shares: valued in today's, the 100 new shares
+    // are worth the same 1000, not 10000.
+    await prisma.corporateAction.create({
+      data: { symbolId, type: 'SPLIT', exDate: utcMidnight(WED), splitFrom: '1', splitTo: '10' },
+    });
+    const exDate = await portfolios.get(userId, portfolio.id, at(WED, '12:00'));
+    expect(exDate.positions).toMatchObject([
+      { quantity: '100.000000', lastPrice: '10', priceDate: MON, marketValue: '1000.00' },
+    ]);
+    expect(exDate.equity).toBe('10000.00');
+
     // Thursday: a dividend of 0.10 a share goes ex, paid the Monday after.
-    await prisma.corporateAction.createMany({
-      data: [
-        { symbolId, type: 'SPLIT', exDate: utcMidnight(WED), splitFrom: '1', splitTo: '10' },
-        {
-          symbolId,
-          type: 'DIVIDEND',
-          exDate: utcMidnight(THU),
-          cashAmount: '0.1',
-          payDate: utcMidnight('2026-06-08'),
-        },
-      ],
+    await prisma.corporateAction.create({
+      data: {
+        symbolId,
+        type: 'DIVIDEND',
+        exDate: utcMidnight(THU),
+        cashAmount: '0.1',
+        payDate: utcMidnight('2026-06-08'),
+      },
     });
     await prisma.candleDaily.createMany({ data: [bar(WED, '10'), bar(THU, '10')] });
 
@@ -187,13 +203,27 @@ describe('Orders (database)', () => {
     const again = await orders.cancel(userId, portfolio.id, resting.id);
     expect(again.status).toBe('cancelled');
 
-    // Read today, long after the pay date: the dividend is cash.
+    // Read today, long after the pay date: the dividend is cash, and the
+    // shares are worth what they cost (100 at Thursday's close of 10).
     const books = await portfolios.get(userId, portfolio.id);
     expect(books).toMatchObject({
       cash: '9010.00',
       dividendIncome: '10.00',
       dividendsReceivable: '0.00',
-      positions: [{ ticker: TICKER, quantity: '100.000000', cost: '1000.00' }],
+      marketValue: '1000.00',
+      unrealizedPnl: '0.00',
+      equity: '10010.00',
+      positions: [
+        {
+          ticker: TICKER,
+          quantity: '100.000000',
+          cost: '1000.00',
+          lastPrice: '10',
+          priceDate: THU,
+          marketValue: '1000.00',
+          unrealizedPnl: '0.00',
+        },
+      ],
     });
     const kinds = await prisma.ledgerTransaction.findMany({
       where: { portfolioId: portfolio.id },

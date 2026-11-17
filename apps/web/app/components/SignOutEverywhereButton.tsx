@@ -12,6 +12,7 @@ import {
   Button,
   useToastManager,
 } from "@astraq/ui";
+import { postAuth } from "@/lib/auth-client";
 
 /**
  * "Log out everywhere" (ROADMAP Phase 2 item 1): revokes every session,
@@ -26,10 +27,11 @@ export function SignOutEverywhereButton({ count }: { count: number }) {
 
   function signOutEverywhere() {
     startTransition(async () => {
-      const response = await fetch("/api/auth/logout-all", { method: "POST" });
-      if (!response.ok) {
+      const result = await postAuth("logout-all");
+      if (!result.ok) {
         toast.add({
           title: "Couldn't sign out everywhere",
+          description: result.error ?? undefined,
           type: "danger",
           priority: "high",
         });

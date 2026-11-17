@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { toIsoDate, utcMidnight } from '../common/dates';
+import { lower, upper } from '../common/enum-case';
 import { PrismaService } from '../database/prisma.service';
 import type {
   FillRule as DbFillRule,
@@ -18,9 +19,11 @@ import { firstEligibleSession, sessionDate } from '../trading/market-hours';
 import type {
   Book,
   CloseReason,
+  CorporateAction,
   LastBar,
   OpenOrder,
   Plan,
+  SessionBar,
 } from '../trading/settlement';
 
 /** An order as stored, with its symbol and fill; numbers as decimal strings. */
@@ -89,9 +92,6 @@ const orderColumns = {
 } as const;
 
 type StoredOrder = Prisma.OrderGetPayload<{ select: typeof orderColumns }>;
-
-const lower = <T extends string>(value: T) => value.toLowerCase() as Lowercase<T>;
-const upper = <T extends string>(value: T) => value.toUpperCase() as Uppercase<T>;
 
 function toRow({ symbol, fill, ...order }: StoredOrder): OrderRow {
   return {
@@ -201,6 +201,7 @@ export class OrdersRepository {
     return order && toRow(order);
   }
 
+  /** Everything `decide` reads, loaded inside the locked transaction. */
   private async snapshot(
     tx: Prisma.TransactionClient,
     scope: OrderScope,
@@ -233,31 +234,9 @@ export class OrdersRepository {
         barsFrom.set(order.symbolId, from);
       }
     }
-    const bars =
-      barsFrom.size === 0
-        ? []
-        : await tx.candleDaily.findMany({
-            where: {
-              OR: [...barsFrom].map(([id, from]) => ({
-                symbolId: id,
-                ts: { gte: utcMidnight(from) },
-              })),
-            },
-            orderBy: { ts: 'asc' },
-          });
-
-    const last =
-      symbolId === undefined
-        ? null
-        : await tx.candleDaily.findFirst({
-            where: { symbolId },
-            orderBy: { ts: 'desc' },
-            select: { ts: true, close: true },
-          });
-    const lastBar = last && {
-      date: toIsoDate(last.ts),
-      close: last.close.toFixed(),
-    };
+    const bars = await this.loadBars(tx, barsFrom);
+    const lastBar =
+      symbolId === undefined ? null : await this.loadLastBar(tx, symbolId);
 
     // Splits and dividends of every symbol the ledger, an open order, or
     // the new order names, from the earliest day any of them goes back to.
@@ -274,42 +253,78 @@ export class OrdersRepository {
       ...orders.map((order) => sessionDate(order.placedAt)),
     ]);
     const actions =
-      since === undefined || symbolIds.size === 0
+      since === undefined
         ? []
-        : await tx.corporateAction.findMany({
-            where: {
-              symbolId: { in: [...symbolIds] },
-              exDate: { gte: utcMidnight(since) },
-            },
-            orderBy: [{ exDate: 'asc' }, { id: 'asc' }],
-          });
+        : await this.loadActions(tx, [...symbolIds], since);
 
     return {
       existing: existing && toRow(existing),
       lastBar,
-      book: {
-        history,
-        orders,
-        costs,
-        bars: bars.map((bar) => ({
-          symbolId: bar.symbolId,
-          date: toIsoDate(bar.ts),
-          open: bar.open.toFixed(),
-          high: bar.high.toFixed(),
-          low: bar.low.toFixed(),
-          close: bar.close.toFixed(),
-        })),
-        actions: actions.map((action) => ({
-          symbolId: action.symbolId,
-          type: lower(action.type),
-          exDate: toIsoDate(action.exDate),
-          splitFrom: action.splitFrom?.toFixed() ?? null,
-          splitTo: action.splitTo?.toFixed() ?? null,
-          cashAmount: action.cashAmount?.toFixed() ?? null,
-          payDate: action.payDate && toIsoDate(action.payDate),
+      book: { history, orders, costs, bars, actions },
+    };
+  }
+
+  /** Each symbol's daily bars from its session date on, oldest first. */
+  private async loadBars(
+    tx: Prisma.TransactionClient,
+    from: ReadonlyMap<number, string>,
+  ): Promise<SessionBar[]> {
+    if (from.size === 0) return [];
+    const bars = await tx.candleDaily.findMany({
+      where: {
+        OR: [...from].map(([symbolId, date]) => ({
+          symbolId,
+          ts: { gte: utcMidnight(date) },
         })),
       },
-    };
+      orderBy: { ts: 'asc' },
+    });
+    return bars.map((bar) => ({
+      symbolId: bar.symbolId,
+      date: toIsoDate(bar.ts),
+      open: bar.open.toFixed(),
+      high: bar.high.toFixed(),
+      low: bar.low.toFixed(),
+      close: bar.close.toFixed(),
+    }));
+  }
+
+  /** The symbol's latest stored session; null without one. */
+  private async loadLastBar(
+    tx: Prisma.TransactionClient,
+    symbolId: number,
+  ): Promise<LastBar | null> {
+    const last = await tx.candleDaily.findFirst({
+      where: { symbolId },
+      orderBy: { ts: 'desc' },
+      select: { ts: true, close: true },
+    });
+    return last && { date: toIsoDate(last.ts), close: last.close.toFixed() };
+  }
+
+  /** The symbols' splits and dividends with an ex-date from `since` on. */
+  private async loadActions(
+    tx: Prisma.TransactionClient,
+    symbolIds: number[],
+    since: string,
+  ): Promise<CorporateAction[]> {
+    if (symbolIds.length === 0) return [];
+    const actions = await tx.corporateAction.findMany({
+      where: {
+        symbolId: { in: symbolIds },
+        exDate: { gte: utcMidnight(since) },
+      },
+      orderBy: [{ exDate: 'asc' }, { id: 'asc' }],
+    });
+    return actions.map((action) => ({
+      symbolId: action.symbolId,
+      type: lower(action.type),
+      exDate: toIsoDate(action.exDate),
+      splitFrom: action.splitFrom?.toFixed() ?? null,
+      splitTo: action.splitTo?.toFixed() ?? null,
+      cashAmount: action.cashAmount?.toFixed() ?? null,
+      payDate: action.payDate && toIsoDate(action.payDate),
+    }));
   }
 
   /** Writes a plan after `historyLength` ledger transactions; returns the placed order's id. */

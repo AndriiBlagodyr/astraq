@@ -3,12 +3,13 @@ import { APP_PIPE } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ZodValidationPipe } from 'nestjs-zod';
 import request from 'supertest';
+import { AuthRepository } from '../auth/auth.repository';
 import { signJwt } from '../auth/jwt';
 import { env } from '../common/env';
 import { AllExceptionsFilter } from '../common/filters/http-exception.filter';
 import { PrismaService } from '../database/prisma.service';
 import { AccountModule } from './account.module';
-import { AccountRepository, SessionNotFoundError } from './account.repository';
+import { AccountRepository } from './account.repository';
 
 // Ownership lives in the repository's WHERE clauses (scoped by user id like
 // the watchlists repository); this checks the HTTP layer: the guard,
@@ -19,8 +20,8 @@ describe('AccountController', () => {
     findUser: vi.fn(),
     updateName: vi.fn(),
     findLiveSessions: vi.fn(),
-    revokeSession: vi.fn(),
   };
+  const auth = { revokeSession: vi.fn() };
 
   const USER = '019a0000-0000-7000-8000-000000000001';
   const SESSION = '019a0000-0000-7000-8000-0000000000aa';
@@ -42,6 +43,8 @@ describe('AccountController', () => {
       .useValue({})
       .overrideProvider(AccountRepository)
       .useValue(account)
+      .overrideProvider(AuthRepository)
+      .useValue(auth)
       .compile();
 
     app = module.createNestApplication();
@@ -144,14 +147,14 @@ describe('AccountController', () => {
   });
 
   it('revokes one of the user’s sessions, 404 for a foreign one, 400 for a bad id', async () => {
-    account.revokeSession.mockResolvedValueOnce(undefined);
+    auth.revokeSession.mockResolvedValueOnce(true);
     await request(app.getHttpServer())
       .delete(`/me/sessions/${OTHER_SESSION}`)
       .set('Authorization', bearer)
       .expect(204);
-    expect(account.revokeSession).toHaveBeenCalledWith(USER, OTHER_SESSION);
+    expect(auth.revokeSession).toHaveBeenCalledWith(OTHER_SESSION, 'LOGOUT', USER);
 
-    account.revokeSession.mockRejectedValueOnce(new SessionNotFoundError(OTHER_SESSION));
+    auth.revokeSession.mockResolvedValueOnce(false);
     await request(app.getHttpServer())
       .delete(`/me/sessions/${OTHER_SESSION}`)
       .set('Authorization', bearer)
@@ -161,6 +164,6 @@ describe('AccountController', () => {
       .delete('/me/sessions/not-a-uuid')
       .set('Authorization', bearer)
       .expect(400);
-    expect(account.revokeSession).toHaveBeenCalledTimes(2);
+    expect(auth.revokeSession).toHaveBeenCalledTimes(2);
   });
 });

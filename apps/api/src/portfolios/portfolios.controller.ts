@@ -59,7 +59,8 @@ export class PortfoliosController {
   @Get(':id')
   @ApiOperation({
     operationId: 'getPortfolio',
-    summary: 'A portfolio with its cash, positions at cost, and PnL, from its ledger',
+    summary:
+      'A portfolio with its cash, PnL, and positions at cost and at their latest close',
   })
   @ZodResponse({ status: 200, type: PortfolioDto })
   get(@Req() req: AuthenticatedRequest, @Param() { id }: PortfolioIdParamDto) {

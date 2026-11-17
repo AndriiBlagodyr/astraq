@@ -7,10 +7,10 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { tickPercent } from "@/lib/format";
 import {
   barLabel,
   histogramLayout,
-  tickPercent,
   type DailyReturn,
   type ReturnStats,
 } from "@/lib/returns-view";

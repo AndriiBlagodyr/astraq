@@ -1,16 +1,28 @@
 import { format } from '../common/decimal';
 import { PrismaService } from '../database/prisma.service';
-import { LedgerError, positions } from './ledger';
+import { OrdersRepository } from '../portfolios/orders.repository';
+import {
+  LedgerError,
+  buy,
+  deposit,
+  positions,
+  replay,
+  sell,
+  withdrawal,
+  type LedgerState,
+  type Posting,
+} from './ledger';
 import { LedgerRepository, PortfolioNotFoundError } from './ledger.repository';
-import { LedgerService } from './ledger.service';
 
 // Runs against a real database (`pnpm --filter @astraq/api test:integration`).
 // Verifies what only the database can: postings to one portfolio never
 // interleave, the ledger tables refuse edits, and an unbalanced transaction
-// can't commit (ADR 0009).
+// can't commit (ADR 0009). Postings go through `OrdersRepository.transact`,
+// the one path that writes a ledger.
 describe('Ledger (database)', () => {
   const prisma = new PrismaService();
-  const ledger = new LedgerService(new LedgerRepository(prisma));
+  const ledger = new LedgerRepository();
+  const orders = new OrdersRepository(prisma, ledger);
   const EMAIL = 'itest-ledger@veracand.test';
   const TICKER = 'ITLDG';
   const PASSWORD_HASH = '$argon2id$v=19$m=19456,t=2,p=1$dGVzdA$dGVzdGhhc2g';
@@ -33,6 +45,30 @@ describe('Ledger (database)', () => {
     return portfolio.id;
   }
 
+  /** Appends one posting, built from the state under the portfolio's lock. */
+  async function post(
+    portfolioId: string,
+    build: (state: LedgerState) => Posting,
+  ): Promise<number> {
+    const { result } = await orders.transact(
+      { userId, portfolioId },
+      ({ book }) => ({
+        plan: {
+          postings: [
+            { posting: build(replay(book.history)), occurredAt: AT, fill: null },
+          ],
+          closed: [],
+          placed: null,
+        },
+        result: book.history.length + 1,
+      }),
+    );
+    return result;
+  }
+
+  const state = async (portfolioId: string) =>
+    replay(await ledger.read(prisma, portfolioId));
+
   beforeAll(async () => {
     await cleanup();
     const user = await prisma.user.create({
@@ -52,43 +88,41 @@ describe('Ledger (database)', () => {
 
   it('stores postings and derives the same state back from them', async () => {
     const portfolioId = await newPortfolio('Round trip');
-    await ledger.deposit(portfolioId, '1000.00', AT);
-    await ledger.recordBuy(
-      portfolioId,
-      { symbolId, quantity: '3', notional: '10.00', commission: '1.00' },
-      AT,
+    await post(portfolioId, () => deposit('1000.00'));
+    await post(portfolioId, (s) =>
+      buy(s, { symbolId, quantity: '3', notional: '10.00', commission: '1.00' }),
     );
-    const sold = await ledger.recordSell(
-      portfolioId,
-      { symbolId, quantity: '1', notional: '4.00', commission: '0' },
-      AT,
+    const seq = await post(portfolioId, (s) =>
+      sell(s, { symbolId, quantity: '1', notional: '4.00', commission: '0' }),
     );
-    expect(sold.seq).toBe(3);
+    expect(seq).toBe(3);
 
-    const state = await ledger.state(portfolioId);
-    expect(format(state.cash)).toBe('993.00'); // 1000 - 10 - 1 + 4
-    expect(format(state.realizedPnl)).toBe('0.67'); // 4.00 - 3.33
-    expect(format(state.fees)).toBe('1.00');
-    const [position] = positions(state);
+    const books = await state(portfolioId);
+    expect(format(books.cash)).toBe('993.00'); // 1000 - 10 - 1 + 4
+    expect(format(books.realizedPnl)).toBe('0.67'); // 4.00 - 3.33
+    expect(format(books.fees)).toBe('1.00');
+    const [position] = positions(books);
     expect(format(position!.quantity)).toBe('2.000000');
     expect(format(position!.cost)).toBe('6.67');
 
     await expect(
-      ledger.withdraw(portfolioId, '993.01', AT),
+      post(portfolioId, (s) => withdrawal(s, '993.01')),
     ).rejects.toBeInstanceOf(LedgerError);
     await expect(
-      ledger.deposit('00000000-0000-7000-8000-000000000000', '1', AT),
+      post('00000000-0000-7000-8000-000000000000', () => deposit('1')),
     ).rejects.toBeInstanceOf(PortfolioNotFoundError);
   });
 
   it('runs concurrent postings to one portfolio one after the other', async () => {
     const portfolioId = await newPortfolio('Concurrent');
-    await ledger.deposit(portfolioId, '100.00', AT);
+    await post(portfolioId, () => deposit('100.00'));
 
     // Ten withdrawals of 30 race for 100 in cash: exactly three fit. Without
     // the portfolio lock they'd each see 100 and overdraw, or collide on seq.
     const results = await Promise.allSettled(
-      Array.from({ length: 10 }, () => ledger.withdraw(portfolioId, '30', AT)),
+      Array.from({ length: 10 }, () =>
+        post(portfolioId, (s) => withdrawal(s, '30')),
+      ),
     );
     const done = results.filter((result) => result.status === 'fulfilled');
     expect(done).toHaveLength(3);
@@ -103,12 +137,12 @@ describe('Ledger (database)', () => {
       orderBy: { seq: 'asc' },
     });
     expect(rows.map((row) => row.seq)).toEqual([1, 2, 3, 4]);
-    expect(format((await ledger.state(portfolioId)).cash)).toBe('10.00');
+    expect(format((await state(portfolioId)).cash)).toBe('10.00');
   });
 
   it('refuses updates, direct deletes, and unbalanced transactions', async () => {
     const portfolioId = await newPortfolio('Guards');
-    await ledger.deposit(portfolioId, '50.00', AT);
+    await post(portfolioId, () => deposit('50.00'));
     const transaction = await prisma.ledgerTransaction.findFirstOrThrow({
       where: { portfolioId },
     });
@@ -142,7 +176,7 @@ describe('Ledger (database)', () => {
     ).rejects.toThrow(/unbalanced/);
 
     // Nothing above left a mark.
-    expect(format((await ledger.state(portfolioId)).cash)).toBe('50.00');
+    expect(format((await state(portfolioId)).cash)).toBe('50.00');
 
     // The cascade from a deleted portfolio is the one delete allowed.
     await prisma.portfolio.delete({ where: { id: portfolioId } });

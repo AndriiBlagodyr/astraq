@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, Feedback, FormField, Input, buttonVariants } from "@astraq/ui";
 import { RegisterBodySchema, type RegisterBody } from "@astraq/shared";
+import { postAuth } from "@/lib/auth-client";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -22,15 +23,9 @@ export function RegisterForm() {
 
   const onSubmit = async (data: RegisterBody) => {
     setServerError(null);
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { error?: string };
-      setServerError(body.error ?? "Registration failed. Please try again.");
+    const result = await postAuth("register", data);
+    if (!result.ok) {
+      setServerError(result.error ?? "Registration failed. Please try again.");
       return;
     }
 

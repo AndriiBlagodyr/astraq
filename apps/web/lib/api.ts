@@ -64,6 +64,15 @@ function keepingProblems<Client extends ReturnType<typeof createApiClient>>(
   return client;
 }
 
+/**
+ * A 401 from the api means the session ended after proxy.ts let the request
+ * through (revoked from another device, say): the caller goes to sign in.
+ * Every read and every server action checks its response with this.
+ */
+export function requireSession(response: Response): void {
+  if (response.status === 401) redirect("/login");
+}
+
 /** Data pages render per request; a cached read would hide a bootstrap run. */
 export const fresh = { cache: "no-store" } as const;
 

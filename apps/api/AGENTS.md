@@ -2,6 +2,8 @@
 
 - Framework: NestJS 11. The api is the only writer of domain tables.
 - Layering: `controller -> service -> repository -> db`. No DB calls in controllers.
+- Errors: a repository raises a domain error that extends `NotFoundError` or `ConflictError` (`src/common/domain-errors.ts`) and knows nothing about HTTP; `AllExceptionsFilter` maps the kind to 404 or 409 with the error's message. Services let these pass: no catch-and-rethrow. A service throws a Nest `HttpException` itself only for what it decides (a 400 on the request's content, a 422 for a ledger refusal).
+- A portfolio's ledger is written in one place, `OrdersRepository.transact`, which settles the portfolio first. Don't add a second write path.
 - DB access: Prisma only. Use Prisma Client for models, Prisma Migrate for every schema change, and TypedSQL (`$queryRaw` as fallback) for hand-written candle and analytics queries. Hypertables and other TimescaleDB DDL go in `migrate dev --create-only` migrations edited by hand. MongoDB (Phase 4+) uses a second Prisma client with the MongoDB connector, not Mongoose. Don't add another ORM, query builder, or migration tool.
 - The Prisma Client in `src/generated/prisma` is generated on install (`postinstall`) and gitignored: never commit it. Migration folders keep the name Prisma gives them (`YYYYMMDDHHMMSS_name`, 14 digits), since Prisma applies them in name order; rename one only before it reaches a shared database.
 - Jobs/queues: BullMQ on Redis. Cron via `@nestjs/schedule`.

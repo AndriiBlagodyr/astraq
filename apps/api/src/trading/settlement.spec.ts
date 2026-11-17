@@ -19,6 +19,7 @@ import {
   cancel,
   place,
   settle,
+  transfer,
   type Book,
   type CorporateAction,
   type OpenOrder,
@@ -348,5 +349,40 @@ describe('cancel', () => {
     expect(filled.cancelled).toBe(false);
     expect(filled.plan.closed).toEqual([]);
     expect(filled.plan.postings).toHaveLength(1);
+  });
+});
+
+describe('transfer', () => {
+  // A buy of 10 resting since Monday evening meets Tuesday's open at 100.
+  const tuesday = { orders: [order({})], bars: [bar(TUE, '100')] };
+
+  it('settles before a deposit, so new cash can’t pay for an earlier fill', () => {
+    const { plan, state } = transfer(
+      book({ history: funded('500'), ...tuesday }),
+      { type: 'deposit', amount: '1000' },
+      at(WED, '12:00'),
+    );
+
+    // Tuesday's fill needed 1000 and found 500: Wednesday's deposit is too late.
+    expect(plan.closed).toEqual([
+      { orderId: 'order-1', status: 'rejected', reason: 'insufficient_cash', at: sessionOpen(TUE) },
+    ]);
+    expect(plan.postings.map((planned) => planned.posting.kind)).toEqual(['deposit']);
+    expect(format(state.cash)).toBe('1500.00');
+  });
+
+  it('settles before a withdrawal, so it can’t take cash a fill has spent', () => {
+    const spent = book({ history: funded('1000'), ...tuesday });
+
+    expect(() =>
+      transfer(spent, { type: 'withdrawal', amount: '500' }, at(WED, '12:00')),
+    ).toThrow(expect.objectContaining({ code: 'insufficient_cash' }));
+    // Before Tuesday's bar exists the cash is still there to take.
+    const early = transfer(
+      { ...spent, bars: [] },
+      { type: 'withdrawal', amount: '500' },
+      at(MON, '22:00'),
+    );
+    expect(format(early.state.cash)).toBe('500.00');
   });
 });

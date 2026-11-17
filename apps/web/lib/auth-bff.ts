@@ -1,3 +1,4 @@
+import { LoginBodySchema, RegisterBodySchema } from "@astraq/shared";
 import { NextResponse, type NextRequest } from "next/server";
 import { problemDetail } from "./api";
 import {
@@ -26,18 +27,25 @@ export type CredentialsCopy = {
   conflict?: string;
 };
 
+// A route handler is a public endpoint like a server action: the body is
+// checked against the api's own schema before anything is forwarded.
+const credentialSchemas = {
+  login: LoginBodySchema,
+  register: RegisterBodySchema,
+} as const;
+
 export async function forwardCredentials(
   request: NextRequest,
   path: "login" | "register",
   copy: CredentialsCopy,
   successStatus = 200
 ): Promise<NextResponse> {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
+  const parsed = credentialSchemas[path].safeParse(
+    await request.json().catch(() => undefined)
+  );
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid request body" },
+      { error: parsed.error.issues[0]?.message ?? "Invalid request body" },
       { status: 400 }
     );
   }
@@ -50,7 +58,7 @@ export async function forwardCredentials(
       // these every user behind the web server would share one bucket.
       ...bffHeaders(clientIpFrom(request.headers)),
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(parsed.data),
   });
 
   if (!upstream.ok) {
