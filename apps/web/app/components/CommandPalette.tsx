@@ -13,40 +13,28 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { CornerDownLeft, Search } from "lucide-react";
 import {
-  Combobox,
-  ComboboxCollection,
-  ComboboxEmpty,
-  ComboboxGroup,
-  ComboboxGroupLabel,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxStatus,
   Dialog,
   DialogContent,
-  Kbd,
   THEME_NAMES,
   useTheme,
   useToastManager,
 } from "@astraq/ui";
-import { suggestSymbols } from "@/app/(app)/watchlists/actions";
+import { postAuth } from "@/lib/auth-client";
 import {
   actionCommands,
-  buildPaletteGroups,
+  parseRecent,
   rememberRecent,
   type PaletteCommand,
-  type PaletteGroup,
-  type PaletteSymbol,
 } from "@/lib/command-palette";
+import { createLocalStore } from "@/lib/local-store";
 import {
   createShortcutMatcher,
   isApplePlatform,
   isTypingTarget,
   type Shortcut,
 } from "@/lib/shortcuts";
-import { ShortcutKeys } from "./ShortcutKeys";
+import { PaletteSearch, type PaletteSearchProps } from "./PaletteSearch";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 
 // The ⌘K command palette and the app's keyboard shortcuts (docs/ui-plan.md
@@ -54,10 +42,12 @@ import { ShortcutsDialog } from "./ShortcutsDialog";
 // One provider in the app layout owns both dialogs and the global key
 // listener, so the top-bar trigger, `/`, and Mod+K all open the same
 // palette. The lists and the ranking live in lib/command-palette.ts and
-// lib/shortcuts.ts; this file renders them and runs what's chosen.
+// lib/shortcuts.ts, and the search box with its results in
+// PaletteSearch.tsx; this file owns the state and runs what's chosen.
 
-const RECENT_STORAGE_KEY = "veracand-palette-recent";
-const SUGGEST_DELAY_MS = 150;
+// Recent items live in localStorage and reach React through
+// useSyncExternalStore (lib/local-store.ts).
+const recentStore = createLocalStore("veracand-palette-recent");
 
 type CommandPaletteContextValue = {
   openPalette: () => void;
@@ -78,56 +68,6 @@ export function useCommandPalette(): CommandPaletteContextValue {
   return value;
 }
 
-// Recent items live in localStorage and reach React through
-// useSyncExternalStore: the server snapshot is empty, the browser's is the
-// stored string (a stable primitive, so the hook can compare it), and a save
-// notifies subscribers with an event, since `storage` only fires in other tabs.
-const RECENT_EVENT = "veracand-palette-recent-change";
-
-function subscribeRecent(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  window.addEventListener(RECENT_EVENT, onChange);
-  return () => {
-    window.removeEventListener("storage", onChange);
-    window.removeEventListener(RECENT_EVENT, onChange);
-  };
-}
-
-function readRecentRaw(): string {
-  try {
-    return window.localStorage.getItem(RECENT_STORAGE_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function parseRecent(raw: string): PaletteCommand[] {
-  try {
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed)
-      ? parsed.filter(
-          (item): item is PaletteCommand =>
-            typeof item === "object" &&
-            item !== null &&
-            typeof item.id === "string" &&
-            typeof item.label === "string" &&
-            typeof item.href === "string"
-        )
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRecent(recent: PaletteCommand[]) {
-  try {
-    window.localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(recent));
-    window.dispatchEvent(new Event(RECENT_EVENT));
-  } catch {
-    // Private mode or a full store: recents are a convenience only.
-  }
-}
-
 const noSubscription = () => () => {};
 
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
@@ -144,9 +84,9 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     () => false
   );
   const recentRaw = useSyncExternalStore(
-    subscribeRecent,
-    readRecentRaw,
-    () => ""
+    recentStore.subscribe,
+    recentStore.read,
+    recentStore.readOnServer
   );
   const recent = useMemo(() => parseRecent(recentRaw), [recentRaw]);
 
@@ -154,10 +94,11 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     THEME_NAMES[(THEME_NAMES.indexOf(theme) + 1) % THEME_NAMES.length];
 
   const signOut = useCallback(async () => {
-    const response = await fetch("/api/auth/logout", { method: "POST" });
-    if (!response.ok) {
+    const result = await postAuth("logout");
+    if (!result.ok) {
       toast.add({
         title: "Couldn't sign out",
+        description: result.error ?? undefined,
         type: "danger",
         priority: "high",
       });
@@ -188,7 +129,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       }
       setPaletteOpen(false);
       if (command.href) {
-        saveRecent(rememberRecent(recent, command));
+        recentStore.write(rememberRecent(recent, command));
         router.push(command.href as Route);
         return;
       }
@@ -290,13 +231,9 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   );
 }
 
-type CommandPaletteDialogProps = {
+type CommandPaletteDialogProps = PaletteSearchProps & {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  recent: readonly PaletteCommand[];
-  actions: readonly PaletteCommand[];
-  apple: boolean;
-  onRun: (command: PaletteCommand) => void;
   /** Where focus goes when the dialog closes; `true` is back to the trigger. */
   finalFocus: () => HTMLElement | true;
 };
@@ -329,130 +266,5 @@ function CommandPaletteDialog({
         />
       </DialogContent>
     </Dialog>
-  );
-}
-
-type SymbolResults = { query: string; symbols: PaletteSymbol[] };
-
-function PaletteSearch({
-  recent,
-  actions,
-  apple,
-  onRun,
-}: Omit<CommandPaletteDialogProps, "open" | "onOpenChange" | "finalFocus">) {
-  const [query, setQuery] = useState("");
-  // The last answer and the query it answers. The list shows it only while
-  // the query still matches, and "searching" is simply "no answer yet".
-  const [results, setResults] = useState<SymbolResults>({
-    query: "",
-    symbols: [],
-  });
-  const latest = useRef(0);
-
-  const trimmed = query.trim();
-  const symbols = results.query === trimmed ? results.symbols : [];
-  const searching = trimmed !== "" && results.query !== trimmed;
-
-  // Symbols come from the api's search through a server action, after a
-  // short pause, like the watchlist's add-symbol box.
-  useEffect(() => {
-    if (!trimmed) return;
-    const request = ++latest.current;
-    const timer = setTimeout(async () => {
-      const found = await suggestSymbols(trimmed);
-      // A slower, older answer must not overwrite a newer query's.
-      if (request === latest.current) {
-        setResults({ query: trimmed, symbols: found });
-      }
-    }, SUGGEST_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [trimmed]);
-
-  const groups = buildPaletteGroups({ query, recent, symbols, actions });
-
-  return (
-    <>
-      <Combobox<PaletteCommand, false, PaletteGroup>
-        inline
-        open
-        modal={false}
-        items={groups}
-        filter={null}
-        value={null}
-        onValueChange={(command) => {
-          if (command) onRun(command);
-        }}
-        inputValue={query}
-        onInputValueChange={setQuery}
-        itemToStringLabel={(command) => command.label}
-        autoHighlight
-      >
-        <ComboboxInput
-          aria-label="Search symbols, pages, and actions"
-          placeholder="Search symbols, pages, actions…"
-          autoComplete="off"
-          spellCheck={false}
-          trigger={false}
-          size="lg"
-          className="rounded-none border-0 border-b border-border bg-transparent shadow-none focus-within:border-border focus-within:shadow-none"
-        />
-        <ComboboxStatus>
-          {searching ? "Searching symbols…" : null}
-        </ComboboxStatus>
-        <ComboboxEmpty>
-          {searching ? null : `Nothing matches “${trimmed}”.`}
-        </ComboboxEmpty>
-        <ComboboxList className="max-h-[min(60dvh,24rem)] p-2">
-          {(group: PaletteGroup) => (
-            <ComboboxGroup key={group.value} items={group.items}>
-              <ComboboxGroupLabel>{group.value}</ComboboxGroupLabel>
-              <ComboboxCollection>
-                {(command: PaletteCommand) => (
-                  <ComboboxItem
-                    key={command.id}
-                    value={command}
-                    className="pr-3"
-                  >
-                    <span className="min-w-0 flex-1 truncate">
-                      <span className="font-semibold text-foreground">
-                        {command.label}
-                      </span>
-                      {command.hint ? (
-                        <span className="ml-2 text-muted">{command.hint}</span>
-                      ) : null}
-                    </span>
-                    {command.shortcut ? (
-                      <ShortcutKeys keys={command.shortcut} apple={apple} />
-                    ) : null}
-                  </ComboboxItem>
-                )}
-              </ComboboxCollection>
-            </ComboboxGroup>
-          )}
-        </ComboboxList>
-      </Combobox>
-      <footer className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-4 py-2 text-xs text-muted">
-        <span className="inline-flex items-center gap-1.5">
-          <Kbd size="sm">↑</Kbd>
-          <Kbd size="sm">↓</Kbd>
-          move
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Kbd size="sm">
-            <CornerDownLeft aria-hidden="true" />
-            <span className="sr-only">Enter</span>
-          </Kbd>
-          open
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Kbd size="sm">Esc</Kbd>
-          close
-        </span>
-        <span className="ml-auto inline-flex items-center gap-1.5">
-          <Search aria-hidden="true" className="size-3.5" />
-          Symbols from every listed US equity
-        </span>
-      </footer>
-    </>
   );
 }

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { LedgerModule } from '../ledger/ledger.module';
 import { MarketDataModule } from '../market-data/market-data.module';
-import { SymbolsRepository } from '../symbols/symbols.repository';
+import { SymbolsModule } from '../symbols/symbols.module';
 import { OrdersController } from './orders.controller';
 import { OrdersRepository } from './orders.repository';
 import { OrdersService } from './orders.service';
@@ -17,14 +17,13 @@ import { PortfoliosService } from './portfolios.service';
  * and database edge.
  */
 @Module({
-  imports: [DatabaseModule, LedgerModule, MarketDataModule],
+  imports: [DatabaseModule, LedgerModule, MarketDataModule, SymbolsModule],
   controllers: [PortfoliosController, OrdersController],
   providers: [
     PortfoliosService,
     PortfoliosRepository,
     OrdersService,
     OrdersRepository,
-    SymbolsRepository,
   ],
 })
 export class PortfoliosModule {}

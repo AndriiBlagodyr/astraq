@@ -33,7 +33,7 @@ describe('WatchlistsController', () => {
     removeItem: vi.fn(),
     reorderItems: vi.fn(),
   };
-  const symbols = { findIdByTicker: vi.fn() };
+  const symbols = { findIdByTicker: vi.fn(), findIdsByTickers: vi.fn() };
   const candles = { findLatestCloses: vi.fn(), findRecentCloses: vi.fn() };
   const onDemand = { ensureCandles: vi.fn() };
 
@@ -210,7 +210,12 @@ describe('WatchlistsController', () => {
   });
 
   it('answers 400 when the new order is not a permutation of the list', async () => {
-    symbols.findIdByTicker.mockResolvedValueOnce(7).mockResolvedValueOnce(9);
+    symbols.findIdsByTickers.mockResolvedValueOnce(
+      new Map([
+        ['AAPL', 9],
+        ['NVDA', 7],
+      ]),
+    );
     watchlists.reorderItems.mockResolvedValueOnce(false);
 
     await request(app.getHttpServer())

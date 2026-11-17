@@ -24,37 +24,46 @@ export type ChartAdjustment = (typeof chartAdjustments)[number];
 /** A picked range of session dates, both ends inclusive, as YYYY-MM-DD. */
 export type CustomRange = { from: string; to: string };
 
+/** A view's range: a preset, or picked dates. */
+export type RangeView = { range: ChartRange } | { custom: CustomRange };
+
+export type SearchParams = Record<string, string | string[] | undefined>;
+
 /**
- * Reads `?range=&adjustment=` and `?from=&to=` leniently: anything unknown
- * falls back to the default. A valid `from`/`to` pair wins over `range`; a
- * half, malformed, or reversed pair is ignored.
+ * Reads `?range=` and `?from=&to=` leniently, for every view with a range
+ * (the stock chart, the returns distribution): an unknown preset falls back
+ * to the default, and a valid `from`/`to` pair wins over `range`. A half,
+ * malformed, or reversed pair is ignored.
  */
-export function parseChartParams(
-  params: Record<string, string | string[] | undefined>
-) {
+export function parseRangeParams(params: SearchParams) {
   const range =
     chartRanges.find((value) => value === params.range) ?? defaultRange;
-  const adjustment =
-    chartAdjustments.find((value) => value === params.adjustment) ?? "split";
   const { from, to } = params;
   const custom: CustomRange | null =
     isIsoDate(from) && isIsoDate(to) && from <= to ? { from, to } : null;
-  return { range, adjustment, custom };
+  return { range, custom };
+}
+
+/** The query parameters that `parseRangeParams` reads back as `view`. */
+export function rangeQuery(view: RangeView): Record<string, string> {
+  return "custom" in view
+    ? { from: view.custom.from, to: view.custom.to }
+    : { range: view.range };
+}
+
+/** Reads the stock page's `?range=&from=&to=&adjustment=`. */
+export function parseChartParams(params: SearchParams) {
+  const adjustment =
+    chartAdjustments.find((value) => value === params.adjustment) ?? "split";
+  return { ...parseRangeParams(params), adjustment };
 }
 
 /** The stock page URL for a preset range or a custom one. */
 export function chartHref(
   ticker: string,
-  view: { adjustment: ChartAdjustment } & (
-    | { range: ChartRange }
-    | { custom: CustomRange }
-  )
+  view: { adjustment: ChartAdjustment } & RangeView
 ): string {
-  const query = new URLSearchParams(
-    "custom" in view
-      ? { from: view.custom.from, to: view.custom.to }
-      : { range: view.range }
-  );
+  const query = new URLSearchParams(rangeQuery(view));
   query.set("adjustment", view.adjustment);
   return `/stocks/${ticker}?${query}`;
 }
@@ -105,21 +114,6 @@ export function sessionChange({
     change,
     changePercent: (change / Number(previousClose)) * 100,
   };
-}
-
-const price = new Intl.NumberFormat("en-US", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 4,
-});
-
-/**
- * A price for display: "150.10", "1,234.50", "0.0125". The api trims
- * trailing zeros ("150.1"), which reads ragged in a column of closes.
- * Anything that isn't a number comes back as it was.
- */
-export function formatPrice(value: string): string {
-  const number = Number(value);
-  return Number.isFinite(number) ? price.format(number) : value;
 }
 
 const newYorkDate = new Intl.DateTimeFormat("en-CA", {

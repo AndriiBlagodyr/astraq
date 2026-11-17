@@ -54,7 +54,7 @@ export class CandlesRepository {
                ) AS split_ratio,
                numeric_product(
                  CASE WHEN ca.type = 'dividend'
-                      THEN 1 - ca.cash_amount / previous.close END
+                      THEN 1 - ca.cash_amount / nullif(previous.close, 0) END
                ) AS dividend_ratio
         FROM corporate_actions ca
         LEFT JOIN LATERAL (
@@ -381,8 +381,8 @@ export class CandlesRepository {
     // The CHECK constraint guarantees both ratio columns on a split.
     return splits.map((split) => ({
       exDate: toIsoDate(split.exDate),
-      from: split.splitFrom!.toString(),
-      to: split.splitTo!.toString(),
+      from: split.splitFrom!.toFixed(),
+      to: split.splitTo!.toFixed(),
     }));
   }
 }

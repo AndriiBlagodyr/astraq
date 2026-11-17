@@ -141,6 +141,9 @@ describe('Portfolio and order endpoints', () => {
       realizedPnl: '0.00',
       dividendIncome: '0.00',
       dividendsReceivable: '0.00',
+      marketValue: '0.00',
+      unrealizedPnl: '0.00',
+      equity: '1000.00',
       positions: [],
     });
     await post('/portfolios').send({ name: ' Paper ', startingCash: '1000' }).expect(201);

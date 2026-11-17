@@ -43,6 +43,10 @@ export class AuthService {
 
     const passwordHash = await hashPassword(body.password);
     const user = await this.auth.createUser(body.email, passwordHash);
+    // Two registrations raced past the check above: the second loses.
+    if (!user) {
+      throw new ConflictException('Registration is currently invite-only');
+    }
 
     await this.auth.appendAuditLog({
       userId: user.id,

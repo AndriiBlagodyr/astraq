@@ -1,20 +1,20 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TickerParamSchema } from "@astraq/shared";
 import { Card, EmptyState, buttonVariants } from "@astraq/ui";
 import { AddToWatchlistMenu } from "@/app/components/AddToWatchlistMenu";
 import { CandleChart } from "@/app/components/CandleChart";
-import { CustomRangePicker } from "@/app/components/CustomRangePicker";
 import { DayChange } from "@/app/components/DayChange";
 import { PillLinks } from "@/app/components/PillLinks";
+import { RangeControls } from "@/app/components/RangeControls";
 import { RecordStockView } from "@/app/components/RecentStocks";
+import { formatPrice } from "@/lib/format";
 import { findSymbol, getDailyCandles } from "@/lib/market-data";
 import { listWatchlists } from "@/lib/watchlists";
 import {
   chartAdjustments,
   chartHref,
-  chartRanges,
-  formatPrice,
   marketDate,
   parseChartParams,
   rangeStart,
@@ -49,6 +49,9 @@ export default async function StockPage({
   searchParams,
 }: StockPageProps) {
   const { symbol } = await params;
+  // Not a ticker at all (`/stocks/123`): the api would answer 400, which
+  // reads as "the chart couldn't load". It's a page that doesn't exist.
+  if (!TickerParamSchema.safeParse({ ticker: symbol }).success) notFound();
   const { range, adjustment, custom } = parseChartParams(await searchParams);
   const ticker = symbol.toUpperCase();
   const today = marketDate();
@@ -125,23 +128,13 @@ export default async function StockPage({
 
       <Card className="grid gap-4 p-5 sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <PillLinks
-              label="Range"
-              items={chartRanges.map((value) => ({
-                key: value,
-                text: value,
-                href: href({ range: value }),
-                current: !custom && value === range,
-              }))}
-            />
-            <CustomRangePicker
-              key={custom ? `${custom.from}/${custom.to}` : "preset"}
-              target={{ page: "stock", ticker, adjustment }}
-              value={custom}
-              max={today}
-            />
-          </div>
+          <RangeControls
+            range={range}
+            custom={custom}
+            today={today}
+            target={{ page: "stock", ticker, adjustment }}
+            hrefFor={(value) => href({ range: value })}
+          />
           <PillLinks
             label="Prices"
             items={chartAdjustments.map((value) => ({

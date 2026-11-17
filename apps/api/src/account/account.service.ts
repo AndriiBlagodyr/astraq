@@ -1,10 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Account, AccountSession, AccountSessionList } from '@astraq/shared';
-import { AccountRepository, SessionNotFoundError } from './account.repository';
+import { AuthRepository } from '../auth/auth.repository';
+import { SessionRevokedReason } from '../generated/prisma/enums';
+import { AccountRepository } from './account.repository';
 
 @Injectable()
 export class AccountService {
-  constructor(private readonly account: AccountRepository) {}
+  constructor(
+    private readonly account: AccountRepository,
+    private readonly auth: AuthRepository,
+  ) {}
 
   async get(userId: string): Promise<Account> {
     const user = await this.account.findUser(userId);
@@ -34,14 +39,16 @@ export class AccountService {
     return { sessions };
   }
 
+  /**
+   * Signs one device out: the same revocation as that device's own logout.
+   * A foreign or already revoked session is a 404.
+   */
   async revokeSession(userId: string, sessionId: string): Promise<void> {
-    try {
-      await this.account.revokeSession(userId, sessionId);
-    } catch (error) {
-      if (error instanceof SessionNotFoundError) {
-        throw new NotFoundException('Session not found');
-      }
-      throw error;
-    }
+    const revoked = await this.auth.revokeSession(
+      sessionId,
+      SessionRevokedReason.LOGOUT,
+      userId,
+    );
+    if (!revoked) throw new NotFoundException('Session not found');
   }
 }

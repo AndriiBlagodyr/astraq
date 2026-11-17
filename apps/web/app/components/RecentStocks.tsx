@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Card } from "@astraq/ui";
+import { createLocalStore } from "@/lib/local-store";
 import {
   parseRecentStocks,
   rememberStock,
@@ -11,53 +12,30 @@ import {
 
 // Recently viewed stocks (docs/ui-plan.md § Today, Phase 2). The list is
 // this browser's own history, kept in localStorage like the palette's
-// recent items and read the same way: through useSyncExternalStore, with an
-// empty server snapshot, so the server's HTML and the first client render
-// agree and the stored list appears right after hydration.
+// recent items and read the same way (lib/local-store.ts): through
+// useSyncExternalStore, with an empty server snapshot, so the server's HTML
+// and the first client render agree and the stored list appears right
+// after hydration.
 
-const STORAGE_KEY = "veracand-recent-stocks";
-const CHANGE_EVENT = "veracand-recent-stocks-change";
-
-function subscribe(onChange: () => void) {
-  // `storage` fires in other tabs only; the event covers this one.
-  window.addEventListener("storage", onChange);
-  window.addEventListener(CHANGE_EVENT, onChange);
-  return () => {
-    window.removeEventListener("storage", onChange);
-    window.removeEventListener(CHANGE_EVENT, onChange);
-  };
-}
-
-function readRaw(): string {
-  try {
-    return window.localStorage.getItem(STORAGE_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-const serverSnapshot = () => "";
+const store = createLocalStore("veracand-recent-stocks");
 
 /** Renders nothing; a stock page mounts it to put itself on the list. */
 export function RecordStockView({ ticker, name }: RecentStock) {
   useEffect(() => {
-    try {
-      const next = rememberStock(parseRecentStocks(readRaw()), {
-        ticker,
-        name,
-      });
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      window.dispatchEvent(new Event(CHANGE_EVENT));
-    } catch {
-      // Private mode or a full store: the list is a convenience only.
-    }
+    store.write(
+      rememberStock(parseRecentStocks(store.read()), { ticker, name })
+    );
   }, [ticker, name]);
   return null;
 }
 
 /** Today's card of the stocks opened last; absent until there is one. */
 export function RecentStocks() {
-  const raw = useSyncExternalStore(subscribe, readRaw, serverSnapshot);
+  const raw = useSyncExternalStore(
+    store.subscribe,
+    store.read,
+    store.readOnServer
+  );
   const stocks = useMemo(() => parseRecentStocks(raw), [raw]);
   if (stocks.length === 0) return null;
 

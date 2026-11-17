@@ -10,10 +10,8 @@ import {
   Thead,
   Tr,
 } from "@astraq/ui";
-import { formatPrice, sessionChange } from "@/lib/stock-chart";
 import type { Watchlist } from "@/lib/watchlists";
-import { DayChange } from "./DayChange";
-import { Sparkline } from "./Sparkline";
+import { QuoteCells } from "./QuoteCells";
 
 /**
  * One watchlist on Today (docs/ui-plan.md § Today, Phase 2): its symbols in
@@ -65,44 +63,24 @@ export function WatchlistSummaryCard({ watchlist }: { watchlist: Watchlist }) {
               </Tr>
             </Thead>
             <Tbody>
-              {watchlist.items.map((item) => {
-                const session = item.latestClose
-                  ? sessionChange(item.latestClose)
-                  : null;
-                return (
-                  <Tr key={item.ticker}>
-                    <Td>
-                      <Link
-                        href={`/stocks/${item.ticker}`}
-                        className="font-semibold text-foreground underline-offset-4 hover:underline"
-                      >
-                        {item.ticker}
-                      </Link>
-                    </Td>
-                    <Td>{item.name}</Td>
-                    {session ? (
-                      <>
-                        <Td className="text-right tabular-nums">
-                          {formatPrice(session.close)}
-                        </Td>
-                        <Td className="tabular-nums">
-                          <DayChange session={session} />
-                        </Td>
-                        <Td>
-                          <Sparkline
-                            ticker={item.ticker}
-                            points={item.sparkline}
-                          />
-                        </Td>
-                      </>
-                    ) : (
-                      <Td colSpan={3} className="text-sm text-muted">
-                        No candles yet
-                      </Td>
-                    )}
-                  </Tr>
-                );
-              })}
+              {watchlist.items.map((item) => (
+                <Tr key={item.ticker}>
+                  <Td>
+                    <Link
+                      href={`/stocks/${item.ticker}`}
+                      className="font-semibold text-foreground underline-offset-4 hover:underline"
+                    >
+                      {item.ticker}
+                    </Link>
+                  </Td>
+                  <Td>{item.name}</Td>
+                  <QuoteCells
+                    ticker={item.ticker}
+                    latestClose={item.latestClose}
+                    sparkline={item.sparkline}
+                  />
+                </Tr>
+              ))}
             </Tbody>
           </Table>
         </TableWrap>

@@ -1,9 +1,17 @@
 import type { LatestClose, WatchlistMovers } from '@astraq/shared';
+import {
+  compare,
+  decimal,
+  isZero,
+  multiply,
+  type Decimal,
+} from '../common/decimal';
 
 // A watchlist's best and worst movers (ROADMAP Phase 2 item 5), picked from
 // the closes the rows already show. Prices are decimal strings and stay
-// exact here: two day changes are compared as fractions of integers, never
-// as floats, so two symbols a hair apart can't swap places.
+// exact here: two day changes are compared as fractions on the api's exact
+// decimal (`common/decimal.ts`), never as floats, so two symbols a hair
+// apart can't swap places.
 
 export interface MoverCandidate {
   ticker: string;
@@ -11,31 +19,23 @@ export interface MoverCandidate {
   latestClose: LatestClose | null;
 }
 
-/** A decimal string as an integer and the power of ten it was scaled by. */
-function toScaled(value: string): { digits: bigint; scale: number } {
-  const [whole = '0', fraction = ''] = value.split('.');
-  return { digits: BigInt(whole + fraction), scale: fraction.length };
-}
-
 /**
  * The sign of `a.close / a.previousClose - b.close / b.previousClose`,
  * without dividing: for positive denominators, a/b > c/d exactly when
- * a * d > c * b. Each side is brought to the same power of ten first.
+ * a * d > c * b.
  */
 function compareChange(a: Session, b: Session): number {
-  const left = { digits: a.close.digits * b.previous.digits, scale: a.close.scale + b.previous.scale };
-  const right = { digits: b.close.digits * a.previous.digits, scale: b.close.scale + a.previous.scale };
-  const scale = Math.max(left.scale, right.scale);
-  const l = left.digits * 10n ** BigInt(scale - left.scale);
-  const r = right.digits * 10n ** BigInt(scale - right.scale);
-  return l > r ? 1 : l < r ? -1 : 0;
+  return compare(
+    multiply(a.close, b.previous),
+    multiply(b.close, a.previous),
+  );
 }
 
 type Session = {
   ticker: string;
   latestClose: LatestClose;
-  close: ReturnType<typeof toScaled>;
-  previous: ReturnType<typeof toScaled>;
+  close: Decimal;
+  previous: Decimal;
 };
 
 /**
@@ -58,12 +58,12 @@ export function pickMovers(items: readonly MoverCandidate[]): WatchlistMovers {
   for (const { ticker, latestClose } of items) {
     if (!latestClose || latestClose.date !== newest) continue;
     if (latestClose.previousClose === null) continue;
-    const previous = toScaled(latestClose.previousClose);
-    if (previous.digits === 0n) continue;
+    const previous = decimal(latestClose.previousClose);
+    if (isZero(previous)) continue;
     sessions.push({
       ticker,
       latestClose,
-      close: toScaled(latestClose.close),
+      close: decimal(latestClose.close),
       previous,
     });
   }

@@ -166,6 +166,29 @@ export function rankCommands(
 export const RECENT_LIMIT = 6;
 
 /**
+ * The stored recent items, or what can be saved of them: storage is the
+ * user's to edit and survives app versions, so anything that isn't a
+ * command with somewhere to go is dropped.
+ */
+export function parseRecent(raw: string): PaletteCommand[] {
+  let parsed: unknown;
+  try {
+    parsed = raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter(
+    (item): item is PaletteCommand =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof item.id === "string" &&
+      typeof item.label === "string" &&
+      typeof item.href === "string"
+  );
+}
+
+/**
  * `command` becomes the most recent item; a repeat moves up instead of
  * duplicating, and the list stays at `RECENT_LIMIT`. Only things you can
  * go back to are remembered: actions have nothing to reopen.

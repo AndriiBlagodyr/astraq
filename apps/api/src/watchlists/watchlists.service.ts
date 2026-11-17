@@ -1,17 +1,15 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import type { Watchlist, WatchlistList } from '@astraq/shared';
 import { OnDemandCandlesService } from '../market-data/on-demand-candles.service';
 import { CandlesRepository } from '../symbols/candles.repository';
+import { resolveTicker } from '../symbols/resolve-ticker';
 import { SymbolsRepository } from '../symbols/symbols.repository';
 import { type MoverCandidate, pickMovers } from './movers';
 import {
-  WatchlistNameTakenError,
-  WatchlistNotFoundError,
   type WatchlistRow,
   WatchlistsRepository,
 } from './watchlists.repository';
@@ -65,7 +63,7 @@ export class WatchlistsService {
   }
 
   async create(userId: string, name: string): Promise<Watchlist> {
-    const row = await this.run(() => this.watchlists.create(userId, name));
+    const row = await this.watchlists.create(userId, name);
     return this.withItems(userId, row);
   }
 
@@ -77,12 +75,12 @@ export class WatchlistsService {
   }
 
   async rename(userId: string, id: string, name: string): Promise<Watchlist> {
-    const row = await this.run(() => this.watchlists.rename(userId, id, name));
+    const row = await this.watchlists.rename(userId, id, name);
     return this.withItems(userId, row);
   }
 
   async delete(userId: string, id: string): Promise<void> {
-    await this.run(() => this.watchlists.delete(userId, id));
+    await this.watchlists.delete(userId, id);
   }
 
   /**
@@ -95,8 +93,8 @@ export class WatchlistsService {
     id: string,
     rawTicker: string,
   ): Promise<Watchlist> {
-    const symbolId = await this.resolveTicker(rawTicker);
-    await this.run(() => this.watchlists.addItem(userId, id, symbolId));
+    const { symbolId } = await resolveTicker(this.symbols, rawTicker);
+    await this.watchlists.addItem(userId, id, symbolId);
     await this.onDemand.ensureCandles(symbolId);
     return this.get(userId, id);
   }
@@ -114,7 +112,7 @@ export class WatchlistsService {
       await this.get(userId, id);
       return;
     }
-    await this.run(() => this.watchlists.removeItem(userId, id, symbolId));
+    await this.watchlists.removeItem(userId, id, symbolId);
   }
 
   /** Puts the list in the order given; 400 unless it names every row once. */
@@ -123,17 +121,16 @@ export class WatchlistsService {
     id: string,
     rawTickers: string[],
   ): Promise<Watchlist> {
-    const ids = await Promise.all(
-      rawTickers.map((ticker) =>
-        this.symbols.findIdByTicker(ticker.toUpperCase()),
-      ),
-    );
-    const symbolIds = ids.filter((symbolId) => symbolId !== null);
+    // One query for the whole order, not one per row.
+    const tickers = rawTickers.map((ticker) => ticker.toUpperCase());
+    const known = await this.symbols.findIdsByTickers(tickers);
+    const symbolIds = tickers.flatMap((ticker) => {
+      const symbolId = known.get(ticker);
+      return symbolId === undefined ? [] : [symbolId];
+    });
     const ok =
-      symbolIds.length === ids.length &&
-      (await this.run(() =>
-        this.watchlists.reorderItems(userId, id, symbolIds),
-      ));
+      symbolIds.length === tickers.length &&
+      (await this.watchlists.reorderItems(userId, id, symbolIds));
     if (!ok) {
       throw new BadRequestException(
         'tickers must name every symbol on the list exactly once',
@@ -166,29 +163,5 @@ export class WatchlistsService {
         addedAt: item.addedAt.toISOString(),
       })),
     };
-  }
-
-  private async resolveTicker(rawTicker: string): Promise<number> {
-    const ticker = rawTicker.toUpperCase();
-    const symbolId = await this.symbols.findIdByTicker(ticker);
-    if (symbolId === null) {
-      throw new NotFoundException(`Unknown symbol ${ticker}`);
-    }
-    return symbolId;
-  }
-
-  /** Turns the repository's domain errors into HTTP problems. */
-  private async run<T>(action: () => Promise<T>): Promise<T> {
-    try {
-      return await action();
-    } catch (error) {
-      if (error instanceof WatchlistNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      if (error instanceof WatchlistNameTakenError) {
-        throw new ConflictException(error.message);
-      }
-      throw error;
-    }
   }
 }

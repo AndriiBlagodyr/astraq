@@ -1,15 +1,9 @@
 import { z } from "zod";
 import { LatestCloseSchema, TickerParamSchema } from "./market-data";
-
-const decimalString = z.string().regex(/^\d+(\.\d+)?$/);
+import { decimalString, oneLineName } from "./primitives";
 
 /** A watchlist's name as the user typed it, trimmed; one line, up to 64 characters. */
-const watchlistName = z
-  .string()
-  .trim()
-  .min(1, "Name is required")
-  .max(64, "At most 64 characters")
-  .regex(/^[^\u0000-\u001f\u007f]+$/, "One line, no control characters");
+const watchlistName = oneLineName(64);
 
 /** Path of `/api/watchlists/{id}/...`. Watchlist ids are UUIDs. */
 export const WatchlistIdParamSchema = z.object({

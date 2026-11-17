@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { ConflictError } from '../common/domain-errors';
+import { isUniqueViolation } from '../common/prisma-errors';
 import { PrismaService } from '../database/prisma.service';
-import { Prisma } from '../generated/prisma/client';
+import type { Prisma } from '../generated/prisma/client';
 import type { Posting } from '../ledger/ledger';
 import { LedgerRepository } from '../ledger/ledger.repository';
 
-/** Thrown when a create would reuse one of the user's portfolio names. */
-export class PortfolioNameTakenError extends Error {
+/** Thrown when a create would reuse one of the user's portfolio names: a 409. */
+export class PortfolioNameTakenError extends ConflictError {
   constructor(readonly portfolioName: string) {
     super(`A portfolio named "${portfolioName}" already exists`);
     this.name = 'PortfolioNameTakenError';
@@ -20,6 +22,16 @@ export interface PortfolioRow {
   commissionPerShare: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** A held symbol and the price its shares are valued at. */
+export interface HeldSymbol {
+  ticker: string;
+  name: string;
+  /** The latest stored close in the shares that trade today; null without bars. */
+  lastPrice: string | null;
+  /** The session that close is from, YYYY-MM-DD. */
+  priceDate: string | null;
 }
 
 export interface NewPortfolio {
@@ -98,25 +110,52 @@ export class PortfoliosRepository {
         return toRow(row);
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new PortfolioNameTakenError(data.name);
-      }
+      if (isUniqueViolation(error)) throw new PortfolioNameTakenError(data.name);
       throw error;
     }
   }
 
-  /** Ticker and name of each symbol, keyed by id. */
-  async findSymbols(
+  /**
+   * Each symbol's ticker, name, and latest stored close, keyed by id.
+   *
+   * The close is in the shares that trade on `today` (a session date): it
+   * is multiplied by `from / to` of every split that went ex after its bar
+   * and no later than `today`. Settlement has already converted the lots
+   * for those splits, so on an ex-date whose bar isn't stored yet the old
+   * close would price ten times the shares at the pre-split price.
+   */
+  async findHeldSymbols(
     symbolIds: number[],
-  ): Promise<Map<number, { ticker: string; name: string }>> {
+    today: string,
+  ): Promise<Map<number, HeldSymbol>> {
     if (symbolIds.length === 0) return new Map();
-    const symbols = await this.prisma.symbol.findMany({
-      where: { id: { in: symbolIds } },
-      select: { id: true, ticker: true, name: true },
-    });
-    return new Map(symbols.map(({ id, ...symbol }) => [id, symbol]));
+    const rows = await this.prisma.$queryRaw<
+      Array<HeldSymbol & { symbolId: number }>
+    >`
+      SELECT s.id AS "symbolId",
+             s.ticker,
+             s.name,
+             to_char(latest.ts AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS "priceDate",
+             trim_scale(round(latest.close * splits.factor, 6))::text
+               AS "lastPrice"
+      FROM symbols s
+      LEFT JOIN LATERAL (
+        SELECT c.ts, c.close
+        FROM candles_daily c
+        WHERE c.symbol_id = s.id
+        ORDER BY c.ts DESC
+        LIMIT 1
+      ) latest ON true
+      LEFT JOIN LATERAL (
+        SELECT numeric_product(ca.split_from / ca.split_to) AS factor
+        FROM corporate_actions ca
+        WHERE ca.symbol_id = s.id
+          AND ca.type = 'split'
+          AND ca.ex_date > (latest.ts AT TIME ZONE 'UTC')::date
+          AND ca.ex_date <= ${today}::date
+      ) splits ON true
+      WHERE s.id = ANY(${symbolIds}::int[])
+    `;
+    return new Map(rows.map(({ symbolId, ...symbol }) => [symbolId, symbol]));
   }
 }

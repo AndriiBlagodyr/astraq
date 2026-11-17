@@ -70,4 +70,14 @@ export class SymbolsRepository {
     });
     return symbol?.id ?? null;
   }
+
+  /** The ids of the tickers that exist, keyed by ticker, in one query. */
+  async findIdsByTickers(tickers: string[]): Promise<Map<string, number>> {
+    if (tickers.length === 0) return new Map();
+    const symbols = await this.prisma.symbol.findMany({
+      where: { ticker: { in: tickers } },
+      select: { id: true, ticker: true },
+    });
+    return new Map(symbols.map((symbol) => [symbol.ticker, symbol.id]));
+  }
 }

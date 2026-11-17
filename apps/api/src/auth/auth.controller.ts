@@ -17,6 +17,12 @@ import { AuthTokensDto, LoginBodyDto, RefreshBodyDto, RegisterBodyDto } from './
 import { AuthService } from './auth.service';
 import { type AuthenticatedRequest, JwtAuthGuard } from './jwt-auth.guard';
 
+/** Who is asking, for the session row and the audit log. */
+const requestContext = (req: Request) => ({
+  ip: clientAddress(req, env.BFF_SHARED_SECRET),
+  userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
+});
+
 @ApiTags('auth')
 @ApiProblemResponses()
 @Controller('auth')
@@ -29,10 +35,7 @@ export class AuthController {
   @ApiOperation({ operationId: 'register', summary: 'Register with an invited email' })
   @ZodResponse({ status: 201, type: AuthTokensDto })
   register(@Body() body: RegisterBodyDto, @Req() req: Request) {
-    return this.authService.register(body, {
-      ip: clientAddress(req, env.BFF_SHARED_SECRET),
-      userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
-    });
+    return this.authService.register(body, requestContext(req));
   }
 
   @Post('login')
@@ -41,10 +44,7 @@ export class AuthController {
   @ApiOperation({ operationId: 'login', summary: 'Sign in with email and password' })
   @ZodResponse({ status: 200, type: AuthTokensDto })
   login(@Body() body: LoginBodyDto, @Req() req: Request) {
-    return this.authService.login(body, {
-      ip: clientAddress(req, env.BFF_SHARED_SECRET),
-      userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
-    });
+    return this.authService.login(body, requestContext(req));
   }
 
   @Post('refresh')

@@ -117,7 +117,7 @@ The triggers guard against bugs in the api, not against someone with the databas
 
 ### 7. Transaction boundaries
 
-**Posting to the ledger** is one database transaction (`LedgerRepository.append`):
+**Posting to the ledger** is one database transaction:
 
 1. `SELECT ... FOR UPDATE` on the portfolio's row. Two postings to the same portfolio now run one after the other; postings to different portfolios don't wait.
 2. Read the portfolio's history and replay it.
@@ -126,11 +126,13 @@ The triggers guard against bugs in the api, not against someone with the databas
 
 The lock is what makes step 3 trustworthy. Without it, two sells could each see the same shares, or two withdrawals the same cash, and both commit. Read Committed isolation is enough once the lock is held, because nothing else can write to that portfolio's ledger in between. The unique `(portfolio_id, seq)` index is the backstop: a writer that somehow skipped the lock fails instead of forking the history.
 
-**Placing, cancelling, and filling an order** is the same transaction, wider (`OrdersRepository.transact`):
+Nothing in the api posts this way any more (amended 2026-11-16). A cash move used to: `POST .../transfers` appended a deposit or withdrawal straight to the ledger. But a portfolio is settled lazily, so the ledger a transfer met could be days behind the market data. A deposit made on Wednesday then paid for an order that had met Tuesday's bar with too little cash, and a withdrawal could take cash that Tuesday's fill had already spent, turning that fill into a rejection. Cash moves now go through the wider transaction below, which settles first. The standalone path (`LedgerRepository.append` and the `LedgerService` over it) is deleted, so there is one way to write a ledger; `LedgerRepository` only reads and inserts rows inside the caller's transaction, and the ledger's integration test posts through `OrdersRepository.transact`. The four steps above still describe what happens, as the core of the wider transaction.
+
+**Placing, cancelling, and filling an order, and moving cash,** is the same transaction, wider (`OrdersRepository.transact`):
 
 1. `SELECT ... FOR UPDATE` on the portfolio's row, with the owner's id in the WHERE clause, so a portfolio that isn't the user's is not found.
 2. Read what the decision needs: the ledger, the open orders, the daily bars those orders may fill on, the corporate actions of every symbol involved, and (for a placement) the order already stored under the request's idempotency key.
-3. A pure function decides (`apps/api/src/trading/settlement.ts`). `settle`, `place`, and `cancel` return a plan: ledger postings, fills, and order status changes.
+3. A pure function decides (`apps/api/src/trading/settlement.ts`). `settle`, `place`, `cancel`, and `transfer` return a plan: ledger postings, fills, and order status changes.
 4. Write the plan. A fill is three writes (its ledger transaction, its `fills` row pointing at that transaction, and the order's status), and they commit together with everything else in the plan, or not at all.
 
 As with the ledger alone, the lock is what makes the decision trustworthy, and the decision is pure because it runs while the lock is held.

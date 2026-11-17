@@ -1,5 +1,5 @@
 import {
-  sessionDate,
+  barSessionTs,
   toCandleRows,
   toCorporateActionRows,
   toSymbolSeeds,
@@ -64,10 +64,10 @@ describe('alpaca mapping', () => {
   });
 
   it('dates a bar by its New York session in and out of DST', () => {
-    expect(sessionDate('2024-06-10T04:00:00Z')).toEqual(
+    expect(barSessionTs('2024-06-10T04:00:00Z')).toEqual(
       new Date('2024-06-10T00:00:00.000Z'),
     );
-    expect(sessionDate('2024-01-10T05:00:00Z')).toEqual(
+    expect(barSessionTs('2024-01-10T05:00:00Z')).toEqual(
       new Date('2024-01-10T00:00:00.000Z'),
     );
   });

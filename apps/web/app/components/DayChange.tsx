@@ -1,23 +1,25 @@
 import { Badge } from "@astraq/ui";
+import { signedPercentPoints, signedPriceChange } from "@/lib/format";
 import type { LastSession } from "@/lib/stock-chart";
 
-const signed = new Intl.NumberFormat("en-US", {
-  signDisplay: "always",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-/** "+1.23 (+0.45%)", green or red; nothing when there's no previous close. */
+/**
+ * "+1.23 (+0.45%)", green or red; nothing when there's no previous close.
+ * `percentOnly` drops the price change: "+0.45%".
+ */
 export function DayChange({
   session,
+  percentOnly = false,
 }: {
   session: Pick<LastSession, "change" | "changePercent">;
+  percentOnly?: boolean;
 }) {
   if (session.change === null || session.changePercent === null) return null;
+  const percent = `${signedPercentPoints.format(session.changePercent)}%`;
   return (
     <Badge tone={session.change >= 0 ? "positive" : "negative"}>
-      {signed.format(session.change)} ({signed.format(session.changePercent)}
-      %)
+      {percentOnly
+        ? percent
+        : `${signedPriceChange.format(session.change)} (${percent})`}
     </Badge>
   );
 }

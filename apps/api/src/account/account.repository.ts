@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { AuditAction, SessionRevokedReason } from '../generated/prisma/enums';
 import { PrismaService } from '../database/prisma.service';
 
 /** A live session as the "your devices" list needs it. */
@@ -12,12 +11,6 @@ export type SessionRow = {
   lastUsedAt: Date;
   expiresAt: Date;
 };
-
-export class SessionNotFoundError extends Error {
-  constructor(id: string) {
-    super(`Session ${id} not found`);
-  }
-}
 
 /**
  * The signed-in user's own rows. Every query is scoped by the caller's
@@ -77,23 +70,5 @@ export class AccountRepository {
       ...session,
       lastUsedAt: refreshTokens[0]?.createdAt ?? session.createdAt,
     }));
-  }
-
-  /**
-   * Revokes one of the user's live sessions, with its audit entry. The
-   * WHERE carries the user id, so a foreign or already revoked session
-   * changes nothing and is reported as not found.
-   */
-  async revokeSession(userId: string, sessionId: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.session.updateMany({
-        where: { id: sessionId, userId, revokedAt: null },
-        data: { revokedAt: new Date(), revokedReason: SessionRevokedReason.LOGOUT },
-      });
-      if (count === 0) throw new SessionNotFoundError(sessionId);
-      await tx.auditLog.create({
-        data: { userId, action: AuditAction.LOGOUT, metadata: { sessionId } },
-      });
-    });
   }
 }

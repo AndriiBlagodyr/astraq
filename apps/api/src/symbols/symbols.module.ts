@@ -9,5 +9,7 @@ import { SymbolsService } from './symbols.service';
   imports: [DatabaseModule],
   controllers: [SymbolsController],
   providers: [SymbolsService, SymbolsRepository, CandlesRepository],
+  // Watchlists and portfolios read symbols and closes through these.
+  exports: [SymbolsRepository, CandlesRepository],
 })
 export class SymbolsModule {}

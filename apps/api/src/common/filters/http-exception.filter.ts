@@ -8,8 +8,12 @@ import {
 } from '@nestjs/common';
 import type { Problem, ValidationIssue } from '@astraq/shared';
 import type { Request, Response } from 'express';
-import { ZodValidationException } from 'nestjs-zod';
+import {
+  ZodSerializationException,
+  ZodValidationException,
+} from 'nestjs-zod';
 import { ZodError } from 'zod';
+import { ConflictError, DomainError, NotFoundError } from '../domain-errors';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -20,13 +24,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
-
+    const status = statusOf(exception);
+    // A domain error's message is written for the user, like an
+    // HttpException's; anything else may describe internals.
     const message =
-      exception instanceof HttpException
+      exception instanceof HttpException || exception instanceof DomainError
         ? exception.message
         : 'Internal server error';
 
@@ -35,6 +37,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exception instanceof Error ? exception.message : 'Unknown error',
         exception instanceof Error ? exception.stack : undefined,
       );
+      // A response that failed its own schema has an empty message: the
+      // fields that were wrong are in the Zod error it carries.
+      if (exception instanceof ZodSerializationException) {
+        const cause = exception.getZodError();
+        this.logger.error(
+          `Response failed its schema on ${request.method} ${request.url}: ${
+            cause instanceof ZodError
+              ? JSON.stringify(cause.issues)
+              : String(cause)
+          }`,
+        );
+      }
     }
 
     const problem: Problem = {
@@ -49,6 +63,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     response.status(status).json(problem);
   }
+}
+
+/**
+ * The status an exception answers with. Repositories raise domain errors
+ * (`common/domain-errors.ts`) that know nothing about HTTP; this is where
+ * each kind gets its status, so services don't catch and rethrow them.
+ */
+function statusOf(exception: unknown): number {
+  if (exception instanceof HttpException) return exception.getStatus();
+  if (exception instanceof NotFoundError) return HttpStatus.NOT_FOUND;
+  if (exception instanceof ConflictError) return HttpStatus.CONFLICT;
+  return HttpStatus.INTERNAL_SERVER_ERROR;
 }
 
 /** The failed checks behind a request-validation 400, if that's what this is. */

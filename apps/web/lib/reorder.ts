@@ -52,6 +52,11 @@ export function dropIndex(
   return target;
 }
 
+/** Whether two orders name the same items in the same places. */
+export function sameOrder<T>(a: readonly T[], b: readonly T[]): boolean {
+  return a.length === b.length && a.every((item, index) => item === b[index]);
+}
+
 /** The index a keyboard move lands on, clamped to the list. */
 export function stepIndex(index: number, by: -1 | 1, length: number): number {
   return Math.min(length - 1, Math.max(0, index + by));

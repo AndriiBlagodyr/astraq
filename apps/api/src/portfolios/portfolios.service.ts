@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -11,12 +10,24 @@ import type {
   PortfolioList,
   PortfolioSummary,
 } from '@astraq/shared';
-import { CASH_PLACES, format, isZero, decimal, round } from '../common/decimal';
-import { LedgerError, deposit, positions } from '../ledger/ledger';
-import { LedgerService } from '../ledger/ledger.service';
+import {
+  CASH_PLACES,
+  decimal,
+  format,
+  isZero,
+  round,
+  type Decimal,
+} from '../common/decimal';
+import {
+  LedgerError,
+  deposit,
+  positions,
+  type LedgerState,
+} from '../ledger/ledger';
+import { sessionDate } from '../trading/market-hours';
+import { valuePortfolio } from '../trading/valuation';
 import { OrdersService } from './orders.service';
 import {
-  PortfolioNameTakenError,
   type PortfolioRow,
   PortfoliosRepository,
 } from './portfolios.repository';
@@ -38,7 +49,6 @@ function toSummary(row: PortfolioRow): PortfolioSummary {
 export class PortfoliosService {
   constructor(
     private readonly portfolios: PortfoliosRepository,
-    private readonly ledger: LedgerService,
     private readonly orders: OrdersService,
   ) {}
 
@@ -48,43 +58,46 @@ export class PortfoliosService {
   }
 
   /** Creates a portfolio with its opening deposit; 409 when the name is taken. */
-  async create(userId: string, body: CreatePortfolioBody): Promise<Portfolio> {
+  async create(
+    userId: string,
+    body: CreatePortfolioBody,
+    now = new Date(),
+  ): Promise<Portfolio> {
     const { startingCash, ...settings } = body;
     const opening = isZero(decimal(startingCash)) ? null : deposit(startingCash);
-    let row: PortfolioRow;
-    try {
-      row = await this.portfolios.create(userId, settings, opening, new Date());
-    } catch (error) {
-      if (error instanceof PortfolioNameTakenError) {
-        throw new ConflictException(error.message);
-      }
-      throw error;
-    }
-    return this.withBooks(userId, row);
+    const row = await this.portfolios.create(userId, settings, opening, now);
+    return this.withBooks(row, await this.orders.settle(userId, row.id, now), now);
   }
 
   /** A portfolio with its books, settled first; 404 when it isn't the user's. */
-  async get(userId: string, id: string): Promise<Portfolio> {
-    return this.withBooks(userId, await this.owned(userId, id));
+  async get(userId: string, id: string, now = new Date()): Promise<Portfolio> {
+    const row = await this.owned(userId, id);
+    return this.withBooks(row, await this.orders.settle(userId, id, now), now);
   }
 
-  /** Pays cash in or takes it out; 422 for a withdrawal the cash doesn't cover. */
+  /**
+   * Pays cash in or takes it out; 422 for a withdrawal the cash doesn't
+   * cover. The move goes through the order path, which settles first: the
+   * cash a withdrawal is checked against is what's left after every fill
+   * that has already happened.
+   */
   async transfer(
     userId: string,
     id: string,
     body: CashTransferBody,
+    now = new Date(),
   ): Promise<Portfolio> {
     const row = await this.owned(userId, id);
+    let state: LedgerState;
     try {
-      if (body.type === 'deposit') await this.ledger.deposit(id, body.amount);
-      else await this.ledger.withdraw(id, body.amount);
+      state = await this.orders.transfer(userId, id, body, now);
     } catch (error) {
       if (error instanceof LedgerError && error.code === 'insufficient_cash') {
         throw new UnprocessableEntityException(error.message);
       }
       throw error;
     }
-    return this.withBooks(userId, row);
+    return this.withBooks(row, state, now);
   }
 
   private async owned(userId: string, id: string): Promise<PortfolioRow> {
@@ -93,14 +106,28 @@ export class PortfoliosService {
     return row;
   }
 
-  private async withBooks(userId: string, row: PortfolioRow): Promise<Portfolio> {
-    const state = await this.orders.settle(userId, row.id);
+  private async withBooks(
+    row: PortfolioRow,
+    state: LedgerState,
+    now: Date,
+  ): Promise<Portfolio> {
     const held = positions(state);
-    const symbols = await this.portfolios.findSymbols(
+    // The lots are in the shares of `now`'s session, so the prices must be.
+    const symbols = await this.portfolios.findHeldSymbols(
       held.map((position) => position.symbolId),
+      sessionDate(now),
     );
-    const cents = (value: Parameters<typeof round>[0]) =>
-      format(round(value, CASH_PLACES));
+    const value = valuePortfolio(
+      state.cash,
+      state.receivable,
+      held.map((position) => {
+        const price = symbols.get(position.symbolId)!.lastPrice;
+        return { ...position, price: price === null ? null : decimal(price) };
+      }),
+    );
+    const cents = (amount: Decimal) => format(round(amount, CASH_PLACES));
+    const centsOrNull = (amount: Decimal | null) =>
+      amount === null ? null : cents(amount);
     return {
       ...toSummary(row),
       cash: cents(state.cash),
@@ -109,12 +136,16 @@ export class PortfoliosService {
       realizedPnl: cents(state.realizedPnl),
       dividendIncome: cents(state.dividendIncome),
       dividendsReceivable: cents(state.receivable),
+      marketValue: centsOrNull(value.marketValue),
+      unrealizedPnl: centsOrNull(value.unrealizedPnl),
+      equity: centsOrNull(value.equity),
       positions: held
-        .map((position) => ({
-          ticker: symbols.get(position.symbolId)!.ticker,
-          name: symbols.get(position.symbolId)!.name,
+        .map((position, index) => ({
+          ...symbols.get(position.symbolId)!,
           quantity: format(position.quantity),
           cost: cents(position.cost),
+          marketValue: centsOrNull(value.holdings[index]!.marketValue),
+          unrealizedPnl: centsOrNull(value.holdings[index]!.unrealizedPnl),
         }))
         .sort((a, b) => (a.ticker < b.ticker ? -1 : 1)),
     };

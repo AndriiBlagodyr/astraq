@@ -1,20 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
+import { NotFoundError } from '../common/domain-errors';
+import { lower, upper } from '../common/enum-case';
 import { sessionDate } from '../trading/market-hours';
-import type {
-  LedgerAccount as DbAccount,
-  LedgerTransactionKind as DbKind,
-  Prisma,
-} from '../generated/prisma/client';
-import type {
-  LedgerAccount,
-  LedgerKind,
-  LedgerTransaction,
-  Posting,
-} from './ledger';
+import type { Prisma } from '../generated/prisma/client';
+import type { LedgerTransaction, Posting } from './ledger';
 
-/** Thrown when the portfolio a posting names doesn't exist. */
-export class PortfolioNotFoundError extends Error {
+/** Thrown when the portfolio a posting names doesn't exist, or isn't the user's. */
+export class PortfolioNotFoundError extends NotFoundError {
   constructor(readonly portfolioId: string) {
     super(`Portfolio ${portfolioId} not found`);
     this.name = 'PortfolioNotFoundError';
@@ -22,52 +14,20 @@ export class PortfolioNotFoundError extends Error {
 }
 
 /**
- * Reads and appends a portfolio's ledger (ADR 0009). There is no update
- * and no delete: the tables refuse both.
+ * Reads and writes the rows of a portfolio's ledger (ADR 0009). There is no
+ * update and no delete: the tables refuse both.
  *
- * Callers pass a portfolio id they have already checked belongs to the
- * user; fills arrive from jobs that have no user at all.
+ * It opens no transaction of its own. Both methods take the caller's: the
+ * order path (`OrdersRepository.transact`) locks the portfolio's row, reads
+ * the history here, decides, and inserts here, all in one transaction, and
+ * that is the only place a ledger is written.
  */
 @Injectable()
 export class LedgerRepository {
-  constructor(private readonly prisma: PrismaService) {}
-
-  /** The portfolio's whole history in `seq` order. */
-  findTransactions(portfolioId: string): Promise<LedgerTransaction[]> {
-    return this.read(this.prisma, portfolioId);
-  }
-
   /**
-   * Appends one transaction, decided from the history it follows.
-   *
-   * Everything happens in one database transaction holding a row lock on
-   * the portfolio: two postings to the same portfolio run one after the
-   * other, so `decide` always sees every earlier transaction and the next
-   * `seq` is free. `decide` must be pure: it runs while the lock is held.
-   */
-  async append(
-    portfolioId: string,
-    occurredAt: Date,
-    decide: (history: LedgerTransaction[]) => Posting,
-  ): Promise<LedgerTransaction> {
-    return this.prisma.$transaction(async (tx) => {
-      const locked = await tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM portfolios WHERE id = ${portfolioId}::uuid FOR UPDATE
-      `;
-      if (locked.length === 0) throw new PortfolioNotFoundError(portfolioId);
-
-      const history = await this.read(tx, portfolioId);
-      const posting = decide(history);
-      const seq = history.length + 1;
-      await this.insert(tx, portfolioId, seq, occurredAt, posting);
-      return { seq, date: sessionDate(occurredAt), ...posting };
-    });
-  }
-
-  /**
-   * Writes one transaction at `seq` and returns its id. For callers that
-   * already hold the portfolio's row lock in `tx` and have read the history
-   * there (the order path posts several transactions under one lock).
+   * Writes one transaction at `seq` and returns its id. The caller holds
+   * the portfolio's row lock in `tx` and has read the history there, so
+   * `seq` is the next free one.
    */
   async insert(
     tx: Prisma.TransactionClient,
@@ -80,7 +40,7 @@ export class LedgerRepository {
       data: {
         portfolioId,
         seq,
-        kind: posting.kind.toUpperCase() as DbKind,
+        kind: upper(posting.kind),
         occurredAt,
         splitFrom: posting.split?.from,
         splitTo: posting.split?.to,
@@ -88,7 +48,7 @@ export class LedgerRepository {
         // `read` returns them in (by id).
         entries: {
           create: posting.entries.map((entry) => ({
-            account: entry.account.toUpperCase() as DbAccount,
+            account: upper(entry.account),
             symbolId: entry.symbolId,
             amount: entry.amount,
             quantity: entry.quantity,
@@ -123,13 +83,13 @@ export class LedgerRepository {
     return rows.map((row) => ({
       seq: row.seq,
       date: sessionDate(row.occurredAt),
-      kind: row.kind.toLowerCase() as LedgerKind,
+      kind: lower(row.kind),
       ...(row.splitFrom &&
         row.splitTo && {
           split: { from: row.splitFrom.toFixed(), to: row.splitTo.toFixed() },
         }),
       entries: row.entries.map((entry) => ({
-        account: entry.account.toLowerCase() as LedgerAccount,
+        account: lower(entry.account),
         symbolId: entry.symbolId,
         amount: entry.amount.toFixed(2),
         quantity: entry.quantity.toFixed(6),

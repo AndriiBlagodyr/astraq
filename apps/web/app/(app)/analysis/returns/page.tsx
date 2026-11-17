@@ -1,8 +1,8 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { Button, Card, EmptyState, Input } from "@astraq/ui";
-import { CustomRangePicker } from "@/app/components/CustomRangePicker";
 import { PillLinks } from "@/app/components/PillLinks";
+import { RangeControls } from "@/app/components/RangeControls";
 import { ReturnsHistogram } from "@/app/components/ReturnsHistogram";
 import { ReturnStatsTable } from "@/app/components/ReturnStatsTable";
 import { findSymbol, getDailyReturns } from "@/lib/market-data";
@@ -12,12 +12,7 @@ import {
   returnsHref,
   type ReturnsAdjustment,
 } from "@/lib/returns-view";
-import {
-  chartRanges,
-  marketDate,
-  rangeStart,
-  type ChartRange,
-} from "@/lib/stock-chart";
+import { marketDate, rangeStart, type ChartRange } from "@/lib/stock-chart";
 
 type ReturnsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -167,23 +162,13 @@ export default async function ReturnsPage({ searchParams }: ReturnsPageProps) {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <PillLinks
-              label="Range"
-              items={chartRanges.map((value) => ({
-                key: value,
-                text: value,
-                href: href({ range: value }),
-                current: !custom && value === range,
-              }))}
-            />
-            <CustomRangePicker
-              key={custom ? `${custom.from}/${custom.to}` : "preset"}
-              target={{ page: "returns", symbol, adjustment }}
-              value={custom}
-              max={today}
-            />
-          </div>
+          <RangeControls
+            range={range}
+            custom={custom}
+            today={today}
+            target={{ page: "returns", symbol, adjustment }}
+            hrefFor={(value) => href({ range: value })}
+          />
           <PillLinks
             label="Basis"
             items={returnsAdjustments.map((value) => ({

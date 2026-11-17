@@ -1,16 +1,7 @@
 import type { ReactNode } from "react";
 import { Table, TableCaption, TableWrap, Tbody, Td, Th, Tr } from "@astraq/ui";
-import {
-  plainPercent,
-  signedPercent,
-  type DailyReturn,
-  type ReturnStats,
-} from "@/lib/returns-view";
-
-const decimal = new Intl.NumberFormat("en-US", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+import { plainPercent, signedPercent, twoDecimals } from "@/lib/format";
+import type { DailyReturn, ReturnStats } from "@/lib/returns-view";
 
 function Day({ point }: { point: DailyReturn }) {
   return (
@@ -37,7 +28,7 @@ export function ReturnStatsTable({ stats }: { stats: ReturnStats }) {
     ],
     [
       "Skewness",
-      stats.skew === null ? "—" : decimal.format(Number(stats.skew)),
+      stats.skew === null ? "—" : twoDecimals.format(Number(stats.skew)),
     ],
     ["Best day", <Day key="best" point={stats.best} />],
     ["Worst day", <Day key="worst" point={stats.worst} />],

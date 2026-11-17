@@ -6,37 +6,31 @@ import { redirect } from "next/navigation";
 import {
   AddWatchlistItemBodySchema,
   ReorderWatchlistBodySchema,
+  TickerParamSchema,
   WatchlistIdParamSchema,
   WatchlistNameBodySchema,
 } from "@astraq/shared";
-import { z } from "zod";
-import { api, problemDetail, userApi } from "@/lib/api";
-import type { SymbolSummary } from "@/lib/market-data";
+import {
+  type ActionResult,
+  done,
+  failed,
+  failure,
+  firstIssue,
+} from "@/lib/action-result";
+import { problemDetail, requireSession, userApi } from "@/lib/api";
 
 // The watchlist writes, as server actions: a client component calls one
 // like a function, Next posts it to this server, and it calls the api with
 // the session cookie's token. Every action is a public endpoint, so it
 // validates its input with the same shared schemas the api uses before
-// forwarding anything, and tells the router which pages changed.
-
-export type ActionResult<T = null> =
-  | { ok: true; value: T }
-  | { ok: false; error: string };
+// forwarding anything, and tells the router which pages changed. The
+// result type and the shared failure steps are in lib/action-result.ts.
 
 /** What an undo needs to bring a deleted watchlist back (with a new id). */
 export type WatchlistSnapshot = { name: string; tickers: string[] };
 
 const indexPath = "/watchlists";
 const detailPath = (id: string) => `/watchlists/${id}` as Route;
-
-function failed<T = null>(error: string): ActionResult<T> {
-  return { ok: false, error };
-}
-
-/** Zod's first message, for a form field or a toast. */
-function firstIssue(error: z.ZodError): string {
-  return error.issues[0]?.message ?? "Invalid input";
-}
 
 /**
  * Creating from the index: a form action, so it works before hydration and
@@ -55,7 +49,7 @@ export async function createWatchlist(
   const { data, response } = await client.POST("/api/watchlists", {
     body: parsed.data,
   });
-  if (response.status === 401) redirect("/login");
+  requireSession(response);
   if (!data) {
     return { error: await problemDetail(response, "Couldn't create the list") };
   }
@@ -77,13 +71,10 @@ export async function renameWatchlist(
     params: { path: { id } },
     body: { name: parsed.data.name },
   });
-  if (response.status === 401) redirect("/login");
-  if (!response.ok) {
-    return failed(await problemDetail(response, "Couldn't rename the list"));
-  }
+  if (!response.ok) return failure(response, "Couldn't rename the list");
   revalidatePath(indexPath);
   revalidatePath(detailPath(id));
-  return { ok: true, value: null };
+  return done;
 }
 
 /**
@@ -102,18 +93,12 @@ export async function deleteWatchlist(
     params: { path: { id } },
     cache: "no-store",
   });
-  if (current.response.status === 401) redirect("/login");
-  if (!current.data) {
-    return failed(await problemDetail(current.response, "List not found"));
-  }
+  if (!current.data) return failure(current.response, "List not found");
 
   const { response } = await client.DELETE("/api/watchlists/{id}", {
     params: { path: { id } },
   });
-  if (response.status === 401) redirect("/login");
-  if (!response.ok) {
-    return failed(await problemDetail(response, "Couldn't delete the list"));
-  }
+  if (!response.ok) return failure(response, "Couldn't delete the list");
   revalidatePath(indexPath);
   return {
     ok: true,
@@ -141,11 +126,8 @@ export async function restoreWatchlist(
   const created = await client.POST("/api/watchlists", {
     body: { name: parsed.data.name },
   });
-  if (created.response.status === 401) redirect("/login");
   if (!created.data) {
-    return failed(
-      await problemDetail(created.response, "Couldn't restore the list")
-    );
+    return failure(created.response, "Couldn't restore the list");
   }
   // Each add appends, so adding in the saved order restores it.
   const missing: string[] = [];
@@ -174,15 +156,12 @@ export async function addSymbol(
     params: { path: { id } },
     body: { ticker: parsed.data.ticker },
   });
-  if (response.status === 401) redirect("/login");
   if (!response.ok) {
-    return failed(
-      await problemDetail(response, `Couldn't add ${parsed.data.ticker}`)
-    );
+    return failure(response, `Couldn't add ${parsed.data.ticker}`);
   }
   revalidatePath(indexPath);
   revalidatePath(detailPath(id));
-  return { ok: true, value: null };
+  return done;
 }
 
 export async function removeSymbol(
@@ -199,13 +178,10 @@ export async function removeSymbol(
     "/api/watchlists/{id}/items/{ticker}",
     { params: { path: { id, ticker: parsed.data.ticker } } }
   );
-  if (response.status === 401) redirect("/login");
-  if (!response.ok) {
-    return failed(await problemDetail(response, `Couldn't remove ${ticker}`));
-  }
+  if (!response.ok) return failure(response, `Couldn't remove ${ticker}`);
   revalidatePath(indexPath);
   revalidatePath(detailPath(id));
-  return { ok: true, value: null };
+  return done;
 }
 
 /**
@@ -219,25 +195,25 @@ export async function removeSymbol(
 export async function reorderWatchlist(
   id: string,
   tickers: string[],
-  { restore }: { restore?: string } = {}
+  options: { restore?: string } = {}
 ): Promise<ActionResult> {
   const parsed = WatchlistIdParamSchema.extend(
     ReorderWatchlistBodySchema.shape
-  ).safeParse({ id, tickers });
+  )
+    .extend({ restore: TickerParamSchema.shape.ticker.optional() })
+    .safeParse({ id, tickers, restore: options.restore });
   if (!parsed.success) return failed(firstIssue(parsed.error));
 
   const client = await userApi();
+  const { restore } = parsed.data;
   let order = parsed.data.tickers;
   if (restore) {
     const added = await client.POST("/api/watchlists/{id}/items", {
       params: { path: { id } },
       body: { ticker: restore },
     });
-    if (added.response.status === 401) redirect("/login");
     if (!added.data) {
-      return failed(
-        await problemDetail(added.response, `Couldn't restore ${restore}`)
-      );
+      return failure(added.response, `Couldn't restore ${restore}`);
     }
     // The row is back (at the end) whatever happens to the reorder below.
     revalidatePath(indexPath);
@@ -254,27 +230,7 @@ export async function reorderWatchlist(
     params: { path: { id } },
     body: { tickers: order },
   });
-  if (response.status === 401) redirect("/login");
-  if (!response.ok) {
-    return failed(await problemDetail(response, "Couldn't reorder the list"));
-  }
+  if (!response.ok) return failure(response, "Couldn't reorder the list");
   revalidatePath(detailPath(id));
-  return { ok: true, value: null };
-}
-
-const searchQuery = z.string().trim().max(64);
-
-/**
- * Suggestions for the add-symbol box. Symbol search is public data, so this
- * uses the plain client; it's an action only because the browser never calls
- * the api directly.
- */
-export async function suggestSymbols(query: string): Promise<SymbolSummary[]> {
-  const parsed = searchQuery.safeParse(query);
-  if (!parsed.success || !parsed.data) return [];
-  const { data } = await api.GET("/api/symbols", {
-    params: { query: { query: parsed.data } },
-    cache: "no-store",
-  });
-  return data?.symbols.slice(0, 8) ?? [];
+  return done;
 }
