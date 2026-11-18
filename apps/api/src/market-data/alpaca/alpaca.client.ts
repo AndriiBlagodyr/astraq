@@ -4,17 +4,19 @@ import type { AlpacaEnv } from './alpaca.env';
 import {
   type AlpacaAsset,
   type AlpacaBarsPage,
+  type AlpacaCalendarDay,
   type AlpacaCorporateActions,
   alpacaAssetsSchema,
   alpacaBarsPageSchema,
+  alpacaCalendarSchema,
   alpacaCorporateActionsPageSchema,
 } from './alpaca.schemas';
 import { parseJsonExact } from './exact-json';
 
 /**
- * A minimal, hand-written client for the three Alpaca endpoints the market
+ * A minimal, hand-written client for the four Alpaca endpoints the market
  * data loaders need: bars and corporate actions from the data API, the asset
- * list from the trading API. No retries or rate limiting on purpose: every
+ * list and the exchange calendar from the trading API. No retries or rate limiting on purpose: every
  * loader is idempotent, so a failed run is simply run again (ROADMAP Phase 1).
  */
 export class AlpacaClient {
@@ -31,6 +33,19 @@ export class AlpacaClient {
       '/v2/assets',
       { status: 'active', asset_class: 'us_equity' },
       alpacaAssetsSchema,
+    );
+  }
+
+  /**
+   * The trading days in the range, each with its open and close in New
+   * York time. One response: the endpoint has no paging.
+   */
+  async calendar(range: DateRange): Promise<AlpacaCalendarDay[]> {
+    return this.get(
+      this.config.ALPACA_TRADING_URL,
+      '/v2/calendar',
+      { start: range.from, end: range.to },
+      alpacaCalendarSchema,
     );
   }
 

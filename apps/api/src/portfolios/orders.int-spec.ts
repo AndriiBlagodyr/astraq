@@ -1,4 +1,7 @@
-import { ConflictException } from '@nestjs/common';
+import {
+  ConflictException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { format } from '../common/decimal';
 import { utcMidnight } from '../common/dates';
 import { PrismaService } from '../database/prisma.service';
@@ -7,6 +10,7 @@ import {
   LedgerRepository,
   PortfolioNotFoundError,
 } from '../ledger/ledger.repository';
+import type { MarketCalendarService } from '../market-data/market-calendar.service';
 import type { OnDemandCandlesService } from '../market-data/on-demand-candles.service';
 import { SymbolsRepository } from '../symbols/symbols.repository';
 import { OrdersRepository } from './orders.repository';
@@ -25,6 +29,8 @@ describe('Orders (database)', () => {
     new OrdersRepository(prisma, ledgerRepository),
     new SymbolsRepository(prisma),
     { ensureCandles: async () => {} } as unknown as OnDemandCandlesService,
+    // No calendar: the weekday rule, whatever `market_sessions` holds.
+    { around: async () => null } as unknown as MarketCalendarService,
   );
   const portfolios = new PortfoliosService(
     new PortfoliosRepository(prisma, ledgerRepository),
@@ -133,6 +139,54 @@ describe('Orders (database)', () => {
       orders.place(otherUserId, portfolio.id, 'key-2', buyTen, at(TUE, '15:03')),
     ).rejects.toBeInstanceOf(PortfolioNotFoundError);
     expect(await prisma.order.count({ where: { portfolioId: portfolio.id } })).toBe(1);
+  });
+
+  it('refuses an order the portfolio cannot cover, and stores nothing for it', async () => {
+    const portfolio = await portfolios.create(userId, {
+      name: 'Guarded',
+      startingCash: '1500',
+      slippageBps: 0,
+      commissionPerOrder: '0',
+      commissionPerShare: '0',
+      maxOrderNotional: '1200',
+    });
+    expect(portfolio.maxOrderNotional).toBe('1200.00');
+    const limitBuy = { ticker: TICKER, side: 'buy', type: 'limit', limitPrice: '90' } as const;
+
+    // Ten at Monday's close of 100 fits; a limit order for six more at 90
+    // doesn't fit beside it once the first has filled.
+    await orders.place(userId, portfolio.id, 'a', buyTen, at(TUE, '15:00'));
+    await expect(
+      orders.place(userId, portfolio.id, 'b', { ...limitBuy, quantity: '6' }, at(TUE, '15:01')),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
+    // Five do, and then the cash they hold isn't free for a third order.
+    const { order: resting } = await orders.place(
+      userId,
+      portfolio.id,
+      'c',
+      { ...limitBuy, quantity: '5' },
+      at(TUE, '15:02'),
+    );
+    expect(resting.status).toBe('open');
+    const third = { ...limitBuy, quantity: '1' };
+    expect(await orders.preview(userId, portfolio.id, third, at(TUE, '15:03'))).toMatchObject({
+      timing: 'next_session',
+      fillSession: WED,
+      notional: '90.00',
+      cashAfter: '410.00',
+      refusal: { code: 'insufficient_cash' },
+    });
+
+    // Over the limit per order, and more shares than are held.
+    await expect(
+      orders.place(userId, portfolio.id, 'd', { ...buyTen, quantity: '13' }, at(TUE, '15:04')),
+    ).rejects.toThrow(/limit of 1200.00 per order/);
+    await expect(
+      orders.place(userId, portfolio.id, 'e', { ...buyTen, side: 'sell', quantity: '11' }, at(TUE, '15:05')),
+    ).rejects.toThrow(/Short selling/);
+
+    // Only the two accepted orders exist: a refusal stores nothing.
+    expect(await prisma.order.count({ where: { portfolioId: portfolio.id } })).toBe(2);
   });
 
   it('settles a split, a resting order, and a dividend from stored market data', async () => {

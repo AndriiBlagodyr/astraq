@@ -1,9 +1,11 @@
 import {
+  CASH_PLACES,
   PRICE_PLACES,
   decimal,
   divide,
   format,
   multiply,
+  round,
   sign,
 } from '../common/decimal';
 import {
@@ -34,9 +36,12 @@ import {
 import {
   firstEligibleSession,
   isRegularSession,
+  nextSession,
   sessionDate,
   sessionOpen,
+  type SessionCalendar,
 } from './market-hours';
+import { assess, type Refusal } from './risk';
 
 // What happens to a portfolio between two looks at it (ROADMAP Phase 3
 // items 3 and 4, ADR 0009 section 7), as pure functions. Given the ledger,
@@ -45,7 +50,8 @@ import {
 // dividends going ex and being paid, and orders meeting the bars that fill
 // them. `place`, `cancel`, and `transfer` settle first, then add their own
 // step: whatever a portfolio's owner does today meets books in which
-// everything earlier has already happened.
+// everything earlier has already happened. `preview` settles too, and says
+// what placing an order would do without deciding anything.
 //
 // Nothing here reads a clock or a database. The repository loads a `Book`
 // under the portfolio's row lock, calls one of these, and writes the `Plan`
@@ -151,6 +157,27 @@ export interface CashTransfer {
 export interface LastBar {
   date: string;
   close: string;
+}
+
+/** What placing an order now would do (ROADMAP Phase 3 item 5). */
+export interface OrderPreview {
+  /**
+   * `immediate`: a market order in the session, filled on placement at the
+   * latest close. `next_session`: the order waits for `fillSession`'s bar.
+   */
+  timing: 'immediate' | 'next_session';
+  /** Today's session, or the first one the order can fill in. */
+  fillSession: string;
+  /** Per share: the latest close with slippage, or the limit. Null without a price. */
+  estimatedPrice: string | null;
+  /** The session the latest close is from; null on a limit order. */
+  priceDate: string | null;
+  notional: string | null;
+  commission: string | null;
+  /** Cash once the order fills at the estimate. */
+  cashAfter: string | null;
+  /** Why the order would be refused; null when it would be accepted. */
+  refusal: Refusal | null;
 }
 
 const REJECTIONS: Partial<Record<LedgerErrorCode, CloseReason>> = {
@@ -416,6 +443,65 @@ function lastPriceToday(
   return format(price);
 }
 
+/** A market order with a price to fill at, placed while the market trades. */
+const fillsAtOnce = (
+  request: OrderRequest,
+  lastBar: LastBar | null,
+  now: Date,
+  calendar: SessionCalendar | null,
+): lastBar is LastBar =>
+  request.type === 'market' &&
+  lastBar !== null &&
+  isRegularSession(now, calendar);
+
+/**
+ * Settles, then says what placing the order would do: when it fills, what
+ * it is expected to cost, and whether the guards at placement let it in
+ * (`risk.ts`). Writes nothing, so the settled state it reads is discarded;
+ * the next read or write of the portfolio settles again to the same result.
+ *
+ * `lastBars` holds the latest stored session of the order's symbol and of
+ * every symbol with an open order: open buy orders are priced too, since
+ * the cash they will take isn't free.
+ */
+export function preview(
+  book: Book,
+  request: OrderRequest,
+  lastBars: ReadonlyMap<number, LastBar>,
+  now: Date,
+  calendar: SessionCalendar | null,
+  maxOrderNotional: string | null,
+): OrderPreview {
+  const settlement = run(book, now);
+  const today = sessionDate(now);
+  const lastBar = lastBars.get(request.symbolId) ?? null;
+  const prices = new Map(
+    [...lastBars].map(([symbolId, bar]) => [
+      symbolId,
+      lastPriceToday(bar, book.actions, symbolId, today),
+    ]),
+  );
+  const { estimate, cashAfter, refusal } = assess({
+    state: settlement.state,
+    open: settlement.open,
+    request,
+    prices,
+    costs: book.costs,
+    maxOrderNotional,
+  });
+  const immediate = fillsAtOnce(request, lastBar, now, calendar);
+  return {
+    timing: immediate ? 'immediate' : 'next_session',
+    fillSession: immediate ? today : nextSession(now, calendar).date,
+    estimatedPrice: estimate?.price ?? null,
+    priceDate: request.type === 'market' ? (lastBar?.date ?? null) : null,
+    notional: estimate?.notional ?? null,
+    commission: estimate?.commission ?? null,
+    cashAfter: cashAfter && format(round(cashAfter, CASH_PLACES)),
+    refusal,
+  };
+}
+
 /**
  * Settles, then places a new order. A market order placed during the
  * session fills at once at the latest known price (ADR 0008's
@@ -423,12 +509,15 @@ function lastPriceToday(
  * rejected. Every other order starts open and waits for a bar.
  *
  * `lastBar` is the symbol's latest stored session, or null without any.
+ * The guards at placement aren't here: the caller asks `preview` first and
+ * doesn't call this for an order it refuses.
  */
 export function place(
   book: Book,
   request: OrderRequest,
   lastBar: LastBar | null,
   now: Date,
+  calendar: SessionCalendar | null = null,
 ): Plan {
   const settlement = run(book, now);
   const placed: PlacedOrder = {
@@ -439,7 +528,7 @@ export function place(
     closedAt: null,
   };
 
-  if (request.type === 'market' && lastBar && isRegularSession(now)) {
+  if (fillsAtOnce(request, lastBar, now, calendar)) {
     const price = lastPriceToday(
       lastBar,
       book.actions,

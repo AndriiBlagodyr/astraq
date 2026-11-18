@@ -61,6 +61,11 @@ export const CreatePortfolioBodySchema = z
       .string()
       .regex(/^\d{1,6}(\.\d{1,6})?$/)
       .default("0"),
+    /**
+     * The most one order may come to, before commission. An order over it
+     * is refused when it is placed. Absent or null for no limit.
+     */
+    maxOrderNotional: positiveCashString.nullish(),
   })
   .meta({ id: "CreatePortfolioBody" });
 
@@ -144,6 +149,8 @@ export const PortfolioSummarySchema = z
     slippageBps: z.int().nonnegative(),
     commissionPerOrder: decimalString,
     commissionPerShare: decimalString,
+    /** The most one order may come to, before commission; null for no limit. */
+    maxOrderNotional: decimalString.nullable(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   })
@@ -246,6 +253,52 @@ export const OrderSchema = z
   })
   .meta({ id: "Order" });
 
+/**
+ * Why an order is refused when it is placed (a 422), before it exists:
+ * - `insufficient_cash`: a buy the free cash doesn't cover, at the latest
+ *   close or the limit, after what open buy orders are expected to take;
+ * - `insufficient_shares`: a sell of more shares than are held and not
+ *   already promised to open sell orders (no short selling);
+ * - `max_notional`: over the portfolio's `maxOrderNotional`.
+ */
+export const OrderRefusalCodeSchema = z
+  .enum(["insufficient_cash", "insufficient_shares", "max_notional"])
+  .meta({ id: "OrderRefusalCode" });
+
+/**
+ * Body of `POST /api/portfolios/{id}/orders/preview`: what placing the
+ * order now would do, without placing it. The amounts are estimates: a
+ * market order is priced at the latest close with the portfolio's slippage
+ * and a limit order at its limit, and the fill may differ.
+ */
+export const OrderPreviewSchema = z
+  .object({
+    /**
+     * `immediate`: a market order while the market trades, filled on
+     * placement. `next_session`: the order waits for `fillSession`.
+     */
+    timing: z.enum(["immediate", "next_session"]),
+    /**
+     * Today's session for `immediate`; otherwise the first session the
+     * order can fill in, at its open for a market order. YYYY-MM-DD.
+     */
+    fillSession: z.iso.date(),
+    /** Per share. Null for a market order on a symbol without a price. */
+    estimatedPrice: decimalString.nullable(),
+    /** The session the latest close is from; null on a limit order. */
+    priceDate: z.iso.date().nullable(),
+    /** `quantity × estimatedPrice`, in cents. */
+    notional: decimalString.nullable(),
+    commission: decimalString.nullable(),
+    /** The portfolio's cash once the order fills at the estimate. */
+    cashAfter: signedCashString.nullable(),
+    /** Why placing the order would be refused; null when it would be accepted. */
+    refusal: z
+      .object({ code: OrderRefusalCodeSchema, message: z.string() })
+      .nullable(),
+  })
+  .meta({ id: "OrderPreview" });
+
 /** Body of `GET /api/portfolios/{id}/orders`, newest first. */
 export const OrderListSchema = z
   .object({
@@ -270,3 +323,5 @@ export type Portfolio = z.infer<typeof PortfolioSchema>;
 export type OrderFill = z.infer<typeof OrderFillSchema>;
 export type Order = z.infer<typeof OrderSchema>;
 export type OrderList = z.infer<typeof OrderListSchema>;
+export type OrderRefusalCode = z.infer<typeof OrderRefusalCodeSchema>;
+export type OrderPreview = z.infer<typeof OrderPreviewSchema>;

@@ -70,8 +70,24 @@ export const alpacaAssetSchema = z.object({
 
 export const alpacaAssetsSchema = z.array(alpacaAssetSchema);
 
+const wallClock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected HH:MM');
+
+/**
+ * One trading day from the trading API's `GET /v2/calendar`. `open` and
+ * `close` are New York wall-clock times; a half day closes at 13:00. Days
+ * the market is closed aren't listed at all.
+ */
+export const alpacaCalendarDaySchema = z.object({
+  date: z.iso.date(),
+  open: wallClock,
+  close: wallClock,
+});
+
+export const alpacaCalendarSchema = z.array(alpacaCalendarDaySchema);
+
 export type AlpacaAsset = z.infer<typeof alpacaAssetSchema>;
 export type AlpacaBar = z.infer<typeof alpacaBarSchema>;
+export type AlpacaCalendarDay = z.infer<typeof alpacaCalendarDaySchema>;
 export type AlpacaBarsPage = z.infer<typeof alpacaBarsPageSchema>;
 export type AlpacaCorporateActions = z.infer<
   typeof alpacaCorporateActionsPageSchema

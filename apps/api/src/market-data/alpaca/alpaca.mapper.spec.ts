@@ -2,6 +2,7 @@ import {
   barSessionTs,
   toCandleRows,
   toCorporateActionRows,
+  toMarketSessions,
   toSymbolSeeds,
 } from './alpaca.mapper';
 import type { AlpacaAsset } from './alpaca.schemas';
@@ -120,6 +121,26 @@ describe('alpaca mapping', () => {
         exDate: '2024-01-03',
         cashAmount: '16.13',
         payDate: '2024-01-19',
+      },
+    ]);
+  });
+
+  it('turns calendar days into instants, in summer, in winter, and on a half day', () => {
+    expect(
+      toMarketSessions([
+        { date: '2026-06-01', open: '09:30', close: '16:00' },
+        { date: '2026-11-27', open: '09:30', close: '13:00' },
+      ]),
+    ).toEqual([
+      {
+        date: '2026-06-01',
+        open: new Date('2026-06-01T13:30:00.000Z'),
+        close: new Date('2026-06-01T20:00:00.000Z'),
+      },
+      {
+        date: '2026-11-27',
+        open: new Date('2026-11-27T14:30:00.000Z'),
+        close: new Date('2026-11-27T18:00:00.000Z'),
       },
     ]);
   });

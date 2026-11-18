@@ -1,6 +1,10 @@
 import { utcMidnight } from '../../common/dates';
 import { Prisma } from '../../generated/prisma/client';
-import { sessionDate } from '../../trading/market-hours';
+import {
+  newYorkInstant,
+  sessionDate,
+  type MarketSession,
+} from '../../trading/market-hours';
 import type {
   CandleRow,
   CorporateActionRow,
@@ -9,6 +13,7 @@ import type {
 import type {
   AlpacaAsset,
   AlpacaBar,
+  AlpacaCalendarDay,
   AlpacaCorporateActions,
 } from './alpaca.schemas';
 
@@ -130,4 +135,23 @@ export function toCorporateActionRows(
   }
 
   return byTicker;
+}
+
+/** `HH:MM` as minutes from midnight. */
+const minutesOf = (wallClock: string) =>
+  Number(wallClock.slice(0, 2)) * 60 + Number(wallClock.slice(3, 5));
+
+/**
+ * The calendar's days to `market_sessions` rows: each day's New York open
+ * and close as instants, so a reader compares instants and never does time
+ * zone arithmetic. A day whose close isn't after its open is dropped.
+ */
+export function toMarketSessions(days: AlpacaCalendarDay[]): MarketSession[] {
+  return days
+    .map((day) => ({
+      date: day.date,
+      open: newYorkInstant(day.date, minutesOf(day.open)),
+      close: newYorkInstant(day.date, minutesOf(day.close)),
+    }))
+    .filter((session) => session.close.getTime() > session.open.getTime());
 }

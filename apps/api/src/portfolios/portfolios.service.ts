@@ -39,6 +39,7 @@ function toSummary(row: PortfolioRow): PortfolioSummary {
     slippageBps: row.slippageBps,
     commissionPerOrder: row.commissionPerOrder,
     commissionPerShare: row.commissionPerShare,
+    maxOrderNotional: row.maxOrderNotional,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -63,9 +64,14 @@ export class PortfoliosService {
     body: CreatePortfolioBody,
     now = new Date(),
   ): Promise<Portfolio> {
-    const { startingCash, ...settings } = body;
+    const { startingCash, maxOrderNotional, ...settings } = body;
     const opening = isZero(decimal(startingCash)) ? null : deposit(startingCash);
-    const row = await this.portfolios.create(userId, settings, opening, now);
+    const row = await this.portfolios.create(
+      userId,
+      { ...settings, maxOrderNotional: maxOrderNotional ?? null },
+      opening,
+      now,
+    );
     return this.withBooks(row, await this.orders.settle(userId, row.id, now), now);
   }
 

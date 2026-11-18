@@ -52,8 +52,14 @@ export interface OrderRow {
 /** What a decision about a portfolio's orders is made from. */
 export interface OrderBookSnapshot {
   book: Book;
-  /** The latest stored session of `scope.symbolId`; null without one. */
-  lastBar: LastBar | null;
+  /**
+   * With `scope.symbolId`: the latest stored session of that symbol and of
+   * every symbol with an open order, by symbol id. A symbol without bars
+   * has no entry. Empty without `scope.symbolId`.
+   */
+  lastBars: ReadonlyMap<number, LastBar>;
+  /** The most one order may come to; null for no limit. */
+  maxOrderNotional: string | null;
   /** The order an earlier request placed with `scope.idempotencyKey`. */
   existing: OrderRow | null;
 }
@@ -63,7 +69,10 @@ export interface OrderScope {
   portfolioId: string;
   /** Looks up the order already placed with this key. */
   idempotencyKey?: string;
-  /** The symbol of the order being placed: its last bar and splits are loaded. */
+  /**
+   * The symbol of the order being placed or previewed: its last bar and
+   * splits are loaded, and the last bars of the open orders' symbols.
+   */
   symbolId?: number;
 }
 
@@ -158,18 +167,21 @@ export class OrdersRepository {
             slippageBps: number;
             commissionPerOrder: string;
             commissionPerShare: string;
+            maxOrderNotional: string | null;
           }[]
         >`
           SELECT slippage_bps AS "slippageBps",
                  commission_per_order::text AS "commissionPerOrder",
-                 commission_per_share::text AS "commissionPerShare"
+                 commission_per_share::text AS "commissionPerShare",
+                 max_order_notional::text AS "maxOrderNotional"
           FROM portfolios
           WHERE id = ${portfolioId}::uuid AND user_id = ${userId}::uuid
           FOR UPDATE
         `;
         if (!portfolio) throw new PortfolioNotFoundError(portfolioId);
 
-        const snapshot = await this.snapshot(tx, scope, portfolio);
+        const { maxOrderNotional, ...costs } = portfolio;
+        const snapshot = await this.snapshot(tx, scope, costs, maxOrderNotional);
         const { plan, result } = decide(snapshot);
         const placedId = plan
           ? await this.write(tx, scope, snapshot.book.history.length, plan)
@@ -206,6 +218,7 @@ export class OrdersRepository {
     tx: Prisma.TransactionClient,
     scope: OrderScope,
     costs: Book['costs'],
+    maxOrderNotional: string | null,
   ): Promise<OrderBookSnapshot> {
     const { portfolioId, idempotencyKey, symbolId } = scope;
 
@@ -235,8 +248,13 @@ export class OrdersRepository {
       }
     }
     const bars = await this.loadBars(tx, barsFrom);
-    const lastBar =
-      symbolId === undefined ? null : await this.loadLastBar(tx, symbolId);
+    const lastBars = new Map<number, LastBar>();
+    if (symbolId !== undefined) {
+      for (const id of new Set([symbolId, ...barsFrom.keys()])) {
+        const last = await this.loadLastBar(tx, id);
+        if (last) lastBars.set(id, last);
+      }
+    }
 
     // Splits and dividends of every symbol the ledger, an open order, or
     // the new order names, from the earliest day any of them goes back to.
@@ -249,7 +267,7 @@ export class OrdersRepository {
     }
     const since = earliest([
       history[0]?.date,
-      lastBar?.date,
+      ...[...lastBars.values()].map((bar) => bar.date),
       ...orders.map((order) => sessionDate(order.placedAt)),
     ]);
     const actions =
@@ -259,7 +277,8 @@ export class OrdersRepository {
 
     return {
       existing: existing && toRow(existing),
-      lastBar,
+      lastBars,
+      maxOrderNotional,
       book: { history, orders, costs, bars, actions },
     };
   }

@@ -647,7 +647,7 @@
         ]
       },
       "post": {
-        "description": "A market order placed during the session fills at once at the latest known price; every other order waits for the next session it can fill in. Repeating the request with the same Idempotency-Key returns the order the first one placed, with the response header `Idempotency-Replayed: true`; the same key with a different order is a 409.",
+        "description": "A market order placed during the session fills at once at the latest known price; every other order waits for the next session it can fill in. An order the portfolio can't cover, or one over its limit per order, is a 422 and isn't stored. Repeating the request with the same Idempotency-Key returns the order the first one placed, with the response header `Idempotency-Replayed: true`; the same key with a different order is a 409.",
         "operationId": "placeOrder",
         "parameters": [
           {
@@ -708,6 +708,65 @@
           }
         ],
         "summary": "Place an order, at most once per Idempotency-Key",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/portfolios/{id}/orders/preview": {
+      "post": {
+        "description": "When the order would fill, what it is expected to cost at the latest close or its limit, the cash left after it, and the reason it would be refused, if any. Writes nothing.",
+        "operationId": "previewOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceOrderBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderPreview_Output"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What placing an order would do, without placing it",
         "tags": [
           "orders"
         ]
@@ -1673,6 +1732,17 @@
             "type": "string",
             "pattern": "^\\d+(\\.\\d+)?$"
           },
+          "maxOrderNotional": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -1690,6 +1760,7 @@
           "slippageBps",
           "commissionPerOrder",
           "commissionPerShare",
+          "maxOrderNotional",
           "createdAt",
           "updatedAt"
         ],
@@ -1738,6 +1809,17 @@
             "default": "0",
             "type": "string",
             "pattern": "^\\d{1,6}(\\.\\d{1,6})?$"
+          },
+          "maxOrderNotional": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{1,13}(\\.\\d{1,2})?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -1844,6 +1926,17 @@
             "type": "string",
             "pattern": "^\\d+(\\.\\d+)?$"
           },
+          "maxOrderNotional": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -1924,6 +2017,7 @@
           "slippageBps",
           "commissionPerOrder",
           "commissionPerShare",
+          "maxOrderNotional",
           "createdAt",
           "updatedAt",
           "cash",
@@ -2192,6 +2286,121 @@
           "type",
           "quantity"
         ]
+      },
+      "OrderRefusalCode_Output": {
+        "type": "string",
+        "enum": [
+          "insufficient_cash",
+          "insufficient_shares",
+          "max_notional"
+        ]
+      },
+      "OrderPreview_Output": {
+        "type": "object",
+        "properties": {
+          "timing": {
+            "type": "string",
+            "enum": [
+              "immediate",
+              "next_session"
+            ]
+          },
+          "fillSession": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "estimatedPrice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "priceDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notional": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commission": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cashAfter": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refusal": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "$ref": "#/components/schemas/OrderRefusalCode_Output"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "timing",
+          "fillSession",
+          "estimatedPrice",
+          "priceDate",
+          "notional",
+          "commission",
+          "cashAfter",
+          "refusal"
+        ],
+        "additionalProperties": false
       },
       "SymbolSummary_Output": {
         "type": "object",

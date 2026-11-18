@@ -50,9 +50,10 @@ railway ssh --service api
 node dist/market-data/universe/main             # every listed US equity into `symbols`
 node dist/market-data/bootstrap/main            # candles for the default ~20 tickers
 node dist/market-data/bootstrap/main --tickers NVDA,AAPL
+node dist/market-data/calendar/main             # the exchange calendar, 2016 to the end of next year
 ```
 
-Both are idempotent: rerun the first to pick up listings and delistings, the second to backfill new bars. Any other symbol gets its candles the first time someone adds it to a watchlist.
+All three are idempotent: rerun the first to pick up listings and delistings, the second to backfill new bars, the third after a closure is announced. Any other symbol gets its candles the first time someone adds it to a watchlist, and the api reloads the year ahead of the calendar by itself when it runs short, so the third is for the history.
 
 ## 2. Vercel project
 

@@ -20,6 +20,7 @@ export interface PortfolioRow {
   slippageBps: number;
   commissionPerOrder: string;
   commissionPerShare: string;
+  maxOrderNotional: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +40,7 @@ export interface NewPortfolio {
   slippageBps: number;
   commissionPerOrder: string;
   commissionPerShare: string;
+  maxOrderNotional: string | null;
 }
 
 const columns = {
@@ -47,6 +49,7 @@ const columns = {
   slippageBps: true,
   commissionPerOrder: true,
   commissionPerShare: true,
+  maxOrderNotional: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -57,6 +60,7 @@ const toRow = (portfolio: StoredPortfolio): PortfolioRow => ({
   ...portfolio,
   commissionPerOrder: portfolio.commissionPerOrder.toFixed(),
   commissionPerShare: portfolio.commissionPerShare.toFixed(),
+  maxOrderNotional: portfolio.maxOrderNotional?.toFixed(2) ?? null,
 });
 
 /**

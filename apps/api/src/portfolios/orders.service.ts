@@ -2,21 +2,25 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import type {
   CashTransferBody,
   Order,
   OrderList,
+  OrderPreview,
   PlaceOrderBody,
 } from '@astraq/shared';
 import { compare, decimal } from '../common/decimal';
 import type { LedgerState } from '../ledger/ledger';
+import { MarketCalendarService } from '../market-data/market-calendar.service';
 import { OnDemandCandlesService } from '../market-data/on-demand-candles.service';
 import { resolveTicker } from '../symbols/resolve-ticker';
 import { SymbolsRepository } from '../symbols/symbols.repository';
 import {
   cancel,
   place,
+  preview,
   settle,
   transfer,
   type OrderRequest,
@@ -46,9 +50,10 @@ function toOrder(row: OrderRow): Order {
 }
 
 /**
- * The order lifecycle (ROADMAP Phase 3 item 3): place, cancel, fill. The
- * decisions are the pure functions in `trading/settlement.ts`; this turns
- * requests into them and their outcomes into responses.
+ * The order lifecycle (ROADMAP Phase 3 items 3 and 5): preview, place,
+ * cancel, fill. The decisions are the pure functions in
+ * `trading/settlement.ts` and `trading/risk.ts`; this turns requests into
+ * them and their outcomes into responses.
  *
  * Nothing runs on a schedule yet, so a portfolio is settled whenever it is
  * read or written: resting orders meet the bars that have arrived since,
@@ -62,6 +67,7 @@ export class OrdersService {
     private readonly orders: OrdersRepository,
     private readonly symbols: SymbolsRepository,
     private readonly onDemand: OnDemandCandlesService,
+    private readonly calendar: MarketCalendarService,
   ) {}
 
   /** Brings the portfolio up to date and returns its books. 404 when it isn't the user's. */
@@ -108,10 +114,38 @@ export class OrdersService {
   }
 
   /**
+   * What placing the order now would do: when it fills, what it is
+   * expected to cost, and whether the guards would refuse it. Places
+   * nothing and writes nothing.
+   */
+  async preview(
+    userId: string,
+    portfolioId: string,
+    body: PlaceOrderBody,
+    now = new Date(),
+  ): Promise<OrderPreview> {
+    const request = await this.request(body);
+    const calendar = await this.calendar.around(now);
+    const { result } = await this.orders.transact(
+      { userId, portfolioId, symbolId: request.symbolId },
+      ({ book, lastBars, maxOrderNotional }) => ({
+        plan: null,
+        result: preview(book, request, lastBars, now, calendar, maxOrderNotional),
+      }),
+    );
+    return result;
+  }
+
+  /**
    * Places an order, once per idempotency key: a repeat of the key returns
    * the order the first request placed (`replayed`), and a repeat with a
    * different order is a 409. The key is looked up under the portfolio's
    * lock, so two concurrent requests with one key place one order.
+   *
+   * A new order passes the guards first (`trading/risk.ts`): one the
+   * portfolio can't cover, or over its limit per order, is a 422 and is
+   * never stored. Both run under the same lock as the write, so two orders
+   * can't each be told the same cash is free.
    */
   async place(
     userId: string,
@@ -120,22 +154,28 @@ export class OrdersService {
     body: PlaceOrderBody,
     now = new Date(),
   ): Promise<{ order: Order; replayed: boolean }> {
-    const { symbolId } = await resolveTicker(this.symbols, body.ticker);
-    // A symbol nobody has watched yet has no bars to fill on.
-    await this.onDemand.ensureCandles(symbolId);
+    const request = await this.request(body);
+    const { symbolId } = request;
+    const calendar = await this.calendar.around(now);
 
-    const request: OrderRequest = {
-      symbolId,
-      side: body.side,
-      type: body.type,
-      quantity: body.quantity,
-      limitPrice: body.limitPrice ?? null,
-    };
     const { result: existingId, placedId } = await this.orders.transact(
       { userId, portfolioId, idempotencyKey, symbolId },
-      ({ book, lastBar, existing }) => {
+      ({ book, lastBars, maxOrderNotional, existing }) => {
         if (!existing) {
-          return { plan: place(book, request, lastBar, now), result: null };
+          const { refusal } = preview(
+            book,
+            request,
+            lastBars,
+            now,
+            calendar,
+            maxOrderNotional,
+          );
+          if (refusal) throw new UnprocessableEntityException(refusal.message);
+          const lastBar = lastBars.get(symbolId) ?? null;
+          return {
+            plan: place(book, request, lastBar, now, calendar),
+            result: null,
+          };
         }
         const same =
           existing.symbolId === request.symbolId &&
@@ -179,5 +219,19 @@ export class OrdersService {
       throw new ConflictException(`The order is already ${row.status}`);
     }
     return toOrder(row);
+  }
+
+  /** The order a body asks for, with its ticker resolved; 404 for an unknown one. */
+  private async request(body: PlaceOrderBody): Promise<OrderRequest> {
+    const { symbolId } = await resolveTicker(this.symbols, body.ticker);
+    // A symbol nobody has watched yet has no bars to price or fill on.
+    await this.onDemand.ensureCandles(symbolId);
+    return {
+      symbolId,
+      side: body.side,
+      type: body.type,
+      quantity: body.quantity,
+      limitPrice: body.limitPrice ?? null,
+    };
   }
 }
