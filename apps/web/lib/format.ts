@@ -65,3 +65,31 @@ export const twoDecimals = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
+
+const money = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const signedMoney = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+  signDisplay: "exceptZero",
+});
+
+const shares = new Intl.NumberFormat("en-US", { maximumFractionDigits: 6 });
+
+/** One of the api's decimal strings through a formatter; as it was when it isn't a number. */
+function formatted(value: string, format: Intl.NumberFormat): string {
+  const number = Number(value);
+  return Number.isFinite(number) ? format.format(number) : value;
+}
+
+/** A cash amount in cents: "12,345.60", "-70.00". */
+export const formatMoney = (value: string) => formatted(value, money);
+
+/** A gain or loss, signed unless it is zero: "+123.45", "-70.00", "0.00". */
+export const formatSignedMoney = (value: string) => formatted(value, signedMoney);
+
+/** A share count without trailing zeros: "100", "0.25". */
+export const formatShares = (value: string) => formatted(value, shares);

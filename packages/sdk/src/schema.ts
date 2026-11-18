@@ -239,9 +239,29 @@ export interface paths {
         put?: never;
         /**
          * Place an order, at most once per Idempotency-Key
-         * @description A market order placed during the session fills at once at the latest known price; every other order waits for the next session it can fill in. Repeating the request with the same Idempotency-Key returns the order the first one placed, with the response header `Idempotency-Replayed: true`; the same key with a different order is a 409.
+         * @description A market order placed during the session fills at once at the latest known price; every other order waits for the next session it can fill in. An order the portfolio can't cover, or one over its limit per order, is a 422 and isn't stored. Repeating the request with the same Idempotency-Key returns the order the first one placed, with the response header `Idempotency-Replayed: true`; the same key with a different order is a 409.
          */
         post: operations["placeOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portfolios/{id}/orders/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What placing an order would do, without placing it
+         * @description When the order would fill, what it is expected to cost at the latest close or its limit, the cash left after it, and the reason it would be refused, if any. Writes nothing.
+         */
+        post: operations["previewOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -479,6 +499,7 @@ export interface components {
             slippageBps: number;
             commissionPerOrder: string;
             commissionPerShare: string;
+            maxOrderNotional: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -496,6 +517,7 @@ export interface components {
             commissionPerOrder: string;
             /** @default 0 */
             commissionPerShare: string;
+            maxOrderNotional?: string | null;
         };
         Position_Output: {
             ticker: string;
@@ -514,6 +536,7 @@ export interface components {
             slippageBps: number;
             commissionPerOrder: string;
             commissionPerShare: string;
+            maxOrderNotional: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -582,6 +605,23 @@ export interface components {
             type: components["schemas"]["OrderType"];
             quantity: string;
             limitPrice?: string | null;
+        };
+        /** @enum {string} */
+        OrderRefusalCode_Output: "insufficient_cash" | "insufficient_shares" | "max_notional";
+        OrderPreview_Output: {
+            /** @enum {string} */
+            timing: "immediate" | "next_session";
+            /** Format: date */
+            fillSession: string;
+            estimatedPrice: string | null;
+            priceDate: string | null;
+            notional: string | null;
+            commission: string | null;
+            cashAfter: string | null;
+            refusal: {
+                code: components["schemas"]["OrderRefusalCode_Output"];
+                message: string;
+            } | null;
         };
         SymbolSummary_Output: {
             ticker: string;
@@ -1205,6 +1245,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Order_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    previewOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceOrderBody"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderPreview_Output"];
                 };
             };
             /** @description Any error, as an RFC 9457 problem detail */

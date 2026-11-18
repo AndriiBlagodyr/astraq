@@ -2,10 +2,11 @@
 // named by its New York calendar date, the same `YYYY-MM-DD` a daily bar
 // carries (`candles_daily.ts`).
 //
-// Weekends are known here; holidays and half days are not. They arrive with
-// the exchange calendar (ROADMAP Phase 3 item 5). Until then `isRegularSession`
-// says "open" at 11:00 on Thanksgiving, and a market order placed then fills
-// at the last close instead of waiting for the next open.
+// Holidays and half days come from the exchange calendar (`market_sessions`,
+// ROADMAP Phase 3 item 5), which the caller loads and passes in as a
+// `SessionCalendar`. For a date the calendar doesn't cover (none is loaded,
+// or the instant is outside what is), the rule is the one from before it
+// existed: Monday to Friday, 09:30 to 16:00.
 
 const newYork = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/New_York',
@@ -33,32 +34,121 @@ function newYorkParts(instant: Date) {
 const OPEN_MINUTES = 9 * 60 + 30;
 const CLOSE_MINUTES = 16 * 60;
 
+/** One trading day: when it opens and closes, as instants. */
+export interface MarketSession {
+  /** The session's New York calendar date, YYYY-MM-DD. */
+  date: string;
+  open: Date;
+  close: Date;
+}
+
+/**
+ * The exchange calendar between two dates. A date from `from` to `to`
+ * without a session is a day the market is closed; a date outside them is
+ * unknown, and falls back to the weekday rule.
+ */
+export interface SessionCalendar {
+  from: string;
+  to: string;
+  sessions: ReadonlyMap<string, MarketSession>;
+}
+
+/** A calendar covering `from` to `to` with these sessions. */
+export function sessionCalendar(
+  from: string,
+  to: string,
+  sessions: MarketSession[],
+): SessionCalendar {
+  return {
+    from,
+    to,
+    sessions: new Map(sessions.map((session) => [session.date, session])),
+  };
+}
+
+const covers = (
+  calendar: SessionCalendar | null,
+  date: string,
+): calendar is SessionCalendar =>
+  calendar !== null && calendar.from <= date && date <= calendar.to;
+
+/**
+ * A New York wall-clock time on a date, as an instant; `minutes` counts
+ * from midnight. New York is UTC-4 in summer and UTC-5 in winter, and the
+ * clocks change at 02:00 on a Sunday, so for any time the market trades at
+ * one of the two candidates reads back as that time.
+ */
+export function newYorkInstant(date: string, minutes: number): Date {
+  const midnight = Date.parse(`${date}T00:00:00.000Z`);
+  const summer = new Date(midnight + (minutes + 4 * 60) * 60_000);
+  return newYorkParts(summer).minutes === minutes
+    ? summer
+    : new Date(midnight + (minutes + 5 * 60) * 60_000);
+}
+
 /** The New York calendar date of an instant: the session it belongs to. */
 export function sessionDate(instant: Date): string {
   return newYorkParts(instant).date;
 }
 
 /**
- * 09:30 New York on a session date, as an instant. New York is UTC-4 in
- * summer and UTC-5 in winter, and the clocks change at 02:00 on a Sunday,
- * so one of the two candidates always reads back as 09:30.
+ * 09:30 New York on a session date, as an instant: when a daily bar's
+ * session opens. Every session opens at 09:30; a half day only closes early.
  */
 export function sessionOpen(date: string): Date {
-  const summer = new Date(`${date}T13:30:00.000Z`);
-  return newYorkParts(summer).minutes === OPEN_MINUTES
-    ? summer
-    : new Date(`${date}T14:30:00.000Z`);
+  return newYorkInstant(date, OPEN_MINUTES);
 }
 
-/** Monday to Friday, 09:30 up to 16:00 New York. Holidays count as open. */
-export function isRegularSession(instant: Date): boolean {
-  const { minutes, weekday } = newYorkParts(instant);
+/**
+ * Whether the market is trading at `instant`. With a calendar that covers
+ * the day: inside that day's session, so a holiday is closed and a half day
+ * ends early. Without one: Monday to Friday, 09:30 up to 16:00 New York.
+ */
+export function isRegularSession(
+  instant: Date,
+  calendar: SessionCalendar | null = null,
+): boolean {
+  const { date, minutes, weekday } = newYorkParts(instant);
+  if (covers(calendar, date)) {
+    const session = calendar.sessions.get(date);
+    return (
+      session !== undefined &&
+      instant.getTime() >= session.open.getTime() &&
+      instant.getTime() < session.close.getTime()
+    );
+  }
   return (
     weekday !== 'Sat' &&
     weekday !== 'Sun' &&
     minutes >= OPEN_MINUTES &&
     minutes < CLOSE_MINUTES
   );
+}
+
+/**
+ * The first session that opens after `instant`: where an order placed now
+ * and not filled at once meets its first bar. Days the calendar covers are
+ * sessions or not as it says; the rest are sessions on weekdays.
+ */
+export function nextSession(
+  instant: Date,
+  calendar: SessionCalendar | null = null,
+): { date: string; open: Date } {
+  let date = sessionDate(instant);
+  // The longest closure on record is under two weeks.
+  for (let day = 0; day < 30; day += 1, date = nextDate(date)) {
+    let open: Date | undefined;
+    if (covers(calendar, date)) {
+      open = calendar.sessions.get(date)?.open;
+    } else {
+      const weekday = new Date(`${date}T12:00:00.000Z`).getUTCDay();
+      if (weekday !== 0 && weekday !== 6) open = sessionOpen(date);
+    }
+    if (open !== undefined && open.getTime() > instant.getTime()) {
+      return { date, open };
+    }
+  }
+  throw new RangeError(`No session opens within 30 days of ${date}`);
 }
 
 /** The calendar date after `date`. */

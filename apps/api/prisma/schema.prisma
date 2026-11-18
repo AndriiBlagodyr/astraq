@@ -64,6 +64,18 @@ enum CorporateActionType {
   @@map("corporate_action_type")
 }
 
+/// One trading day of the US equity market, from the exchange calendar
+/// (ROADMAP Phase 3 item 5). A weekday without a row, between the first
+/// and the last date stored, is a holiday; a half day closes early.
+model MarketSession {
+  /// The session's New York calendar date, as a daily bar names it.
+  date     DateTime @id @db.Date
+  opensAt  DateTime @map("opens_at") @db.Timestamptz(6)
+  closesAt DateTime @map("closes_at") @db.Timestamptz(6)
+
+  @@map("market_sessions")
+}
+
 /// A split or cash dividend, effective on its ex-date. Which columns are set
 /// depends on `type`; a CHECK constraint in the migration enforces it.
 model CorporateAction {
@@ -256,6 +268,8 @@ model Portfolio {
   slippageBps        Int      @default(0) @map("slippage_bps")
   commissionPerOrder Decimal  @default(0) @map("commission_per_order") @db.Decimal(18, 2)
   commissionPerShare Decimal  @default(0) @map("commission_per_share") @db.Decimal(18, 6)
+  /// The most one order may come to, before commission; null for no limit.
+  maxOrderNotional   Decimal? @map("max_order_notional") @db.Decimal(18, 2)
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 

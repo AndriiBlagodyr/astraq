@@ -184,6 +184,18 @@ export function fillOnBar(
 }
 
 /**
+ * A limit order at its limit: the worst price it can fill at, so what a
+ * guard at placement sets aside for it (ROADMAP Phase 3 item 5). Not a
+ * fill: whether and where the order fills is `fillOnBar`'s to say.
+ */
+export function fillAtLimit(order: FillOrder, costs: FillCosts): Fill | null {
+  if (order.type !== 'limit') return null;
+  const quantity = positive(order.quantity, 'quantity', QUANTITY_PLACES);
+  const limit = positive(order.limitPrice ?? '', 'limitPrice', PRICE_PLACES);
+  return fill('limit_cross', limit, quantity, costs);
+}
+
+/**
  * A market order placed while the market is open: fills at the latest known
  * price plus slippage. Until realtime prices exist (Phase 9) that price is
  * the latest stored close. A limit order never fills here; it waits for the

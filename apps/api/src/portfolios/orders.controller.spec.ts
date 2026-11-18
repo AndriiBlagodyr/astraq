@@ -1,4 +1,8 @@
-import { ConflictException, INestApplication } from '@nestjs/common';
+import {
+  ConflictException,
+  INestApplication,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -16,7 +20,7 @@ import { PortfoliosService } from './portfolios.service';
 // the guard, validation, and the Idempotency-Key header.
 describe('Portfolio and order endpoints', () => {
   let app: INestApplication;
-  const orders = { list: vi.fn(), place: vi.fn(), cancel: vi.fn() };
+  const orders = { list: vi.fn(), place: vi.fn(), preview: vi.fn(), cancel: vi.fn() };
   const portfolios = {
     list: vi.fn(),
     create: vi.fn(),
@@ -111,6 +115,31 @@ describe('Portfolio and order endpoints', () => {
     expect(orders.place).not.toHaveBeenCalled();
   });
 
+  it('previews an order without a key, and passes a refused placement back as a 422', async () => {
+    const preview = {
+      timing: 'next_session',
+      fillSession: '2026-06-03',
+      estimatedPrice: '120.500000',
+      priceDate: null,
+      notional: '1205.00',
+      commission: '0.00',
+      cashAfter: '-205.00',
+      refusal: { code: 'insufficient_cash', message: 'The order needs about 1205.00' },
+    };
+    orders.preview.mockResolvedValueOnce(preview);
+    const res = await post(`/portfolios/${PORTFOLIO}/orders/preview`).send(body).expect(200);
+    expect(res.body).toEqual(preview);
+    expect(orders.preview).toHaveBeenCalledWith(USER, PORTFOLIO, body);
+    await post(`/portfolios/${PORTFOLIO}/orders/preview`).send({ ...body, quantity: '0' }).expect(400);
+
+    orders.place.mockRejectedValueOnce(new UnprocessableEntityException(preview.refusal.message));
+    const refused = await post(`/portfolios/${PORTFOLIO}/orders`)
+      .set('Idempotency-Key', 'k')
+      .send(body)
+      .expect(422);
+    expect(refused.body.detail).toBe(preview.refusal.message);
+  });
+
   it('passes a cancel through, and a conflict back', async () => {
     orders.cancel.mockResolvedValueOnce({ ...order, status: 'cancelled', closeReason: 'user', closedAt: order.placedAt });
     const res = await post(`/portfolios/${PORTFOLIO}/orders/${ORDER}/cancel`).expect(200);
@@ -125,6 +154,7 @@ describe('Portfolio and order endpoints', () => {
     await post('/portfolios').send({ name: ' ', startingCash: '1000' }).expect(400);
     await post('/portfolios').send({ name: 'Paper', startingCash: '10.001' }).expect(400);
     await post('/portfolios').send({ name: 'Paper', startingCash: '1000', slippageBps: 1001 }).expect(400);
+    await post('/portfolios').send({ name: 'Paper', startingCash: '1000', maxOrderNotional: '0' }).expect(400);
     expect(portfolios.create).not.toHaveBeenCalled();
 
     portfolios.create.mockResolvedValueOnce({
@@ -133,6 +163,7 @@ describe('Portfolio and order endpoints', () => {
       slippageBps: 0,
       commissionPerOrder: '0',
       commissionPerShare: '0',
+      maxOrderNotional: null,
       createdAt: '2026-06-01T10:00:00.000Z',
       updatedAt: '2026-06-01T10:00:00.000Z',
       cash: '1000.00',

@@ -6,6 +6,8 @@ export const appNavigation = [
   { href: "/", label: "Today", key: "t" },
   { href: "/watchlists", label: "Watchlists", key: "w" },
   { href: "/stocks", label: "Stocks", key: "s" },
+  // Opens the one portfolio directly; the list shows once there are several.
+  { href: "/portfolios", label: "Portfolio", key: "p" },
   // Points at the one analysis view until Phase 6 adds the /analysis index.
   { href: "/analysis/returns", label: "Analysis", key: "a" },
   // Bottom of the sidebar: the account, then the system.

@@ -14,6 +14,7 @@
     "openapi:emit": "nest build && node dist/openapi/emit",
     "bootstrap": "nest build && node --env-file-if-exists=.env.local dist/market-data/bootstrap/main",
     "symbols:sync": "nest build && node --env-file-if-exists=.env.local dist/market-data/universe/main",
+    "calendar:sync": "nest build && node --env-file-if-exists=.env.local dist/market-data/calendar/main",
     "lint": "eslint src eslint.config.mjs vitest.config.ts vitest.integration.config.ts prisma.config.ts",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",

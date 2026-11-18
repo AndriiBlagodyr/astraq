@@ -141,7 +141,7 @@ As with the ledger alone, the lock is what makes the decision trustworthy, and t
 
 **Idempotency.** `POST /api/portfolios/{id}/orders` requires an `Idempotency-Key` header. The key is stored on the order, unique per portfolio, and looked up in step 2, under the lock. Two requests with one key therefore run one after the other, and the second finds the first one's order and returns it (with `Idempotency-Replayed: true`) instead of placing another. The unique index is the backstop for a writer that skipped the lock. A repeated key with a different order is a 409, not a silent replay of the old one. Keys never expire: at paper-trading volumes there is nothing to clean up.
 
-**Order states.** `open` → `filled`, `cancelled`, or `rejected`, and nothing leaves those three. A market order placed during the session is filled or rejected at once (`market_last`); every other order starts `open`. The guards against buying on credit and selling short are the ledger's (section 4), applied at the fill: an order whose fill the ledger refuses is `rejected` with the reason, not left to try again. Orders have no time in force; they wait until they fill or are cancelled. Checking an order against cash and holdings when it is *placed* is a risk rule (Phase 3 item 5).
+**Order states.** `open` → `filled`, `cancelled`, or `rejected`, and nothing leaves those three. A market order placed during the session is filled or rejected at once (`market_last`); every other order starts `open`. The guards against buying on credit and selling short are the ledger's (section 4), applied at the fill: an order whose fill the ledger refuses is `rejected` with the reason, not left to try again. Orders have no time in force; they wait until they fill or are cancelled. An order is also checked against cash and holdings when it is *placed* (section 9); one refused there never becomes an order, so it has no state.
 
 **Posting order is not time order.** A market order placed today during the session fills now, at `seq` n. A limit order resting since yesterday may fill on today's bar, which is only stored tomorrow, at `seq` n+1 with an earlier `occurred_at`. That's inherent in mixing daily bars with immediate fills. `seq` is the order things were booked in, and FIFO and the cash guard follow it; `occurred_at` is when each took effect.
 
@@ -167,12 +167,37 @@ Booking the income on the ex-date rather than the pay date matters for the equit
 
 A split and a dividend with the same ex-date apply in that order: the dividend's amount per share is quoted in the shares that trade that day.
 
+### 9. Guards at placement and the exchange calendar
+
+Added 2026-11-17 (Phase 3 item 5).
+
+**Two checks, on purpose.** The ledger refuses a fill the portfolio can't take (section 4). That check is exact, but it runs when the order fills, which for a resting order is a day later: until then an order for a hundred times the cash sits there looking valid. So placement has its own check (`apps/api/src/trading/risk.ts`, pure), and a refusal there is a 422 with the reason; nothing is stored. The check at the fill stays, because the first one works from an estimate and prices move between the two.
+
+**What the estimate is.** A market order is priced at the symbol's latest stored close in today's shares, with the portfolio's slippage; a limit order at its limit, the worst price it can fill at. Both go through the fill model, so the commission is the one the fill will charge. A market order on a symbol without a bar has no estimate and passes: it can't fill before a bar exists, and the ledger checks it then.
+
+**The three rules**, checked in this order:
+
+1. A sell needs the shares: held, less what open sell orders already promise. No short selling.
+2. Either side must be within the portfolio's `max_order_notional`, when it has one. The limit is on the notional, before commission, and is set when the portfolio is created.
+3. A buy needs the cash for its notional and commission: the settled cash, less what open buy orders are expected to take by the same estimate.
+
+Open sell orders free nothing: their proceeds don't exist until they fill. That makes the cash rule conservative, which is the right way to be wrong.
+
+**Where it runs.** Inside `OrdersRepository.transact`, after settling and under the portfolio's lock, like the placement it guards. Two orders placed at once therefore can't each be told the same cash is free. The idempotency lookup comes first: a repeated key returns the order it placed, even if the portfolio could no longer afford it.
+
+**Preview.** `POST .../orders/preview` runs the same function and returns its answer instead of acting on it: when the order would fill, the estimate, the cash after, and the refusal if there is one. It takes the lock and settles in memory but writes nothing. One function behind both is what keeps the order ticket's preview from disagreeing with the placement.
+
+**The exchange calendar.** `market_sessions` holds one row per trading day with its open and close as instants, loaded from Alpaca's calendar. The session clock (`market-hours.ts`) stays pure: the service reads the days around "now" into a `SessionCalendar` and passes it in. A date the calendar covers is a session or not as it says, so a holiday is closed and a half day ends at 13:00; a date it doesn't cover falls back to the old rule, weekdays 09:30 to 16:00. The fallback is why a database without the calendar still trades instead of refusing every order, and why the older tests didn't change.
+
+The calendar is reference data, not portfolio state, so it is read before the transaction and outside the lock. It reloads itself: a read that finds less than a week stored ahead asks Alpaca for the next year, inline, and a failure is logged and skipped. The bars decide where a resting order fills (only trading days have bars), so the calendar changes two things only: whether a market order placed now fills at once, and which session the preview names.
+
 ## Consequences
 
 - Every number on a portfolio page can be traced to entries, and the Activity tab ([docs/ui-plan.md](../ui-plan.md)) is the ledger read in order.
 - A `GET` on a portfolio can write (it settles first). The writes are ones the read would have had to compute anyway, they're idempotent, and they disappear behind the end-of-day job in Phase 4.
 - Corporate actions are only as good as the market data's timing. A dividend that is loaded after its shares were sold is missed, and a split loaded late is applied late. Both close when ingestion keeps data fresh (Phase 4); until then a rerun of the bootstrap before trading is the remedy.
-- The session clock knows weekends, not holidays: on a holiday a market order fills at the last close instead of waiting for the next open. The exchange calendar (Phase 3 item 5) fixes that.
+- The session clock knows holidays and half days only where the exchange calendar is loaded (section 9). Without Alpaca keys and without a `calendar:sync` run it knows weekends, and on a holiday a market order then fills at the last close instead of waiting for the next open.
+- A preview can be out of date by the time the order is placed: it promises nothing, and the placement runs the check again.
 - Reads replay the whole history, and so does each posting. That's fine at paper-trading volumes: a few thousand entries is a small read and a short loop. When it isn't, the fix is a stored snapshot of the state at some `seq`, which replay can verify against; the ledger stays the source of truth.
 - A portfolio with history can be deleted (taking its ledger with it) but never edited. Symbols referenced by the ledger can't be deleted, only deactivated.
 - Nothing stops balanced entries being appended to an old transaction except that the repository never does. Closing that in the database would need a "transaction is sealed" flag; it hasn't been worth it yet.

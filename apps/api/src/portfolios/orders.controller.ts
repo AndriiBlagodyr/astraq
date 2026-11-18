@@ -29,6 +29,7 @@ import { OrdersService } from './orders.service';
 import {
   OrderDto,
   OrderListDto,
+  OrderPreviewDto,
   PlaceOrderBodyDto,
   PortfolioIdParamDto,
   PortfolioOrderParamDto,
@@ -59,7 +60,8 @@ export class OrdersController {
     summary: 'Place an order, at most once per Idempotency-Key',
     description:
       'A market order placed during the session fills at once at the latest known price; ' +
-      'every other order waits for the next session it can fill in. Repeating the request ' +
+      'every other order waits for the next session it can fill in. An order the portfolio ' +
+      "can't cover, or one over its limit per order, is a 422 and isn't stored. Repeating the request " +
       'with the same Idempotency-Key returns the order the first one placed, with the ' +
       'response header `Idempotency-Replayed: true`; the same key with a different order is a 409.',
   })
@@ -91,6 +93,24 @@ export class OrdersController {
     );
     if (replayed) res.setHeader('Idempotency-Replayed', 'true');
     return order;
+  }
+
+  @Post('preview')
+  @HttpCode(200)
+  @ApiOperation({
+    operationId: 'previewOrder',
+    summary: 'What placing an order would do, without placing it',
+    description:
+      'When the order would fill, what it is expected to cost at the latest close or its limit, ' +
+      'the cash left after it, and the reason it would be refused, if any. Writes nothing.',
+  })
+  @ZodResponse({ status: 200, type: OrderPreviewDto })
+  preview(
+    @Req() req: AuthenticatedRequest,
+    @Param() { id }: PortfolioIdParamDto,
+    @Body() body: PlaceOrderBodyDto,
+  ) {
+    return this.orders.preview(req.user.sub, id, body);
   }
 
   @Post(':orderId/cancel')

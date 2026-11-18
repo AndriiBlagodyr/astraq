@@ -12,12 +12,16 @@ import {
 import {
   firstEligibleSession,
   isRegularSession,
+  newYorkInstant,
+  nextSession,
+  sessionCalendar,
   sessionDate,
   sessionOpen,
 } from './market-hours';
 import {
   cancel,
   place,
+  preview,
   settle,
   transfer,
   type Book,
@@ -146,6 +150,46 @@ describe('market hours', () => {
     expect(isRegularSession(at(MON, '13:30'))).toBe(true);
     expect(isRegularSession(at(MON, '20:00'))).toBe(false);
     expect(isRegularSession(new Date('2026-06-06T15:00:00Z'))).toBe(false);
+  });
+
+  // Thanksgiving week 2026: Thursday the 26th is closed, Friday the 27th
+  // closes at 13:00. New York is on winter time (09:30 is 14:30 UTC).
+  const session = (date: string, close = 16 * 60) => ({
+    date,
+    open: sessionOpen(date),
+    close: newYorkInstant(date, close),
+  });
+  const thanksgiving = sessionCalendar('2026-11-23', '2026-11-30', [
+    session('2026-11-23'),
+    session('2026-11-24'),
+    session('2026-11-25'),
+    session('2026-11-27', 13 * 60),
+    session('2026-11-30'),
+  ]);
+
+  it('closes on a holiday and early on a half day, by the calendar', () => {
+    const thursday = new Date('2026-11-26T16:00:00Z');
+    expect(isRegularSession(thursday)).toBe(true);
+    expect(isRegularSession(thursday, thanksgiving)).toBe(false);
+
+    expect(isRegularSession(new Date('2026-11-27T17:59:00Z'), thanksgiving)).toBe(true);
+    expect(isRegularSession(new Date('2026-11-27T18:00:00Z'), thanksgiving)).toBe(false);
+    // A day the calendar doesn't cover keeps the weekday rule.
+    expect(isRegularSession(new Date('2026-12-01T16:00:00Z'), thanksgiving)).toBe(true);
+  });
+
+  it('finds the next session to open, across a holiday and past the calendar', () => {
+    const wednesdayEvening = new Date('2026-11-25T22:00:00Z');
+    expect(nextSession(wednesdayEvening, thanksgiving).date).toBe('2026-11-27');
+    expect(nextSession(wednesdayEvening).date).toBe('2026-11-26');
+    // Before the open, today is the next session; from the open on, it isn't.
+    expect(nextSession(new Date('2026-11-23T14:29:00Z'), thanksgiving).date).toBe('2026-11-23');
+    expect(nextSession(new Date('2026-11-23T14:30:00Z'), thanksgiving).date).toBe('2026-11-24');
+    // Monday the 30th is the calendar's last day: Tuesday is a weekday.
+    expect(nextSession(new Date('2026-11-30T20:00:00Z'), thanksgiving)).toEqual({
+      date: '2026-12-01',
+      open: new Date('2026-12-01T14:30:00.000Z'),
+    });
   });
 });
 
@@ -333,6 +377,65 @@ describe('place', () => {
     );
     expect(limit.placed).toMatchObject({ status: 'open' });
     expect(limit.postings).toEqual([]);
+  });
+});
+
+describe('preview', () => {
+  const lastBars = new Map([[SYMBOL, { date: MON, close: '100' }]]);
+  const buyTen = {
+    symbolId: SYMBOL,
+    side: 'buy' as const,
+    type: 'market' as const,
+    quantity: '10',
+    limitPrice: null,
+  };
+
+  it('says when the order fills and what it is expected to cost', () => {
+    const inSession = preview(book({ history: funded('5000') }), buyTen, lastBars, at(TUE, '15:00'), null, null);
+    expect(inSession).toEqual({
+      timing: 'immediate',
+      fillSession: TUE,
+      estimatedPrice: '100.000000',
+      priceDate: MON,
+      notional: '1000.00',
+      commission: '0.00',
+      cashAfter: '4000.00',
+      refusal: null,
+    });
+
+    // After the close the same order waits for Wednesday's open; a limit
+    // order always waits, and is priced at its limit.
+    const afterClose = preview(book({ history: funded('5000') }), buyTen, lastBars, at(TUE, '21:00'), null, null);
+    expect(afterClose).toMatchObject({ timing: 'next_session', fillSession: WED, notional: '1000.00' });
+    const limit = preview(
+      book({ history: funded('5000') }),
+      { ...buyTen, type: 'limit', limitPrice: '90' },
+      lastBars,
+      at(TUE, '15:00'),
+      null,
+      null,
+    );
+    expect(limit).toMatchObject({
+      timing: 'next_session',
+      fillSession: WED,
+      estimatedPrice: '90.000000',
+      priceDate: null,
+      cashAfter: '4100.00',
+    });
+  });
+
+  it('checks the books as they stand after settling', () => {
+    // A buy placed on Monday evening fills at Tuesday's open and takes
+    // 4000 of the 5000: only then is the new order checked.
+    const resting = order({ quantity: '40' });
+    const settled = book({ history: funded('5000'), orders: [resting], bars: [bar(TUE, '100')] });
+    const result = preview(settled, { ...buyTen, quantity: '11' }, lastBars, at(TUE, '15:00'), null, null);
+    expect(result.refusal?.code).toBe('insufficient_cash');
+    expect(preview(settled, buyTen, lastBars, at(TUE, '15:00'), null, null).refusal).toBeNull();
+
+    expect(
+      preview(book({ history: funded('5000') }), buyTen, lastBars, at(TUE, '15:00'), null, '999.99').refusal,
+    ).toMatchObject({ code: 'max_notional' });
   });
 });
 

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { utcMidnight } from '../common/dates';
+import { toIsoDate, utcMidnight } from '../common/dates';
 import { PrismaService } from '../database/prisma.service';
+import type { MarketSession } from '../trading/market-hours';
 import type {
   CandleRow,
   CorporateActionRow,
@@ -203,5 +204,73 @@ export class MarketDataRepository {
         });
       }
     });
+  }
+
+  /**
+   * Makes the exchange calendar between `range`'s dates exactly `sessions`:
+   * one upsert over the whole list (arrays through `unnest`, like the
+   * candles), and a delete of the stored days the provider no longer lists,
+   * so a newly announced closure removes its session. One transaction.
+   * Returns how many sessions are new or changed.
+   */
+  async replaceMarketSessions(
+    range: DateRange,
+    sessions: MarketSession[],
+  ): Promise<number> {
+    const dates = sessions.map((session) => session.date);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        DELETE FROM market_sessions
+        WHERE date BETWEEN ${range.from}::date AND ${range.to}::date
+          AND date <> ALL(${dates}::date[])
+      `;
+      if (sessions.length === 0) return 0;
+      return tx.$executeRaw`
+        INSERT INTO market_sessions (date, opens_at, closes_at)
+        SELECT t.date, t.opens_at, t.closes_at
+        FROM unnest(
+          ${dates}::date[],
+          ${sessions.map((session) => session.open.toISOString())}::timestamptz[],
+          ${sessions.map((session) => session.close.toISOString())}::timestamptz[]
+        ) AS t(date, opens_at, closes_at)
+        ON CONFLICT (date) DO UPDATE SET
+          opens_at = EXCLUDED.opens_at,
+          closes_at = EXCLUDED.closes_at
+        WHERE (market_sessions.opens_at, market_sessions.closes_at)
+          IS DISTINCT FROM (EXCLUDED.opens_at, EXCLUDED.closes_at)
+      `;
+    });
+  }
+
+  /**
+   * The stored sessions from `range.from` to `range.to`, oldest first, and
+   * the first and last session date stored at all: what the calendar covers.
+   */
+  async findMarketSessions(range: DateRange): Promise<{
+    first: string | null;
+    last: string | null;
+    sessions: MarketSession[];
+  }> {
+    const [bounds, sessions] = await Promise.all([
+      this.prisma.marketSession.aggregate({
+        _min: { date: true },
+        _max: { date: true },
+      }),
+      this.prisma.marketSession.findMany({
+        where: {
+          date: { gte: utcMidnight(range.from), lte: utcMidnight(range.to) },
+        },
+        orderBy: { date: 'asc' },
+      }),
+    ]);
+    return {
+      first: bounds._min.date && toIsoDate(bounds._min.date),
+      last: bounds._max.date && toIsoDate(bounds._max.date),
+      sessions: sessions.map((session) => ({
+        date: toIsoDate(session.date),
+        open: session.opensAt,
+        close: session.closesAt,
+      })),
+    };
   }
 }
