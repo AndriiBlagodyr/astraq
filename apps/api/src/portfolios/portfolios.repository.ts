@@ -3,6 +3,7 @@ import { ConflictError } from '../common/domain-errors';
 import { isUniqueViolation } from '../common/prisma-errors';
 import { PrismaService } from '../database/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
+import type { RecordedTransaction } from '../ledger/activity';
 import type { Posting } from '../ledger/ledger';
 import { LedgerRepository } from '../ledger/ledger.repository';
 
@@ -117,6 +118,35 @@ export class PortfoliosRepository {
       if (isUniqueViolation(error)) throw new PortfolioNameTakenError(data.name);
       throw error;
     }
+  }
+
+  /**
+   * The portfolio's ledger for the Activity timeline, in `seq` order, and
+   * the ticker of every symbol it names, by id. The caller has checked the
+   * portfolio is the user's (it settles it first).
+   */
+  async findHistory(portfolioId: string): Promise<{
+    history: RecordedTransaction[];
+    tickers: Map<number, string>;
+  }> {
+    const history = await this.ledger.readRecorded(this.prisma, portfolioId);
+    const symbolIds = new Set<number>();
+    for (const transaction of history) {
+      for (const entry of transaction.entries) {
+        if (entry.symbolId !== null) symbolIds.add(entry.symbolId);
+      }
+    }
+    const symbols =
+      symbolIds.size === 0
+        ? []
+        : await this.prisma.symbol.findMany({
+            where: { id: { in: [...symbolIds] } },
+            select: { id: true, ticker: true },
+          });
+    return {
+      history,
+      tickers: new Map(symbols.map((symbol) => [symbol.id, symbol.ticker])),
+    };
   }
 
   /**

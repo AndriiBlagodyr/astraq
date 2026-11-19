@@ -1,4 +1,5 @@
 import {
+  ActivityListSchema,
   CashTransferBodySchema,
   CreatePortfolioBodySchema,
   OrderListSchema,
@@ -23,6 +24,7 @@ export class CashTransferBodyDto extends createZodDto(CashTransferBodySchema) {}
 export class PlaceOrderBodyDto extends createZodDto(PlaceOrderBodySchema) {}
 export class PortfolioListDto extends createZodDto(PortfolioListSchema) {}
 export class PortfolioDto extends createZodDto(PortfolioSchema) {}
+export class ActivityListDto extends createZodDto(ActivityListSchema) {}
 export class OrderListDto extends createZodDto(OrderListSchema) {}
 export class OrderDto extends createZodDto(OrderSchema) {}
 export class OrderPreviewDto extends createZodDto(OrderPreviewSchema) {}

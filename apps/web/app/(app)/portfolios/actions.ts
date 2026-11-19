@@ -7,7 +7,10 @@ import type { z } from "zod";
 import {
   CashTransferBodySchema,
   CreatePortfolioBodySchema,
+  IdempotencyKeySchema,
+  PlaceOrderBodySchema,
   PortfolioIdParamSchema,
+  PortfolioOrderParamSchema,
 } from "@astraq/shared";
 import {
   type ActionResult,
@@ -17,6 +20,7 @@ import {
   firstIssue,
 } from "@/lib/action-result";
 import { problemDetail, requireSession, userApi } from "@/lib/api";
+import type { Order, OrderPreview } from "@/lib/portfolios";
 
 // The portfolio writes, as server actions (docs/ui-plan.md § Portfolio):
 // validated with the shared schemas before they reach the api, like the
@@ -25,6 +29,14 @@ import { problemDetail, requireSession, userApi } from "@/lib/api";
 
 const indexPath = "/portfolios";
 const detailPath = (id: string) => `/portfolios/${id}` as Route;
+
+/** Every page that shows the portfolio's books: the index and its three tabs. */
+function revalidatePortfolio(id: string) {
+  revalidatePath(indexPath);
+  revalidatePath(detailPath(id));
+  revalidatePath(`${detailPath(id)}/orders`);
+  revalidatePath(`${detailPath(id)}/activity`);
+}
 
 /** A typed amount as the api takes it: "1,000.50" and " 1000.5 " are "1000.5". */
 const amount = (value: FormDataEntryValue | null) =>
@@ -106,7 +118,79 @@ export async function transferCash(
     body,
   });
   if (!response.ok) return failure(response, "Couldn't move the cash");
-  revalidatePath(indexPath);
-  revalidatePath(detailPath(id));
+  revalidatePortfolio(id);
+  return done;
+}
+
+/**
+ * What placing the order now would do (the order ticket's preview and its
+ * inline guards): when it fills, the estimated cost, the cash after, and
+ * the api's refusal if it would refuse. Places nothing.
+ */
+export async function previewOrder(
+  portfolioId: string,
+  order: unknown
+): Promise<ActionResult<OrderPreview>> {
+  const id = PortfolioIdParamSchema.safeParse({ id: portfolioId });
+  const body = PlaceOrderBodySchema.safeParse(order);
+  if (!id.success) return failed(firstIssue(id.error));
+  if (!body.success) return failed(firstIssue(body.error));
+
+  const client = await userApi();
+  const { data, response } = await client.POST(
+    "/api/portfolios/{id}/orders/preview",
+    { params: { path: id.data }, body: body.data }
+  );
+  if (!data) return failure(response, "Couldn't preview the order");
+  return { ok: true, value: data };
+}
+
+/**
+ * Places an order and answers with it as the api left it: `filled` or
+ * `rejected` at once for a market order during the session, `open`
+ * otherwise. `idempotencyKey` is made when the ticket opens, so a double
+ * submit, or a retry after a dropped connection, places one order.
+ */
+export async function placeOrder(
+  portfolioId: string,
+  idempotencyKey: string,
+  order: unknown
+): Promise<ActionResult<Order>> {
+  const id = PortfolioIdParamSchema.safeParse({ id: portfolioId });
+  const key = IdempotencyKeySchema.safeParse(idempotencyKey);
+  const body = PlaceOrderBodySchema.safeParse(order);
+  if (!id.success) return failed(firstIssue(id.error));
+  if (!key.success) return failed(firstIssue(key.error));
+  if (!body.success) return failed(firstIssue(body.error));
+
+  const client = await userApi();
+  const { data, response } = await client.POST("/api/portfolios/{id}/orders", {
+    params: { path: id.data, header: { "Idempotency-Key": key.data } },
+    body: body.data,
+  });
+  if (!data) return failure(response, "Couldn't place the order");
+  revalidatePortfolio(id.data.id);
+  return { ok: true, value: data };
+}
+
+/** Cancels an open order. One that has filled since the page rendered is the api's 409. */
+export async function cancelOrder(
+  portfolioId: string,
+  orderId: string
+): Promise<ActionResult> {
+  const parsed = PortfolioOrderParamSchema.safeParse({
+    id: portfolioId,
+    orderId,
+  });
+  if (!parsed.success) return failed(firstIssue(parsed.error));
+
+  const client = await userApi();
+  const { response } = await client.POST(
+    "/api/portfolios/{id}/orders/{orderId}/cancel",
+    { params: { path: parsed.data } }
+  );
+  // The order's real state is on the server either way: show it.
+  revalidatePortfolio(parsed.data.id);
+  if (!response.ok) return failure(response, "Couldn't cancel the order");
   return done;
 }

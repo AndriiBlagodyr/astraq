@@ -3,6 +3,7 @@ import { NotFoundError } from '../common/domain-errors';
 import { lower, upper } from '../common/enum-case';
 import { sessionDate } from '../trading/market-hours';
 import type { Prisma } from '../generated/prisma/client';
+import type { RecordedTransaction } from './activity';
 import type { LedgerTransaction, Posting } from './ledger';
 
 /** Thrown when the portfolio a posting names doesn't exist, or isn't the user's. */
@@ -11,6 +12,40 @@ export class PortfolioNotFoundError extends NotFoundError {
     super(`Portfolio ${portfolioId} not found`);
     this.name = 'PortfolioNotFoundError';
   }
+}
+
+const transactionColumns = {
+  seq: true,
+  kind: true,
+  occurredAt: true,
+  splitFrom: true,
+  splitTo: true,
+  entries: {
+    orderBy: { id: 'asc' },
+    select: { account: true, symbolId: true, amount: true, quantity: true },
+  },
+} as const;
+
+type StoredTransaction = Prisma.LedgerTransactionGetPayload<{
+  select: typeof transactionColumns;
+}>;
+
+function toTransaction(row: StoredTransaction): LedgerTransaction {
+  return {
+    seq: row.seq,
+    date: sessionDate(row.occurredAt),
+    kind: lower(row.kind),
+    ...(row.splitFrom &&
+      row.splitTo && {
+        split: { from: row.splitFrom.toFixed(), to: row.splitTo.toFixed() },
+      }),
+    entries: row.entries.map((entry) => ({
+      account: lower(entry.account),
+      symbolId: entry.symbolId,
+      amount: entry.amount.toFixed(2),
+      quantity: entry.quantity.toFixed(6),
+    })),
+  };
 }
 
 /**
@@ -68,32 +103,34 @@ export class LedgerRepository {
     const rows = await client.ledgerTransaction.findMany({
       where: { portfolioId },
       orderBy: { seq: 'asc' },
+      select: transactionColumns,
+    });
+    return rows.map(toTransaction);
+  }
+
+  /**
+   * The same history with what the Activity timeline shows beside the
+   * entries: when each transaction took effect and the fill it books.
+   */
+  async readRecorded(
+    client: Prisma.TransactionClient,
+    portfolioId: string,
+  ): Promise<RecordedTransaction[]> {
+    const rows = await client.ledgerTransaction.findMany({
+      where: { portfolioId },
+      orderBy: { seq: 'asc' },
       select: {
-        seq: true,
-        kind: true,
-        occurredAt: true,
-        splitFrom: true,
-        splitTo: true,
-        entries: {
-          orderBy: { id: 'asc' },
-          select: { account: true, symbolId: true, amount: true, quantity: true },
-        },
+        ...transactionColumns,
+        fill: { select: { orderId: true, price: true } },
       },
     });
     return rows.map((row) => ({
-      seq: row.seq,
-      date: sessionDate(row.occurredAt),
-      kind: lower(row.kind),
-      ...(row.splitFrom &&
-        row.splitTo && {
-          split: { from: row.splitFrom.toFixed(), to: row.splitTo.toFixed() },
-        }),
-      entries: row.entries.map((entry) => ({
-        account: lower(entry.account),
-        symbolId: entry.symbolId,
-        amount: entry.amount.toFixed(2),
-        quantity: entry.quantity.toFixed(6),
-      })),
+      ...toTransaction(row),
+      occurredAt: row.occurredAt,
+      fill: row.fill && {
+        orderId: row.fill.orderId,
+        price: row.fill.price.toFixed(),
+      },
     }));
   }
 }

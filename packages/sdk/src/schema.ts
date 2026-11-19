@@ -210,6 +210,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolios/{id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A portfolio's ledger as a timeline: fills, cash moves, splits, and dividends, newest first
+         * @description One line per ledger transaction, with what it did to cash and the cash after it. The newest line's `cashAfter` is the portfolio's cash.
+         */
+        get: operations["listActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolios/{id}/transfers": {
         parameters: {
             query?: never;
@@ -528,6 +548,13 @@ export interface components {
             priceDate: string | null;
             marketValue: string | null;
             unrealizedPnl: string | null;
+            lots: components["schemas"]["Lot_Output"][];
+        };
+        Lot_Output: {
+            /** Format: date */
+            openedOn: string;
+            quantity: string;
+            cost: string;
         };
         Portfolio_Output: {
             /** Format: uuid */
@@ -551,6 +578,32 @@ export interface components {
             unrealizedPnl: string | null;
             equity: string | null;
             positions: components["schemas"]["Position_Output"][];
+        };
+        ActivityItem_Output: {
+            seq: number;
+            kind: components["schemas"]["ActivityKind_Output"];
+            /** Format: date-time */
+            occurredAt: string;
+            /** Format: date */
+            sessionDate: string;
+            ticker: string | null;
+            quantity: string | null;
+            price: string | null;
+            orderId: string | null;
+            commission: string | null;
+            realizedPnl: string | null;
+            dividend: string | null;
+            split: {
+                from: string;
+                to: string;
+            } | null;
+            cashChange: string;
+            cashAfter: string;
+        };
+        /** @enum {string} */
+        ActivityKind_Output: "deposit" | "withdrawal" | "buy" | "sell" | "split" | "dividend" | "dividend_payment";
+        ActivityList_Output: {
+            activity: components["schemas"]["ActivityItem_Output"][];
         };
         CashTransferBody: {
             /** @enum {string} */
@@ -1144,6 +1197,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Portfolio_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    listActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityList_Output"];
                 };
             };
             /** @description Any error, as an RFC 9457 problem detail */
