@@ -6,11 +6,13 @@ import { Card, EmptyState, buttonVariants } from "@astraq/ui";
 import { AddToWatchlistMenu } from "@/app/components/AddToWatchlistMenu";
 import { CandleChart } from "@/app/components/CandleChart";
 import { DayChange } from "@/app/components/DayChange";
+import { OrderTicket } from "@/app/components/OrderTicket";
 import { PillLinks } from "@/app/components/PillLinks";
 import { RangeControls } from "@/app/components/RangeControls";
 import { RecordStockView } from "@/app/components/RecentStocks";
 import { formatPrice } from "@/lib/format";
 import { findSymbol, getDailyCandles } from "@/lib/market-data";
+import { listPortfolios } from "@/lib/portfolios";
 import { listWatchlists } from "@/lib/watchlists";
 import {
   chartAdjustments,
@@ -56,7 +58,7 @@ export default async function StockPage({
   const ticker = symbol.toUpperCase();
   const today = marketDate();
 
-  const [summary, series, watchlists] = await Promise.all([
+  const [summary, series, watchlists, portfolios] = await Promise.all([
     findSymbol(ticker),
     getDailyCandles(ticker, {
       from: custom ? custom.from : rangeStart(range, today),
@@ -64,6 +66,7 @@ export default async function StockPage({
       adjustment,
     }),
     listWatchlists(),
+    listPortfolios(),
   ]);
   if (!series) notFound();
 
@@ -111,6 +114,17 @@ export default async function StockPage({
               Returns
             </Link>
             <AddToWatchlistMenu ticker={ticker} watchlists={watchlists} />
+            {/* Without a portfolio there is nothing to trade in: Trade leads to where one is opened. */}
+            {portfolios.length > 0 ? (
+              <OrderTicket
+                portfolios={portfolios.map(({ id, name }) => ({ id, name }))}
+                ticker={ticker}
+              />
+            ) : (
+              <Link href="/portfolios" className={buttonVariants()}>
+                Trade
+              </Link>
+            )}
           </div>
         </div>
         {last ? (

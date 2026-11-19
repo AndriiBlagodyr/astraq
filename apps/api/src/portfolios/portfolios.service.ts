@@ -4,6 +4,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type {
+  ActivityList,
   CashTransferBody,
   CreatePortfolioBody,
   Portfolio,
@@ -18,6 +19,7 @@ import {
   round,
   type Decimal,
 } from '../common/decimal';
+import { timeline } from '../ledger/activity';
 import {
   LedgerError,
   deposit,
@@ -106,6 +108,28 @@ export class PortfoliosService {
     return this.withBooks(row, state, now);
   }
 
+  /**
+   * The portfolio's ledger as a timeline, newest first, settled first so
+   * it ends on the cash `get` reports; 404 when it isn't the user's.
+   */
+  async activity(
+    userId: string,
+    id: string,
+    now = new Date(),
+  ): Promise<ActivityList> {
+    await this.orders.settle(userId, id, now);
+    const { history, tickers } = await this.portfolios.findHistory(id);
+    return {
+      activity: timeline(history)
+        .reverse()
+        .map(({ symbolId, occurredAt, ...line }) => ({
+          ...line,
+          occurredAt: occurredAt.toISOString(),
+          ticker: symbolId === null ? null : (tickers.get(symbolId) ?? null),
+        })),
+    };
+  }
+
   private async owned(userId: string, id: string): Promise<PortfolioRow> {
     const row = await this.portfolios.findOne(userId, id);
     if (!row) throw new NotFoundException(`Portfolio ${id} not found`);
@@ -152,6 +176,11 @@ export class PortfoliosService {
           cost: cents(position.cost),
           marketValue: centsOrNull(value.holdings[index]!.marketValue),
           unrealizedPnl: centsOrNull(value.holdings[index]!.unrealizedPnl),
+          lots: (state.lots.get(position.symbolId) ?? []).map((lot) => ({
+            openedOn: lot.openedOn,
+            quantity: format(lot.quantity),
+            cost: cents(lot.cost),
+          })),
         }))
         .sort((a, b) => (a.ticker < b.ticker ? -1 : 1)),
     };

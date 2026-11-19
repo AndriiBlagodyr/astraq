@@ -163,6 +163,18 @@ export const PortfolioListSchema = z
   })
   .meta({ id: "PortfolioList" });
 
+/** Shares from one buy that haven't been sold yet (FIFO), and what they cost. */
+export const LotSchema = z
+  .object({
+    /** The session of the buy that opened the lot, YYYY-MM-DD. */
+    openedOn: z.iso.date(),
+    /** Shares left in the lot, in the shares that trade today. */
+    quantity: decimalString,
+    /** What those shares cost, in cents. */
+    cost: decimalString,
+  })
+  .meta({ id: "Lot" });
+
 /**
  * Shares held in one symbol, summed over its lots, at cost and at the
  * symbol's latest stored close. The price fields are null for a symbol
@@ -183,6 +195,8 @@ export const PositionSchema = z
     marketValue: decimalString.nullable(),
     /** `marketValue - cost`. */
     unrealizedPnl: signedCashString.nullable(),
+    /** The open lots the position is made of, oldest first: the next sell takes the first. */
+    lots: z.array(LotSchema),
   })
   .meta({ id: "Position" });
 
@@ -306,6 +320,69 @@ export const OrderListSchema = z
   })
   .meta({ id: "OrderList" });
 
+/**
+ * What a ledger transaction was:
+ * - `deposit`, `withdrawal`: cash paid in or taken out by the owner;
+ * - `buy`, `sell`: an order's fill;
+ * - `split`: a split converting the shares held, moving no money;
+ * - `dividend`: a dividend earned on its ex-date, owed until it is paid;
+ * - `dividend_payment`: that dividend arriving in cash.
+ */
+export const ActivityKindSchema = z
+  .enum([
+    "deposit",
+    "withdrawal",
+    "buy",
+    "sell",
+    "split",
+    "dividend",
+    "dividend_payment",
+  ])
+  .meta({ id: "ActivityKind" });
+
+/**
+ * One transaction of a portfolio's ledger, as a line of its history. The
+ * fields a kind doesn't have are null.
+ */
+export const ActivityItemSchema = z
+  .object({
+    /** Its place in the portfolio's history, from 1. */
+    seq: z.int().positive(),
+    kind: ActivityKindSchema,
+    /** When it took effect: a fill's time, or the open of a split's or dividend's session. */
+    occurredAt: z.iso.datetime(),
+    /** The session it belongs to, YYYY-MM-DD. */
+    sessionDate: z.iso.date(),
+    /** Null on a deposit or withdrawal. */
+    ticker: z.string().nullable(),
+    /** Shares bought or added by a split (positive), or sold (negative). */
+    quantity: signedDecimalString.nullable(),
+    /** A fill's price per share. */
+    price: decimalString.nullable(),
+    /** The order a fill belongs to. */
+    orderId: z.uuid().nullable(),
+    /** A fill's commission. */
+    commission: decimalString.nullable(),
+    /** A sell's gain or loss against the FIFO cost of the shares, before the commission. */
+    realizedPnl: signedCashString.nullable(),
+    /** The dividend earned (`dividend`) or paid (`dividend_payment`). */
+    dividend: decimalString.nullable(),
+    /** `from` old shares became `to` new ones. */
+    split: z.object({ from: decimalString, to: decimalString }).nullable(),
+    /** What it did to cash; "0.00" for a split or a dividend not yet paid. */
+    cashChange: signedCashString,
+    /** Cash once it was booked. */
+    cashAfter: decimalString,
+  })
+  .meta({ id: "ActivityItem" });
+
+/** Body of `GET /api/portfolios/{id}/activity`, newest first. */
+export const ActivityListSchema = z
+  .object({
+    activity: z.array(ActivityItemSchema),
+  })
+  .meta({ id: "ActivityList" });
+
 export type PortfolioIdParam = z.infer<typeof PortfolioIdParamSchema>;
 export type PortfolioOrderParam = z.infer<typeof PortfolioOrderParamSchema>;
 export type CreatePortfolioBody = z.infer<typeof CreatePortfolioBodySchema>;
@@ -318,6 +395,7 @@ export type FillRule = z.infer<typeof FillRuleSchema>;
 export type PlaceOrderBody = z.infer<typeof PlaceOrderBodySchema>;
 export type PortfolioSummary = z.infer<typeof PortfolioSummarySchema>;
 export type PortfolioList = z.infer<typeof PortfolioListSchema>;
+export type Lot = z.infer<typeof LotSchema>;
 export type Position = z.infer<typeof PositionSchema>;
 export type Portfolio = z.infer<typeof PortfolioSchema>;
 export type OrderFill = z.infer<typeof OrderFillSchema>;
@@ -325,3 +403,6 @@ export type Order = z.infer<typeof OrderSchema>;
 export type OrderList = z.infer<typeof OrderListSchema>;
 export type OrderRefusalCode = z.infer<typeof OrderRefusalCodeSchema>;
 export type OrderPreview = z.infer<typeof OrderPreviewSchema>;
+export type ActivityKind = z.infer<typeof ActivityKindSchema>;
+export type ActivityItem = z.infer<typeof ActivityItemSchema>;
+export type ActivityList = z.infer<typeof ActivityListSchema>;

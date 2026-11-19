@@ -16,6 +16,7 @@ import {
 } from '../auth/jwt-auth.guard';
 import { ApiProblemResponses } from '../common/problem';
 import {
+  ActivityListDto,
   CashTransferBodyDto,
   CreatePortfolioBodyDto,
   PortfolioDto,
@@ -65,6 +66,23 @@ export class PortfoliosController {
   @ZodResponse({ status: 200, type: PortfolioDto })
   get(@Req() req: AuthenticatedRequest, @Param() { id }: PortfolioIdParamDto) {
     return this.portfolios.get(req.user.sub, id);
+  }
+
+  @Get(':id/activity')
+  @ApiOperation({
+    operationId: 'listActivity',
+    summary:
+      "A portfolio's ledger as a timeline: fills, cash moves, splits, and dividends, newest first",
+    description:
+      'One line per ledger transaction, with what it did to cash and the cash after it. ' +
+      "The newest line's `cashAfter` is the portfolio's cash.",
+  })
+  @ZodResponse({ status: 200, type: ActivityListDto })
+  activity(
+    @Req() req: AuthenticatedRequest,
+    @Param() { id }: PortfolioIdParamDto,
+  ) {
+    return this.portfolios.activity(req.user.sub, id);
   }
 
   @Post(':id/transfers')

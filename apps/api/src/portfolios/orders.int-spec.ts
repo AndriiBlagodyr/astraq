@@ -130,6 +130,22 @@ describe('Orders (database)', () => {
     const state = await orders.settle(userId, portfolio.id, at(TUE, '15:01'));
     expect(format(state.cash)).toBe('8999.00');
 
+    // The Activity timeline is that ledger, newest first: the fill with its
+    // order and price, ending on the same cash. The position is one lot.
+    const { activity } = await portfolios.activity(userId, portfolio.id, at(TUE, '15:01'));
+    expect(activity.map((line) => line.kind)).toEqual(['buy', 'deposit']);
+    expect(activity[0]).toMatchObject({
+      ticker: TICKER,
+      quantity: '10.000000',
+      price: '100',
+      orderId: results[0]!.order.id,
+      commission: '1.00',
+      cashChange: '-1001.00',
+      cashAfter: '8999.00',
+    });
+    const books = await portfolios.get(userId, portfolio.id, at(TUE, '15:01'));
+    expect(books.positions[0]!.lots).toEqual([{ openedOn: TUE, quantity: '10.000000', cost: '1000.00' }]);
+
     // The key now means that order: a different one under it is refused.
     await expect(
       orders.place(userId, portfolio.id, 'key-1', { ...buyTen, quantity: '11' }, at(TUE, '15:02')),

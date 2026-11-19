@@ -1,41 +1,20 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { PortfolioIdParamSchema } from "@astraq/shared";
 import { Card, EmptyState, Stat } from "@astraq/ui";
 import { CashTransferForm } from "@/app/components/CashTransferForm";
 import { HoldingsTable } from "@/app/components/HoldingsTable";
-import {
-  formatMoney,
-  formatPrice,
-  formatSignedMoney,
-  signedPercent,
-} from "@/lib/format";
+import { PortfolioHeader } from "@/app/components/PortfolioHeader";
+import { formatMoney, formatSignedMoney, signedPercent } from "@/lib/format";
 import { cashSign } from "@/lib/money";
-import {
-  getPortfolio,
-  pricedAsOf,
-  totalReturn,
-  type Portfolio,
-} from "@/lib/portfolios";
+import { loadPortfolio, pricedAsOf, totalReturn } from "@/lib/portfolios";
 
 type PortfolioPageProps = {
   params: Promise<{ id: string }>;
 };
 
-/** The portfolio, or a 404 for a malformed id as well as a foreign one. */
-async function load(params: PortfolioPageProps["params"]) {
-  const parsed = PortfolioIdParamSchema.safeParse(await params);
-  if (!parsed.success) notFound();
-  const portfolio = await getPortfolio(parsed.data.id);
-  if (!portfolio) notFound();
-  return portfolio;
-}
-
 export async function generateMetadata({
   params,
 }: PortfolioPageProps): Promise<Metadata> {
-  const portfolio = await load(params);
+  const portfolio = await loadPortfolio(params);
   return { title: portfolio.name };
 }
 
@@ -53,60 +32,21 @@ function direction(value: string) {
   } as const;
 }
 
-/** The trading costs and limit the portfolio was created with, in one line. */
-function costsLine(portfolio: Portfolio): string {
-  const parts = [
-    portfolio.slippageBps > 0
-      ? `${portfolio.slippageBps} bps slippage`
-      : "No slippage",
-  ];
-  const perOrder = Number(portfolio.commissionPerOrder) > 0;
-  const perShare = Number(portfolio.commissionPerShare) > 0;
-  if (perOrder || perShare) {
-    const fees = [
-      perOrder && `${formatMoney(portfolio.commissionPerOrder)} per order`,
-      perShare && `${formatPrice(portfolio.commissionPerShare)} per share`,
-    ].filter(Boolean);
-    parts.push(`commission ${fees.join(" + ")}`);
-  } else {
-    parts.push("no commission");
-  }
-  parts.push(
-    portfolio.maxOrderNotional === null
-      ? "no order limit"
-      : `orders up to ${formatMoney(portfolio.maxOrderNotional)}`
-  );
-  return parts.join(" · ");
-}
-
 // One portfolio's Holdings (docs/ui-plan.md § Portfolio): what it is worth,
 // where that comes from, and each position at its latest close, with paper
 // cash in and out. Reading the portfolio settles it, so the figures already
-// include every fill, split, and dividend that has become due. The Orders
-// and Activity tabs and the equity curve are later slices (ROADMAP Phase 3
-// item 6); nothing here links to them until they exist.
+// include every fill, split, and dividend that has become due. Orders and
+// Activity are the other two tabs; the equity curve is the last slice of
+// ROADMAP Phase 3 item 6.
 export default async function PortfolioPage({ params }: PortfolioPageProps) {
-  const portfolio = await load(params);
+  const portfolio = await loadPortfolio(params);
   const made = totalReturn(portfolio);
   const asOf = pricedAsOf(portfolio.positions);
   const receivable = cashSign(portfolio.dividendsReceivable) > 0;
 
   return (
     <main className="grid gap-5">
-      <Card className="grid gap-3 p-7">
-        <p className="m-0 text-sm text-muted">
-          <Link
-            href="/portfolios?all"
-            className="underline-offset-4 hover:underline"
-          >
-            Portfolios
-          </Link>
-        </p>
-        <h1 className="m-0 font-display text-4xl font-bold tracking-tight text-foreground">
-          {portfolio.name}
-        </h1>
-        <p className="m-0 text-sm text-secondary">{costsLine(portfolio)}</p>
-      </Card>
+      <PortfolioHeader portfolio={portfolio} tab="holdings" />
 
       <Card className="grid gap-6 p-7">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-x-8 gap-y-6">
@@ -114,7 +54,9 @@ export default async function PortfolioPage({ params }: PortfolioPageProps) {
             size="lg"
             className="col-span-full"
             label="Equity"
-            value={portfolio.equity === null ? "—" : formatMoney(portfolio.equity)}
+            value={
+              portfolio.equity === null ? "—" : formatMoney(portfolio.equity)
+            }
             delta={
               made
                 ? made.ratio === null
@@ -182,7 +124,7 @@ export default async function PortfolioPage({ params }: PortfolioPageProps) {
         ) : (
           <EmptyState
             title="Nothing held yet"
-            description="Positions appear here once an order fills. The order ticket is the next piece of this page; until it lands, orders are placed through the api."
+            description="Positions appear here once an order fills. Trade, at the top of this page, opens the order ticket."
           />
         )}
       </Card>
