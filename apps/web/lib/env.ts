@@ -18,6 +18,13 @@ const envSchema = z
     // browser instead of per web server (lib/bff-headers.ts). The local
     // default matches the api's.
     BFF_SHARED_SECRET: z.string().min(32).optional(),
+    // Where traces go: the base URL of an OTLP/HTTP collector, without
+    // `/v1/traces` (lib/tracing.ts). Development defaults to the local
+    // Jaeger; anywhere else tracing is off until this is set.
+    OTEL_EXPORTER_OTLP_ENDPOINT: z
+      .url({ protocol: /^https?$/ })
+      .transform((value) => value.replace(/\/+$/, ""))
+      .optional(),
     // The deployed commit, shown on /status. Vercel sets
     // VERCEL_GIT_COMMIT_SHA; COMMIT_SHA lets any other host pass it.
     COMMIT_SHA: z.string().trim().min(1).optional(),
@@ -34,6 +41,9 @@ const envSchema = z
         ? null
         : "dev-bff-secret-at-least-32-bytes-long"),
     COMMIT_SHA: value.COMMIT_SHA ?? VERCEL_GIT_COMMIT_SHA ?? null,
+    OTEL_EXPORTER_OTLP_ENDPOINT:
+      value.OTEL_EXPORTER_OTLP_ENDPOINT ??
+      (value.NODE_ENV === "development" ? "http://localhost:4318" : null),
   }));
 
 const parsed = envSchema.safeParse(process.env);

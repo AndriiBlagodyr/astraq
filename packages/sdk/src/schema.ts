@@ -230,6 +230,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolios/{id}/equity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a portfolio was worth at each day's close, with the day's gain or loss
+         * @description The ledger replayed a day at a time against the closes, oldest first. The last point's `equity` is the portfolio's and its `pnl` is the day PnL.
+         */
+        get: operations["getEquityCurve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portfolios/{id}/transfers": {
         parameters: {
             query?: never;
@@ -604,6 +624,16 @@ export interface components {
         ActivityKind_Output: "deposit" | "withdrawal" | "buy" | "sell" | "split" | "dividend" | "dividend_payment";
         ActivityList_Output: {
             activity: components["schemas"]["ActivityItem_Output"][];
+        };
+        EquityPoint_Output: {
+            /** Format: date */
+            date: string;
+            equity: string | null;
+            capital: string;
+            pnl: string | null;
+        };
+        EquityCurve_Output: {
+            points: components["schemas"]["EquityPoint_Output"][];
         };
         CashTransferBody: {
             /** @enum {string} */
@@ -1227,6 +1257,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityList_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    getEquityCurve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquityCurve_Output"];
                 };
             };
             /** @description Any error, as an RFC 9457 problem detail */

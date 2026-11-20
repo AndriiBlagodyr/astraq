@@ -53,6 +53,13 @@ const envSchema = z
     // limits (rate-limit-key.ts). Optional: without it in production, limits
     // key on the address the api sees.
     BFF_SHARED_SECRET: z.string().min(32).optional(),
+    // Where traces go: the base URL of an OTLP/HTTP collector, without
+    // `/v1/traces` (tracing.ts). Development defaults to the local Jaeger;
+    // anywhere else tracing is off until this is set.
+    OTEL_EXPORTER_OTLP_ENDPOINT: z
+      .url({ protocol: /^https?$/ })
+      .transform((value) => value.replace(/\/+$/, ''))
+      .optional(),
     // Comma-separated invited emails; omit or leave empty to allow no registrations.
     INVITE_EMAILS: z
       .string()
@@ -88,6 +95,11 @@ const envSchema = z
       value.BFF_SHARED_SECRET ??
       (value.NODE_ENV === 'production' ? null : LOCAL_DEFAULTS.BFF_SHARED_SECRET),
     INVITE_EMAILS: value.INVITE_EMAILS ?? [],
+    OTEL_EXPORTER_OTLP_ENDPOINT:
+      value.OTEL_EXPORTER_OTLP_ENDPOINT ??
+      (value.NODE_ENV === 'development'
+        ? LOCAL_DEFAULTS.OTEL_EXPORTER_OTLP_ENDPOINT
+        : null),
   }));
 
 export type Env = z.infer<typeof envSchema>;

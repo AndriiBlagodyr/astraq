@@ -14,6 +14,9 @@ export type Position = components["schemas"]["Position_Output"];
 export type Order = components["schemas"]["Order_Output"];
 export type OrderPreview = components["schemas"]["OrderPreview_Output"];
 export type ActivityItem = components["schemas"]["ActivityItem_Output"];
+export type EquityPoint = components["schemas"]["EquityPoint_Output"];
+/** A point of the curve on a day every share held had a close. */
+export type PricedEquityPoint = EquityPoint & { equity: string };
 
 /** Every portfolio of the signed-in user, oldest first, without its books. */
 export async function listPortfolios(): Promise<PortfolioSummary[]> {
@@ -93,6 +96,44 @@ export async function listActivity(id: string): Promise<ActivityItem[] | null> {
   if (response.status === 404) return null;
   if (!data) throw apiFailure(`Activity of portfolio ${id}`, response.status);
   return data.activity;
+}
+
+/**
+ * The portfolio's equity at each day's close, oldest first; null when it
+ * isn't this user's. The last point's `equity` is the portfolio's.
+ */
+export async function getEquityCurve(
+  id: string
+): Promise<EquityPoint[] | null> {
+  const api = await userApi();
+  const { data, response } = await api.GET("/api/portfolios/{id}/equity", {
+    params: { path: { id } },
+    ...fresh,
+  });
+  requireSession(response);
+  if (response.status === 404) return null;
+  if (!data) throw apiFailure(`Equity of portfolio ${id}`, response.status);
+  return data.points;
+}
+
+/** The points that can be drawn: the days with an equity. */
+export function pricedPoints(points: EquityPoint[]): PricedEquityPoint[] {
+  return points.filter(
+    (point): point is PricedEquityPoint => point.equity !== null
+  );
+}
+
+/**
+ * The gain or loss of the curve's last day and the day it is: the day PnL.
+ * Null for a portfolio without a ledger, or while that day has no equity.
+ */
+export function dayPnl(
+  points: EquityPoint[]
+): { amount: string; date: string } | null {
+  const last = points.at(-1);
+  return last && last.pnl !== null
+    ? { amount: last.pnl, date: last.date }
+    : null;
 }
 
 /**

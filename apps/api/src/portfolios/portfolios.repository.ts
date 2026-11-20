@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { toIsoDate, utcMidnight } from '../common/dates';
 import { ConflictError } from '../common/domain-errors';
 import { isUniqueViolation } from '../common/prisma-errors';
 import { PrismaService } from '../database/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
 import type { RecordedTransaction } from '../ledger/activity';
-import type { Posting } from '../ledger/ledger';
+import type { LedgerTransaction, Posting } from '../ledger/ledger';
 import { LedgerRepository } from '../ledger/ledger.repository';
+import type { DailyClose, PriceSplit } from '../trading/equity-curve';
 
 /** Thrown when a create would reuse one of the user's portfolio names: a 409. */
 export class PortfolioNameTakenError extends ConflictError {
@@ -56,6 +58,17 @@ const columns = {
 } as const;
 
 type StoredPortfolio = Prisma.PortfolioGetPayload<{ select: typeof columns }>;
+
+/** Every symbol id a history's entries name. */
+function symbolIdsOf(history: readonly LedgerTransaction[]): number[] {
+  const ids = new Set<number>();
+  for (const transaction of history) {
+    for (const entry of transaction.entries) {
+      if (entry.symbolId !== null) ids.add(entry.symbolId);
+    }
+  }
+  return [...ids];
+}
 
 const toRow = (portfolio: StoredPortfolio): PortfolioRow => ({
   ...portfolio,
@@ -130,22 +143,75 @@ export class PortfoliosRepository {
     tickers: Map<number, string>;
   }> {
     const history = await this.ledger.readRecorded(this.prisma, portfolioId);
-    const symbolIds = new Set<number>();
-    for (const transaction of history) {
-      for (const entry of transaction.entries) {
-        if (entry.symbolId !== null) symbolIds.add(entry.symbolId);
-      }
-    }
+    const symbolIds = symbolIdsOf(history);
     const symbols =
-      symbolIds.size === 0
+      symbolIds.length === 0
         ? []
         : await this.prisma.symbol.findMany({
-            where: { id: { in: [...symbolIds] } },
+            where: { id: { in: symbolIds } },
             select: { id: true, ticker: true },
           });
     return {
       history,
       tickers: new Map(symbols.map((symbol) => [symbol.id, symbol.ticker])),
+    };
+  }
+
+  /**
+   * What the equity curve is drawn from: the portfolio's ledger in `seq`
+   * order, the closes of every symbol it names, and their splits. The
+   * caller has checked the portfolio is the user's (it settles it first).
+   *
+   * The closes start at each symbol's last session on or before the first
+   * transaction's day, not on that day: a share bought on a day whose bar
+   * isn't stored is worth its previous close that evening.
+   */
+  async findPricedHistory(portfolioId: string): Promise<{
+    history: LedgerTransaction[];
+    closes: DailyClose[];
+    splits: PriceSplit[];
+  }> {
+    const history = await this.ledger.read(this.prisma, portfolioId);
+    const symbolIds = symbolIdsOf(history);
+    const first = history[0];
+    if (!first || symbolIds.length === 0) {
+      return { history, closes: [], splits: [] };
+    }
+
+    const since = utcMidnight(first.date);
+    const closes = await this.prisma.$queryRaw<DailyClose[]>`
+      SELECT c.symbol_id AS "symbolId",
+             to_char(c.ts AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS "date",
+             trim_scale(c.close)::text AS "close"
+      FROM unnest(${symbolIds}::int[]) AS held(symbol_id)
+      CROSS JOIN LATERAL (
+        SELECT coalesce(max(before.ts), ${since}::timestamptz) AS ts
+        FROM candles_daily before
+        WHERE before.symbol_id = held.symbol_id
+          AND before.ts <= ${since}::timestamptz
+      ) start
+      JOIN candles_daily c
+        ON c.symbol_id = held.symbol_id AND c.ts >= start.ts
+      ORDER BY c.ts, c.symbol_id
+    `;
+    const actions = await this.prisma.corporateAction.findMany({
+      where: {
+        symbolId: { in: symbolIds },
+        type: 'SPLIT',
+        splitFrom: { gt: 0 },
+        splitTo: { gt: 0 },
+      },
+      orderBy: [{ exDate: 'asc' }, { id: 'asc' }],
+    });
+    return {
+      history,
+      closes,
+      splits: actions.map((action) => ({
+        symbolId: action.symbolId,
+        exDate: toIsoDate(action.exDate),
+        from: action.splitFrom!.toFixed(),
+        to: action.splitTo!.toFixed(),
+      })),
     };
   }
 

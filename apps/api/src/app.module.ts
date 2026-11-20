@@ -11,6 +11,7 @@ import { rateLimitKey } from './common/rate-limit-key';
 import { RedisModule } from './common/redis.module';
 import { RedisService } from './common/redis.service';
 import { assignRequestId } from './common/request-id';
+import { TracingShutdown } from './common/span';
 import { HealthModule } from './health/health.module';
 import { LedgerModule } from './ledger/ledger.module';
 import { PortfoliosModule } from './portfolios/portfolios.module';
@@ -61,6 +62,7 @@ import { WatchlistsModule } from './watchlists/watchlists.module';
     // Zod DTOs validate every request input and every @ZodResponse body.
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_INTERCEPTOR, useClass: ZodSerializerInterceptor },
+    TracingShutdown,
   ],
 })
 export class AppModule {}
