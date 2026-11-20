@@ -590,6 +590,55 @@
         ]
       }
     },
+    "/api/portfolios/{id}/equity": {
+      "get": {
+        "description": "The ledger replayed a day at a time against the closes, oldest first. The last point's `equity` is the portfolio's and its `pnl` is the day PnL.",
+        "operationId": "getEquityCurve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquityCurve_Output"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What a portfolio was worth at each day's close, with the day's gain or loss",
+        "tags": [
+          "portfolios"
+        ]
+      }
+    },
     "/api/portfolios/{id}/transfers": {
       "post": {
         "operationId": "transferCash",
@@ -2287,6 +2336,64 @@
         },
         "required": [
           "activity"
+        ],
+        "additionalProperties": false
+      },
+      "EquityPoint_Output": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "equity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capital": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "pnl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "date",
+          "equity",
+          "capital",
+          "pnl"
+        ],
+        "additionalProperties": false
+      },
+      "EquityCurve_Output": {
+        "type": "object",
+        "properties": {
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EquityPoint_Output"
+            }
+          }
+        },
+        "required": [
+          "points"
         ],
         "additionalProperties": false
       },

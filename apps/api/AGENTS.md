@@ -11,5 +11,6 @@
 - Jobs/queues: BullMQ on Redis. Cron via `@nestjs/schedule`.
 - Validation: Zod schemas shared from `packages/shared`; use `nestjs-zod` for DTO binding.
 - Logging: pino with request-id middleware. No `console.log` in production paths.
+- Tracing: `src/tracing.ts` sets up OpenTelemetry and must stay the first import of `main.ts` (instrumentations patch modules as they load). Make a span of your own with `inSpan` from `common/span.ts`, which needs only `@opentelemetry/api` and is a no-op in tests and the CLIs. Don't import `tracing.ts` anywhere else.
 - OpenAPI: `@nestjs/swagger` + `nestjs-zod`. Every handler declares `@ZodResponse({ status, type })`; controllers add `@ApiProblemResponses()`. `pnpm contract` (root) writes `openapi.json` and regenerates `packages/sdk`; commit both. CI fails on drift. See ADR 0004.
 - Python jobs (backtests, forecasts): enqueue via BullMQ; persist the returned result in the api.

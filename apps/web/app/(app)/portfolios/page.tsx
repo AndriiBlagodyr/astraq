@@ -16,10 +16,11 @@ import { CreatePortfolioForm } from "@/app/components/CreatePortfolioForm";
 import { SignedMoney } from "@/app/components/SignedMoney";
 import { formatMoney, signedPercent } from "@/lib/format";
 import {
+  dayPnl,
+  getEquityCurve,
   getPortfolio,
   listPortfolios,
   totalReturn,
-  type Portfolio,
 } from "@/lib/portfolios";
 
 export const metadata = {
@@ -46,10 +47,18 @@ export default async function PortfoliosPage({
   }
 
   // The index has no books, so each portfolio is read (and settled) on its
-  // own. A handful of requests: one user's paper portfolios, not a table.
+  // own, and its curve after it for the day PnL. A handful of requests: one
+  // user's paper portfolios, not a table.
   const portfolios = (
-    await Promise.all(summaries.map((summary) => getPortfolio(summary.id)))
-  ).filter((portfolio): portfolio is Portfolio => portfolio !== null);
+    await Promise.all(
+      summaries.map(async (summary) => {
+        const portfolio = await getPortfolio(summary.id);
+        if (!portfolio) return null;
+        const curve = (await getEquityCurve(summary.id)) ?? [];
+        return { ...portfolio, day: dayPnl(curve) };
+      })
+    )
+  ).filter((portfolio) => portfolio !== null);
 
   return (
     <main className="grid gap-5">
@@ -83,6 +92,7 @@ export default async function PortfoliosPage({
                 <Th align="end">Equity</Th>
                 <Th align="end">Cash</Th>
                 <Th align="end">Positions</Th>
+                <Th align="end">Day PnL</Th>
                 <Th align="end">Total return</Th>
               </Tr>
             </Thead>
@@ -109,6 +119,9 @@ export default async function PortfoliosPage({
                     </Td>
                     <Td align="end" className="tabular-nums">
                       {portfolio.positions.length}
+                    </Td>
+                    <Td align="end">
+                      <SignedMoney value={portfolio.day?.amount ?? null} />
                     </Td>
                     <Td align="end">
                       <SignedMoney value={made?.amount ?? null} />

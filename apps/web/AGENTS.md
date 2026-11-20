@@ -14,4 +14,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Data: server components fetch directly via the SDK; writes are server actions answering with `ActionResult` (`lib/action-result.ts`). There is no client-side cache yet: `@tanstack/react-query` joins when something needs one (ROADMAP Phase 9).
 - Charts: `lightweight-charts` for OHLCV panes; `d3` for bespoke viz (heatmaps, treemaps, distributions).
 - Forms: `react-hook-form` + `zod` via `@hookform/resolvers`.
+- Tracing: `lib/tracing.ts` sets up OpenTelemetry for the Node server and is started only from `instrumentation.ts`. Next makes the request, render, and server-action spans; a span of your own comes from `trace.getTracer("veracand-web")` (`@opentelemetry/api`), as in the `placeOrder` action.
 - Testing: Vitest + Testing Library; Playwright for E2E.

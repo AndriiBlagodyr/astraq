@@ -19,6 +19,7 @@ import {
   ActivityListDto,
   CashTransferBodyDto,
   CreatePortfolioBodyDto,
+  EquityCurveDto,
   PortfolioDto,
   PortfolioIdParamDto,
   PortfolioListDto,
@@ -83,6 +84,23 @@ export class PortfoliosController {
     @Param() { id }: PortfolioIdParamDto,
   ) {
     return this.portfolios.activity(req.user.sub, id);
+  }
+
+  @Get(':id/equity')
+  @ApiOperation({
+    operationId: 'getEquityCurve',
+    summary:
+      "What a portfolio was worth at each day's close, with the day's gain or loss",
+    description:
+      'The ledger replayed a day at a time against the closes, oldest first. ' +
+      "The last point's `equity` is the portfolio's and its `pnl` is the day PnL.",
+  })
+  @ZodResponse({ status: 200, type: EquityCurveDto })
+  equity(
+    @Req() req: AuthenticatedRequest,
+    @Param() { id }: PortfolioIdParamDto,
+  ) {
+    return this.portfolios.equity(req.user.sub, id);
   }
 
   @Post(':id/transfers')

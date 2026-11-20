@@ -295,6 +295,19 @@ describe('Orders (database)', () => {
         },
       ],
     });
+    // The curve is the same ledger a day at a time. Tuesday has no bar, so
+    // the shares bought that day are worth Monday's close; the split is no
+    // loss; the dividend is a gain on its ex-date, not on the day it's paid;
+    // and the last point is the equity above.
+    const { points } = await portfolios.equity(userId, portfolio.id);
+    expect(points).toEqual([
+      { date: MON, equity: '10000.00', capital: '10000.00', pnl: '0.00' },
+      { date: TUE, equity: '10000.00', capital: '10000.00', pnl: '0.00' },
+      { date: WED, equity: '10000.00', capital: '10000.00', pnl: '0.00' },
+      { date: THU, equity: '10010.00', capital: '10000.00', pnl: '10.00' },
+      { date: '2026-06-08', equity: '10010.00', capital: '10000.00', pnl: '0.00' },
+    ]);
+
     const kinds = await prisma.ledgerTransaction.findMany({
       where: { portfolioId: portfolio.id },
       orderBy: { seq: 'asc' },

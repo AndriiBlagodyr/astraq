@@ -42,6 +42,19 @@ services:
       retries: 10
     restart: unless-stopped
 
+  jaeger:
+    # Where local traces go (ROADMAP Phase 3 item 7): Jaeger v2, all in one
+    # process, keeping traces in memory. They are gone on restart, which is
+    # what a development trace store should do. The api and the web send to
+    # the OTLP port in development without any configuration.
+    image: jaegertracing/jaeger:2.11.0
+    ports:
+      # The UI: http://localhost:16686
+      - "127.0.0.1:${JAEGER_UI_PORT:-16686}:16686"
+      # OTLP over HTTP, where the services post their spans.
+      - "127.0.0.1:${JAEGER_OTLP_PORT:-4318}:4318"
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   redis-data:

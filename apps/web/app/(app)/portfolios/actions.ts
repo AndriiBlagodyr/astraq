@@ -3,6 +3,7 @@
 import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { trace } from "@opentelemetry/api";
 import type { z } from "zod";
 import {
   CashTransferBodySchema,
@@ -26,6 +27,9 @@ import type { Order, OrderPreview } from "@/lib/portfolios";
 // validated with the shared schemas before they reach the api, like the
 // watchlist actions. Amounts stay the strings the owner typed, less the
 // thousands separators: the api does the arithmetic, in decimals.
+
+// A no-op until lib/tracing.ts registers a provider.
+const tracer = trace.getTracer("veracand-web");
 
 const indexPath = "/portfolios";
 const detailPath = (id: string) => `/portfolios/${id}` as Route;
@@ -163,14 +167,41 @@ export async function placeOrder(
   if (!key.success) return failed(firstIssue(key.error));
   if (!body.success) return failed(firstIssue(body.error));
 
-  const client = await userApi();
-  const { data, response } = await client.POST("/api/portfolios/{id}/orders", {
-    params: { path: id.data, header: { "Idempotency-Key": key.data } },
-    body: body.data,
-  });
-  if (!data) return failure(response, "Couldn't place the order");
-  revalidatePortfolio(id.data.id);
-  return { ok: true, value: data };
+  // One span per submitted ticket (ROADMAP Phase 3 item 7). The call to the
+  // api is its child, and the api's `order.place` span continues the trace.
+  return tracer.startActiveSpan(
+    "order.submit",
+    {
+      attributes: {
+        "portfolio.id": id.data.id,
+        "order.ticker": body.data.ticker,
+        "order.side": body.data.side,
+        "order.type": body.data.type,
+      },
+    },
+    async (span): Promise<ActionResult<Order>> => {
+      try {
+        const client = await userApi();
+        const { data, response } = await client.POST(
+          "/api/portfolios/{id}/orders",
+          {
+            params: { path: id.data, header: { "Idempotency-Key": key.data } },
+            body: body.data,
+          }
+        );
+        span.setAttribute("http.response.status_code", response.status);
+        if (!data) return failure(response, "Couldn't place the order");
+        span.setAttributes({
+          "order.id": data.id,
+          "order.status": data.status,
+        });
+        revalidatePortfolio(id.data.id);
+        return { ok: true, value: data };
+      } finally {
+        span.end();
+      }
+    }
+  );
 }
 
 /** Cancels an open order. One that has filled since the page rendered is the api's 409. */

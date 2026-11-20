@@ -7,6 +7,7 @@ import type {
   ActivityList,
   CashTransferBody,
   CreatePortfolioBody,
+  EquityCurve,
   Portfolio,
   PortfolioList,
   PortfolioSummary,
@@ -26,6 +27,7 @@ import {
   positions,
   type LedgerState,
 } from '../ledger/ledger';
+import { equityCurve } from '../trading/equity-curve';
 import { sessionDate } from '../trading/market-hours';
 import { valuePortfolio } from '../trading/valuation';
 import { OrdersService } from './orders.service';
@@ -127,6 +129,30 @@ export class PortfoliosService {
           occurredAt: occurredAt.toISOString(),
           ticker: symbolId === null ? null : (tickers.get(symbolId) ?? null),
         })),
+    };
+  }
+
+  /**
+   * The portfolio's equity at each day's close, oldest first, settled
+   * first so it ends on the equity `get` reports; 404 when it isn't the
+   * user's.
+   */
+  async equity(
+    userId: string,
+    id: string,
+    now = new Date(),
+  ): Promise<EquityCurve> {
+    await this.orders.settle(userId, id, now);
+    const { history, closes, splits } =
+      await this.portfolios.findPricedHistory(id);
+    const cents = (amount: Decimal) => format(round(amount, CASH_PLACES));
+    return {
+      points: equityCurve(history, closes, splits).map((point) => ({
+        date: point.date,
+        equity: point.equity && cents(point.equity),
+        capital: cents(point.capital),
+        pnl: point.pnl && cents(point.pnl),
+      })),
     };
   }
 

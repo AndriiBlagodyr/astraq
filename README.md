@@ -115,6 +115,11 @@ Every service validates its env at boot and exits with a readable error on a bad
 | web | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` |
 | web | `API_URL` | `http://localhost:4000` |
 | web | `ML_URL` | `http://localhost:8000`; no default in production, where unset means the ML service isn't part of the deploy and `/status` lists it as not deployed |
+| api, web | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` in development (the Jaeger that `pnpm infra:up` starts); unset anywhere else, which turns tracing off |
+
+### Traces
+
+`pnpm infra:up` also starts Jaeger. With `pnpm dev` running, the web and the api send their spans to it, and <http://localhost:16686> shows them: pick the service `veracand-web`, find a trace, and it runs from the page or server action through the api's handler to each SQL statement. Placing an order adds two named spans, `order.submit` (web) and `order.place` (api). The api's request span carries `http.request.id`, the id in its log lines.
 
 ### Web
 

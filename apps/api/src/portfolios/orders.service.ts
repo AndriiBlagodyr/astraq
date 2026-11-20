@@ -12,6 +12,7 @@ import type {
   PlaceOrderBody,
 } from '@astraq/shared';
 import { compare, decimal } from '../common/decimal';
+import { inSpan } from '../common/span';
 import type { LedgerState } from '../ledger/ledger';
 import { MarketCalendarService } from '../market-data/market-calendar.service';
 import { OnDemandCandlesService } from '../market-data/on-demand-candles.service';
@@ -146,13 +147,51 @@ export class OrdersService {
    * portfolio can't cover, or over its limit per order, is a 422 and is
    * never stored. Both run under the same lock as the write, so two orders
    * can't each be told the same cash is free.
+   *
+   * Each placement is one span, `order.place` (ROADMAP Phase 3 item 7): the
+   * lock, the reads, and the writes below are its children, and it says how
+   * the order came out.
    */
-  async place(
+  place(
     userId: string,
     portfolioId: string,
     idempotencyKey: string,
     body: PlaceOrderBody,
     now = new Date(),
+  ): Promise<{ order: Order; replayed: boolean }> {
+    return inSpan(
+      'order.place',
+      {
+        'portfolio.id': portfolioId,
+        'order.ticker': body.ticker,
+        'order.side': body.side,
+        'order.type': body.type,
+        'order.quantity': body.quantity,
+      },
+      async (span) => {
+        const placed = await this.placeOnce(
+          userId,
+          portfolioId,
+          idempotencyKey,
+          body,
+          now,
+        );
+        span.setAttributes({
+          'order.id': placed.order.id,
+          'order.status': placed.order.status,
+          'order.replayed': placed.replayed,
+        });
+        return placed;
+      },
+    );
+  }
+
+  private async placeOnce(
+    userId: string,
+    portfolioId: string,
+    idempotencyKey: string,
+    body: PlaceOrderBody,
+    now: Date,
   ): Promise<{ order: Order; replayed: boolean }> {
     const request = await this.request(body);
     const { symbolId } = request;

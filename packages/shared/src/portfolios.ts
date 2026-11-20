@@ -383,6 +383,41 @@ export const ActivityListSchema = z
   })
   .meta({ id: "ActivityList" });
 
+/**
+ * What a portfolio was worth at one day's close. A day has a point when a
+ * transaction was booked on it or a symbol the ledger names traded.
+ */
+export const EquityPointSchema = z
+  .object({
+    /** The session, YYYY-MM-DD. */
+    date: z.iso.date(),
+    /**
+     * Cash, dividends owed, and the shares held that evening at that day's
+     * closes, in cents. Null when a share held had no close yet.
+     */
+    equity: decimalString.nullable(),
+    /** Paid in by the owner up to that day, less withdrawals. */
+    capital: signedCashString,
+    /**
+     * The day's gain or loss: the change in `equity` since the point
+     * before, less the cash paid in or taken out that day. Null when either
+     * equity is.
+     */
+    pnl: signedCashString.nullable(),
+  })
+  .meta({ id: "EquityPoint" });
+
+/**
+ * Body of `GET /api/portfolios/{id}/equity`, oldest first. The last point's
+ * `equity` is the portfolio's, and its `pnl` is the day PnL. Every `pnl`
+ * added up is `equity - capital`: what the portfolio has made.
+ */
+export const EquityCurveSchema = z
+  .object({
+    points: z.array(EquityPointSchema),
+  })
+  .meta({ id: "EquityCurve" });
+
 export type PortfolioIdParam = z.infer<typeof PortfolioIdParamSchema>;
 export type PortfolioOrderParam = z.infer<typeof PortfolioOrderParamSchema>;
 export type CreatePortfolioBody = z.infer<typeof CreatePortfolioBodySchema>;
@@ -406,3 +441,5 @@ export type OrderPreview = z.infer<typeof OrderPreviewSchema>;
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 export type ActivityItem = z.infer<typeof ActivityItemSchema>;
 export type ActivityList = z.infer<typeof ActivityListSchema>;
+export type EquityPoint = z.infer<typeof EquityPointSchema>;
+export type EquityCurve = z.infer<typeof EquityCurveSchema>;

@@ -1,3 +1,5 @@
+// First, before Nest, Express, and pg are loaded: see tracing.ts.
+import './tracing';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
