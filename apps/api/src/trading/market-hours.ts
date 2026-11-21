@@ -151,6 +151,46 @@ export function nextSession(
   throw new RangeError(`No session opens within 30 days of ${date}`);
 }
 
+/** Whether the market trades now, and the session that opens next. */
+export interface MarketStatus {
+  open: boolean;
+  /** The session trading at the instant; null while the market is closed. */
+  session: MarketSession | null;
+  next: MarketSession;
+  /**
+   * True when today and the next session's day are both in the calendar.
+   * False when either came from the weekday rule, which knows no holidays.
+   */
+  fromCalendar: boolean;
+}
+
+/**
+ * The market at `instant`: open or closed, the session it is in, and the
+ * next one to open. The same two functions the order rules use answer it,
+ * so the status a page shows is the clock an order placed now meets.
+ */
+export function marketStatus(
+  instant: Date,
+  calendar: SessionCalendar | null = null,
+): MarketStatus {
+  // A session by its date: the calendar's, or 09:30 to 16:00 without one.
+  const sessionOn = (date: string): MarketSession =>
+    (covers(calendar, date) ? calendar.sessions.get(date) : undefined) ?? {
+      date,
+      open: sessionOpen(date),
+      close: newYorkInstant(date, CLOSE_MINUTES),
+    };
+  const today = sessionDate(instant);
+  const open = isRegularSession(instant, calendar);
+  const next = sessionOn(nextSession(instant, calendar).date);
+  return {
+    open,
+    session: open ? sessionOn(today) : null,
+    next,
+    fromCalendar: covers(calendar, today) && covers(calendar, next.date),
+  };
+}
+
 /** The calendar date after `date`. */
 export function nextDate(date: string): string {
   const next = new Date(`${date}T00:00:00.000Z`);

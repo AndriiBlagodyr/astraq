@@ -4,6 +4,7 @@ import { AlpacaClient } from './alpaca/alpaca.client';
 import { loadOptionalAlpacaEnv } from './alpaca/alpaca.env';
 import { BootstrapService } from './bootstrap/bootstrap.service';
 import { MarketCalendarService } from './market-calendar.service';
+import { MarketController } from './market.controller';
 import { MarketDataRepository } from './market-data.repository';
 import { OnDemandCandlesService } from './on-demand-candles.service';
 
@@ -11,7 +12,8 @@ const ALPACA = Symbol('optional Alpaca client');
 
 /**
  * The api server's slice of market data: on-demand candle loading for the
- * watchlists and orders, and the exchange calendar. Alpaca keys are
+ * watchlists and orders, and the exchange calendar with the market status
+ * read from it (`GET /api/market/status`). Alpaca keys are
  * optional here. Without them the server boots and serves stored data: a
  * newly watched symbol stays without candles until a bootstrap run, and the
  * calendar is whatever `calendar:sync` last stored. With them (the deployed
@@ -21,6 +23,7 @@ const ALPACA = Symbol('optional Alpaca client');
 
 @Module({
   imports: [DatabaseModule],
+  controllers: [MarketController],
   providers: [
     MarketDataRepository,
     {

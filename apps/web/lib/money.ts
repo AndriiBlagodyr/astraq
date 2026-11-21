@@ -42,6 +42,18 @@ export function cashRatio(part: string, whole: string): number | null {
   return Number(numerator) / Number(denominator);
 }
 
+/**
+ * Which way a signed figure points, as a `Stat`'s arrow and color: a gain
+ * is up and positive, a loss down and negative.
+ */
+export function cashDirection(value: string) {
+  const sign = cashSign(value);
+  return {
+    trend: sign > 0 ? "up" : sign < 0 ? "down" : "flat",
+    tone: sign > 0 ? "positive" : sign < 0 ? "negative" : "neutral",
+  } as const;
+}
+
 /** -1, 0, or 1; 0 for something that isn't a cash string. */
 export function cashSign(value: string): -1 | 0 | 1 {
   const cents = toCents(value);

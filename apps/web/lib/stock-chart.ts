@@ -116,6 +116,49 @@ export function sessionChange({
   };
 }
 
+/** A fill to mark on the chart: what was traded, and the session it filled in. */
+export type ChartFill = {
+  side: "buy" | "sell";
+  quantity: string;
+  /** Per share, as traded. */
+  price: string;
+  sessionDate: string;
+};
+
+/**
+ * Each fill with the bar it is marked on: its session's, or the last bar
+ * before it. A market order placed mid-session fills on a day whose bar
+ * isn't stored until that evening, so it sits on the latest bar until then.
+ * A fill before the first bar, or after `until` (a custom range's end),
+ * isn't in view and is left out. `candles` and the result are oldest first.
+ */
+export function placeFills<Fill extends ChartFill>(
+  fills: Fill[],
+  candles: Pick<Candle, "time">[],
+  until?: string
+): (Fill & { time: string })[] {
+  const placed: (Fill & { time: string })[] = [];
+  for (const fill of fills) {
+    if (until !== undefined && fill.sessionDate > until) continue;
+    let time: string | undefined;
+    for (const candle of candles) {
+      if (candle.time > fill.sessionDate) break;
+      time = candle.time;
+    }
+    if (time !== undefined) placed.push({ ...fill, time });
+  }
+  return placed.sort((a, b) => a.time.localeCompare(b.time));
+}
+
+/** "2 buys and 1 sell", "1 buy"; for the note under the chart. */
+export function fillCounts(fills: Pick<ChartFill, "side">[]): string {
+  const count = (side: ChartFill["side"]) => {
+    const n = fills.filter((fill) => fill.side === side).length;
+    return n === 0 ? null : `${n} ${side}${n === 1 ? "" : "s"}`;
+  };
+  return [count("buy"), count("sell")].filter(Boolean).join(" and ");
+}
+
 const newYorkDate = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/New_York",
 });

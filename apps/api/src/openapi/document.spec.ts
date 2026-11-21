@@ -62,6 +62,7 @@ describe('buildOpenApiDocument', () => {
       '/api/portfolios/{id}/orders',
       '/api/portfolios/{id}/orders/preview',
       '/api/portfolios/{id}/orders/{orderId}/cancel',
+      '/api/market/status',
       '/api/symbols',
       '/api/symbols/{ticker}/candles',
       '/api/symbols/{ticker}/returns',

@@ -8,17 +8,20 @@ import { CandleChart } from "@/app/components/CandleChart";
 import { DayChange } from "@/app/components/DayChange";
 import { OrderTicket } from "@/app/components/OrderTicket";
 import { PillLinks } from "@/app/components/PillLinks";
+import { PositionSummary } from "@/app/components/PositionSummary";
 import { RangeControls } from "@/app/components/RangeControls";
 import { RecordStockView } from "@/app/components/RecentStocks";
 import { formatPrice } from "@/lib/format";
 import { findSymbol, getDailyCandles } from "@/lib/market-data";
-import { listPortfolios } from "@/lib/portfolios";
+import { listPortfolios, symbolTrading } from "@/lib/portfolios";
 import { listWatchlists } from "@/lib/watchlists";
 import {
   chartAdjustments,
   chartHref,
+  fillCounts,
   marketDate,
   parseChartParams,
+  placeFills,
   rangeStart,
   sessionChange,
   splitLabel,
@@ -45,7 +48,8 @@ const adjustmentLabels: Record<ChartAdjustment, string> = {
 
 // The stock page's Chart tab (docs/ui-plan.md § Stock page). Range and
 // adjustment live in the URL, so every view is a link and the server renders
-// it; only the chart itself is a client component.
+// it; only the chart itself is a client component. Since Phase 3 it also
+// shows what the user holds of the symbol and marks their fills on the chart.
 export default async function StockPage({
   params,
   searchParams,
@@ -58,17 +62,25 @@ export default async function StockPage({
   const ticker = symbol.toUpperCase();
   const today = marketDate();
 
-  const [summary, series, watchlists, portfolios] = await Promise.all([
-    findSymbol(ticker),
-    getDailyCandles(ticker, {
-      from: custom ? custom.from : rangeStart(range, today),
-      to: custom?.to,
-      adjustment,
-    }),
-    listWatchlists(),
-    listPortfolios(),
-  ]);
+  // The user's position and fills hang off the portfolio index, so that
+  // chain runs beside the market data instead of after it.
+  const trading = listPortfolios().then(async (portfolios) => ({
+    portfolios,
+    ...(await symbolTrading(ticker, portfolios)),
+  }));
+  const [summary, series, watchlists, { portfolios, holdings, fills }] =
+    await Promise.all([
+      findSymbol(ticker),
+      getDailyCandles(ticker, {
+        from: custom ? custom.from : rangeStart(range, today),
+        to: custom?.to,
+        adjustment,
+      }),
+      listWatchlists(),
+      trading,
+    ]);
   if (!series) notFound();
+  const marked = placeFills(fills, series.candles, custom?.to);
 
   // The header is today's quote, independent of the chart's range and price
   // mode: a custom range or raw prices mustn't turn it into a historical
@@ -140,6 +152,10 @@ export default async function StockPage({
         ) : null}
       </Card>
 
+      {holdings.length > 0 ? (
+        <PositionSummary ticker={ticker} holdings={holdings} />
+      ) : null}
+
       <Card className="grid gap-4 p-5 sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <RangeControls
@@ -166,7 +182,18 @@ export default async function StockPage({
               candles={series.candles}
               label={`${ticker} daily candles, ${adjustmentLabels[adjustment].toLowerCase()}, ${rangeLabel}`}
               splits={adjustment === "raw" ? series.splits : undefined}
+              fills={marked}
             />
+            {marked.length > 0 ? (
+              <p className="m-0 text-sm text-muted">
+                Your fills in this range: {fillCounts(marked)}, marked B and S
+                on the session each filled in. Point at a bar to read its fills
+                {adjustment === "split" && series.splits.length > 0
+                  ? "; their prices are as traded, before any later split"
+                  : null}
+                .
+              </p>
+            ) : null}
             {series.splits.length > 0 ? (
               <p className="m-0 text-sm text-muted">
                 {adjustment === "raw"

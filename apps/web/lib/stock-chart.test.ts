@@ -1,7 +1,9 @@
 import {
   chartHref,
+  fillCounts,
   marketDate,
   parseChartParams,
+  placeFills,
   rangeStart,
   sessionChange,
   splitLabel,
@@ -110,5 +112,47 @@ describe("splitLabel", () => {
     expect(splitLabel({ exDate: "2023-01-03", from: "20", to: "1" })).toBe(
       "1-for-20 reverse split"
     );
+  });
+});
+
+describe("placeFills", () => {
+  const candles = [
+    { time: "2026-11-16" },
+    { time: "2026-11-17" },
+    { time: "2026-11-19" },
+  ];
+  const fill = (sessionDate: string, side: "buy" | "sell" = "buy") => ({
+    side,
+    quantity: "10",
+    price: "150.1",
+    sessionDate,
+  });
+
+  it("marks a fill on its session's bar, or the last bar before it", () => {
+    const placed = placeFills(
+      [fill("2026-11-20", "sell"), fill("2026-11-17"), fill("2026-11-18")],
+      candles
+    );
+    // Today's bar isn't stored yet: the fill of the 20th sits on the 19th.
+    expect(placed.map(({ sessionDate, time }) => [sessionDate, time])).toEqual([
+      ["2026-11-17", "2026-11-17"],
+      ["2026-11-18", "2026-11-17"],
+      ["2026-11-20", "2026-11-19"],
+    ]);
+  });
+
+  it("leaves out a fill before the first bar or after a custom range's end", () => {
+    expect(placeFills([fill("2026-11-13")], candles)).toEqual([]);
+    expect(placeFills([fill("2026-11-20")], candles, "2026-11-19")).toEqual([]);
+    expect(
+      placeFills([fill("2026-11-19")], candles, "2026-11-19")
+    ).toHaveLength(1);
+  });
+
+  it("counts buys and sells in words", () => {
+    expect(fillCounts([fill("a"), fill("b"), fill("c", "sell")])).toBe(
+      "2 buys and 1 sell"
+    );
+    expect(fillCounts([fill("a", "sell")])).toBe("1 sell");
   });
 });
