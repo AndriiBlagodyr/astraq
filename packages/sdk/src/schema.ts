@@ -325,6 +325,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/market/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether the US equity market is open, and the next session */
+        get: operations["getMarketStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/symbols": {
         parameters: {
             query?: never;
@@ -705,6 +722,23 @@ export interface components {
                 code: components["schemas"]["OrderRefusalCode_Output"];
                 message: string;
             } | null;
+        };
+        MarketSession_Output: {
+            /** Format: date */
+            date: string;
+            /** Format: date-time */
+            opensAt: string;
+            /** Format: date-time */
+            closesAt: string;
+        };
+        MarketStatus_Output: {
+            /** Format: date-time */
+            asOf: string;
+            open: boolean;
+            session: components["schemas"]["MarketSession_Output"] | null;
+            nextSession: components["schemas"]["MarketSession_Output"];
+            /** @enum {string} */
+            calendar: "exchange" | "weekdays";
         };
         SymbolSummary_Output: {
             ticker: string;
@@ -1453,6 +1487,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Order_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    getMarketStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketStatus_Output"];
                 };
             };
             /** @description Any error, as an RFC 9457 problem detail */

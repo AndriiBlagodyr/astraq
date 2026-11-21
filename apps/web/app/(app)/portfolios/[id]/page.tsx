@@ -5,7 +5,7 @@ import { EquityChart } from "@/app/components/EquityChart";
 import { HoldingsTable } from "@/app/components/HoldingsTable";
 import { PortfolioHeader } from "@/app/components/PortfolioHeader";
 import { formatMoney, formatSignedMoney, signedPercent } from "@/lib/format";
-import { cashSign } from "@/lib/money";
+import { cashDirection as direction, cashSign } from "@/lib/money";
 import {
   dayPnl,
   getEquityCurve,
@@ -30,15 +30,6 @@ const sessionDay = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
   timeZone: "UTC",
 });
-
-/** Which way a signed figure points, as the Stat's arrow and color. */
-function direction(value: string) {
-  const sign = cashSign(value);
-  return {
-    trend: sign > 0 ? "up" : sign < 0 ? "down" : "flat",
-    tone: sign > 0 ? "positive" : sign < 0 ? "negative" : "neutral",
-  } as const;
-}
 
 // One portfolio's Holdings (docs/ui-plan.md § Portfolio): what it is worth,
 // where that comes from, how that has moved day by day, and each position

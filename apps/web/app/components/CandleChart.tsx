@@ -11,6 +11,7 @@ import {
   type HistogramData,
   type IChartApi,
   type ISeriesApi,
+  type SeriesMarker,
   type UTCTimestamp,
   type WhitespaceData,
 } from "lightweight-charts";
@@ -23,8 +24,16 @@ import {
   type ChartPalette,
 } from "@/lib/chart-theme";
 import { utcMidnight } from "@/lib/dates";
-import { formatPrice } from "@/lib/format";
-import { splitLabel, type Candle, type Split } from "@/lib/stock-chart";
+import { formatPrice, formatShares } from "@/lib/format";
+import {
+  splitLabel,
+  type Candle,
+  type ChartFill,
+  type Split,
+} from "@/lib/stock-chart";
+
+/** A fill and the bar it is marked on (`placeFills` in lib/stock-chart.ts). */
+type PlacedFill = ChartFill & { time: string };
 
 type CandleChartProps = {
   candles: Candle[];
@@ -32,6 +41,11 @@ type CandleChartProps = {
   label: string;
   /** Splits to mark above their ex-date bar; pass them for raw prices only. */
   splits?: Split[];
+  /**
+   * The user's fills to mark: a buy under its bar, a sell over it. Each is
+   * already placed on a bar in `candles`, oldest first.
+   */
+  fills?: PlacedFill[];
 };
 
 // Session dates as UTC midnight: daily bars have no intraday time.
@@ -41,6 +55,7 @@ const toTime = (date: string) =>
 // A stable default: a fresh [] per render would rebuild the chart on every
 // crosshair move.
 const noSplits: Split[] = [];
+const noFills: PlacedFill[] = [];
 
 const volumeFormat = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -59,6 +74,7 @@ export function CandleChart({
   candles,
   label,
   splits = noSplits,
+  fills = noFills,
 }: CandleChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const drawnIn = useRef(false);
@@ -67,6 +83,13 @@ export function CandleChart({
     () => new Map(candles.map((candle) => [toTime(candle.time), candle])),
     [candles]
   );
+  const fillsByTime = useMemo(() => {
+    const grouped = new Map<string, PlacedFill[]>();
+    for (const fill of fills) {
+      grouped.set(fill.time, [...(grouped.get(fill.time) ?? []), fill]);
+    }
+    return grouped;
+  }, [fills]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -125,7 +148,8 @@ export function CandleChart({
     );
     chart.panes()[1]?.setHeight(110);
     // On raw prices a split reads as a crash (or a spike, if reversed); the
-    // marker says why.
+    // marker says why. The user's fills are marked on either price mode: by
+    // their bar, not their price, so an adjustment can't misplace them.
     const markers = createSeriesMarkers(price);
 
     let colors = palette;
@@ -160,16 +184,32 @@ export function CandleChart({
         )
       );
       const lastShown = priceBars[shown - 1]?.time ?? 0;
-      markers.setMarkers(
-        splits
-          .filter((split) => toTime(split.exDate) <= lastShown)
-          .map((split) => ({
+      const marks: SeriesMarker<UTCTimestamp>[] = [
+        ...splits.map(
+          (split): SeriesMarker<UTCTimestamp> => ({
             time: toTime(split.exDate),
             position: "aboveBar",
             shape: "arrowDown",
             color: colors.marker,
             text: splitLabel(split),
-          }))
+          })
+        ),
+        // The letter carries the side, so it doesn't rest on color alone.
+        ...fills.map(
+          (fill): SeriesMarker<UTCTimestamp> => ({
+            time: toTime(fill.time),
+            position: fill.side === "buy" ? "belowBar" : "aboveBar",
+            shape: fill.side === "buy" ? "arrowUp" : "arrowDown",
+            color: fill.side === "buy" ? colors.up : colors.down,
+            text: fill.side === "buy" ? "B" : "S",
+          })
+        ),
+      ];
+      // The series wants its markers in time order.
+      markers.setMarkers(
+        marks
+          .filter((mark) => mark.time <= lastShown)
+          .sort((a, b) => a.time - b.time)
       );
     };
 
@@ -223,9 +263,10 @@ export function CandleChart({
       observer.disconnect();
       chart.remove();
     };
-  }, [candles, byTime, splits]);
+  }, [candles, byTime, splits, fills]);
 
   const shown = hovered ?? candles.at(-1);
+  const shownFills = shown ? (fillsByTime.get(shown.time) ?? noFills) : noFills;
 
   // The OHLCV readout follows the crosshair, so it isn't the figure's caption:
   // an accessible name that changes on every mouse move is noise. The chart's
@@ -242,6 +283,12 @@ export function CandleChart({
           <span>L {formatPrice(shown.low)}</span>
           <span>C {formatPrice(shown.close)}</span>
           <span>V {volumeFormat.format(Number(shown.volume))}</span>
+          {shownFills.map((fill, index) => (
+            <span key={index} className="text-foreground">
+              {fill.side === "buy" ? "Bought" : "Sold"}{" "}
+              {formatShares(fill.quantity)} at {formatPrice(fill.price)}
+            </span>
+          ))}
         </p>
       ) : null}
       <div

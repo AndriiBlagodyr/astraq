@@ -1,5 +1,6 @@
 import type { components } from "@astraq/sdk";
 import { api, apiFailure, fresh } from "./api";
+import type { MarketStatus } from "./market-status";
 import type { ReturnsAdjustment, ReturnSeries } from "./returns-view";
 import type { ChartAdjustment } from "./stock-chart";
 
@@ -26,6 +27,13 @@ export async function findSymbol(
   return (
     symbols.find((symbol) => symbol.ticker === ticker.toUpperCase()) ?? null
   );
+}
+
+/** Whether the US market is trading now, and the session that opens next. */
+export async function getMarketStatus(): Promise<MarketStatus> {
+  const { data, response } = await api.GET("/api/market/status", fresh);
+  if (!data) throw apiFailure("Market status", response.status);
+  return data;
 }
 
 /** Daily candles, or null when the API doesn't know the ticker. */

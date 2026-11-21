@@ -16,6 +16,7 @@ import {
   Tr,
 } from "@astraq/ui";
 import {
+  formatCostPerShare,
   formatMoney,
   formatPrice,
   formatShares,
@@ -52,14 +53,9 @@ function Weight({
   return ratio === null ? dash : plainPercent.format(ratio);
 }
 
-/**
- * Cost per share, for display: the one figure computed here with a float.
- * It is a label for a per-share number the ledger doesn't keep, and nothing
- * is derived from it.
- */
+/** Cost per share, or a dash. */
 function PerShare({ cost, quantity }: { cost: string; quantity: string }) {
-  const perShare = Number(cost) / Number(quantity);
-  return Number.isFinite(perShare) ? formatPrice(String(perShare)) : dash;
+  return formatCostPerShare(cost, quantity) ?? dash;
 }
 
 /** The open lots under a position's row, oldest first: the order a sell takes them in. */

@@ -89,7 +89,21 @@ function formatted(value: string, format: Intl.NumberFormat): string {
 export const formatMoney = (value: string) => formatted(value, money);
 
 /** A gain or loss, signed unless it is zero: "+123.45", "-70.00", "0.00". */
-export const formatSignedMoney = (value: string) => formatted(value, signedMoney);
+export const formatSignedMoney = (value: string) =>
+  formatted(value, signedMoney);
+
+/**
+ * Cost per share, for display: "150.10", or null when it can't be said.
+ * The one figure made with a float here: a label for a per-share number
+ * the ledger doesn't keep, and nothing is derived from it.
+ */
+export function formatCostPerShare(
+  cost: string,
+  quantity: string
+): string | null {
+  const perShare = Number(cost) / Number(quantity);
+  return Number.isFinite(perShare) ? formatPrice(String(perShare)) : null;
+}
 
 /** A share count without trailing zeros: "100", "0.25". */
 export const formatShares = (value: string) => formatted(value, shares);

@@ -12,6 +12,7 @@ import {
 import {
   firstEligibleSession,
   isRegularSession,
+  marketStatus,
   newYorkInstant,
   nextSession,
   sessionCalendar,
@@ -189,6 +190,36 @@ describe('market hours', () => {
     expect(nextSession(new Date('2026-11-30T20:00:00Z'), thanksgiving)).toEqual({
       date: '2026-12-01',
       open: new Date('2026-12-01T14:30:00.000Z'),
+    });
+  });
+
+  it('reports the market status: the session it is in and the next to open', () => {
+    // Wednesday mid-session: open until 16:00, and Thursday is the holiday.
+    expect(marketStatus(new Date('2026-11-25T16:00:00Z'), thanksgiving)).toEqual({
+      open: true,
+      session: session('2026-11-25'),
+      next: session('2026-11-27', 13 * 60),
+      fromCalendar: true,
+    });
+    // Thanksgiving itself: closed, and Friday closes early.
+    expect(marketStatus(new Date('2026-11-26T16:00:00Z'), thanksgiving)).toEqual({
+      open: false,
+      session: null,
+      next: session('2026-11-27', 13 * 60),
+      fromCalendar: true,
+    });
+    // Without a calendar the holiday reads as a trading day, and says so.
+    expect(marketStatus(new Date('2026-11-26T16:00:00Z'))).toEqual({
+      open: true,
+      session: session('2026-11-26'),
+      next: session('2026-11-27'),
+      fromCalendar: false,
+    });
+    // The calendar's last evening: the next session is past what it covers.
+    expect(marketStatus(new Date('2026-11-30T22:00:00Z'), thanksgiving)).toMatchObject({
+      open: false,
+      next: session('2026-12-01'),
+      fromCalendar: false,
     });
   });
 });

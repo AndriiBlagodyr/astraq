@@ -116,6 +116,105 @@ export async function getEquityCurve(
   return data.points;
 }
 
+/** A portfolio as Today shows it: its books, the day's PnL, and what waits. */
+export type PortfolioOverview = {
+  portfolio: Portfolio;
+  day: { amount: string; date: string } | null;
+  /** Orders placed and not yet filled, cancelled, or rejected. */
+  openOrders: number;
+};
+
+/**
+ * Each portfolio with its day PnL and open order count, in the index's
+ * order. The index has no books, so each is read on its own: the portfolio
+ * first (which settles it), then its curve and orders, so all three are of
+ * the same settled state. One deleted in between is left out.
+ */
+export async function portfolioOverviews(
+  summaries: PortfolioSummary[]
+): Promise<PortfolioOverview[]> {
+  const overviews = await Promise.all(
+    summaries.map(async ({ id }) => {
+      const portfolio = await getPortfolio(id);
+      if (!portfolio) return null;
+      const [curve, orders] = await Promise.all([
+        getEquityCurve(id),
+        listOrders(id),
+      ]);
+      return {
+        portfolio,
+        day: dayPnl(curve ?? []),
+        openOrders: (orders ?? []).filter((order) => order.status === "open")
+          .length,
+      };
+    })
+  );
+  return overviews.filter((overview) => overview !== null);
+}
+
+/** A position in one symbol, and the portfolio it is held in. */
+export type SymbolHolding = {
+  portfolio: Pick<Portfolio, "id" | "name">;
+  position: Position;
+};
+
+/** One of the user's fills in a symbol. */
+export type SymbolFill = {
+  orderId: string;
+  portfolioId: string;
+  side: Order["side"];
+  quantity: string;
+  /** Per share, as traded: not adjusted for a later split. */
+  price: string;
+  /** The session whose prices filled the order, YYYY-MM-DD. */
+  sessionDate: string;
+};
+
+/**
+ * What the user holds of one symbol and every fill they have had in it,
+ * across their portfolios: the stock page's position summary and the
+ * chart's fill markers. Fills come oldest first.
+ */
+export async function symbolTrading(
+  ticker: string,
+  summaries: PortfolioSummary[]
+): Promise<{ holdings: SymbolHolding[]; fills: SymbolFill[] }> {
+  const perPortfolio = await Promise.all(
+    summaries.map(async ({ id }) => {
+      const portfolio = await getPortfolio(id);
+      if (!portfolio) return null;
+      const orders = (await listOrders(id)) ?? [];
+      return {
+        position: portfolio.positions.find((held) => held.ticker === ticker),
+        portfolio: { id, name: portfolio.name },
+        fills: orders.flatMap((order): SymbolFill[] =>
+          order.ticker === ticker && order.fill
+            ? [
+                {
+                  orderId: order.id,
+                  portfolioId: id,
+                  side: order.side,
+                  quantity: order.quantity,
+                  price: order.fill.price,
+                  sessionDate: order.fill.sessionDate,
+                },
+              ]
+            : []
+        ),
+      };
+    })
+  );
+  const read = perPortfolio.filter((entry) => entry !== null);
+  return {
+    holdings: read.flatMap(({ portfolio, position }) =>
+      position ? [{ portfolio, position }] : []
+    ),
+    fills: read
+      .flatMap((entry) => entry.fills)
+      .sort((a, b) => a.sessionDate.localeCompare(b.sessionDate)),
+  };
+}
+
 /** The points that can be drawn: the days with an equity. */
 export function pricedPoints(points: EquityPoint[]): PricedEquityPoint[] {
   return points.filter(

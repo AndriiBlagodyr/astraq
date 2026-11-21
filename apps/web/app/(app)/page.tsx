@@ -1,17 +1,22 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Button, Card, EmptyState, Input, buttonVariants } from "@astraq/ui";
+import { MarketStatusLine } from "@/app/components/MarketStatusLine";
 import { NoSymbolsLoaded } from "@/app/components/NoSymbolsLoaded";
+import { PortfolioSummaryCard } from "@/app/components/PortfolioSummaryCard";
 import { RecentStocks } from "@/app/components/RecentStocks";
 import { SymbolTable } from "@/app/components/SymbolTable";
 import { WatchlistSummaryCard } from "@/app/components/WatchlistSummaryCard";
-import { searchSymbols } from "@/lib/market-data";
+import { getMarketStatus, searchSymbols } from "@/lib/market-data";
+import { listPortfolios, portfolioOverviews } from "@/lib/portfolios";
 import { getWatchlist, listWatchlists } from "@/lib/watchlists";
 
-// Today, Phase 2 (docs/ui-plan.md § Today): each of the user's watchlists
-// with last closes, day changes, and sparklines, then the stocks opened
-// last. Until there's a watchlist, the Phase 1 view stands in: symbol
-// search and every symbol with stored candles.
+// Today (docs/ui-plan.md § Today). Phase 3: whether the market is open and
+// the session that opens next, and a card per paper portfolio (equity, day
+// PnL, cash, open orders). Phase 2: each of the user's watchlists with last
+// closes, day changes, and sparklines, then the stocks opened last. Until
+// there's a watchlist, the Phase 1 view stands in: symbol search and every
+// symbol with stored candles.
 
 const loop = [
   "Watchlist",
@@ -28,12 +33,18 @@ export default async function TodayPage() {
   // deployed Today would show build-time closes until the next deploy.
   await connection();
 
-  // The index carries no rows, so each list is read on its own; they go out
-  // together. A list deleted in between reads as null and is left out.
-  const summaries = await listWatchlists();
-  const watchlists = (
-    await Promise.all(summaries.map((summary) => getWatchlist(summary.id)))
-  ).filter((watchlist) => watchlist !== null);
+  // Neither index carries its rows, so each list and each portfolio is read
+  // on its own; they go out together. One deleted in between reads as null
+  // and is left out.
+  const [market, watchlists, portfolios] = await Promise.all([
+    getMarketStatus(),
+    listWatchlists().then(async (summaries) =>
+      (
+        await Promise.all(summaries.map((summary) => getWatchlist(summary.id)))
+      ).filter((watchlist) => watchlist !== null)
+    ),
+    listPortfolios().then(portfolioOverviews),
+  ]);
   const symbols = watchlists.length === 0 ? await searchSymbols() : [];
 
   return (
@@ -63,7 +74,12 @@ export default async function TodayPage() {
             </li>
           ))}
         </ol>
+        <MarketStatusLine status={market} />
       </Card>
+
+      {portfolios.map((overview) => (
+        <PortfolioSummaryCard key={overview.portfolio.id} overview={overview} />
+      ))}
 
       {watchlists.map((watchlist) => (
         <WatchlistSummaryCard key={watchlist.id} watchlist={watchlist} />

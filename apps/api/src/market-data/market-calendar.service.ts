@@ -1,8 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { toIsoDate, utcMidnight } from '../common/dates';
+import type { MarketStatus } from '@astraq/shared';
 import {
+  marketStatus,
   sessionCalendar,
   sessionDate,
+  type MarketSession,
   type SessionCalendar,
 } from '../trading/market-hours';
 import { AlpacaClient } from './alpaca/alpaca.client';
@@ -92,6 +95,29 @@ export class MarketCalendarService {
     const from = stored.first > window.from ? stored.first : window.from;
     const to = stored.last < window.to ? stored.last : window.to;
     return from > to ? null : sessionCalendar(from, to, stored.sessions);
+  }
+
+  /**
+   * Whether the market trades at `now` and the session that opens next
+   * (`GET /api/market/status`), by the calendar where it is stored.
+   */
+  async status(now: Date = new Date()): Promise<MarketStatus> {
+    const { open, session, next, fromCalendar } = marketStatus(
+      now,
+      await this.around(now),
+    );
+    const times = ({ date, open, close }: MarketSession) => ({
+      date,
+      opensAt: open.toISOString(),
+      closesAt: close.toISOString(),
+    });
+    return {
+      asOf: now.toISOString(),
+      open,
+      session: session && times(session),
+      nextSession: times(next),
+      calendar: fromCalendar ? 'exchange' : 'weekdays',
+    };
   }
 
   /** Reloads the year after `day`; false when it failed or is backing off. */

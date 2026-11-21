@@ -180,6 +180,42 @@ export const ReturnSeriesSchema = z
   })
   .meta({ id: "ReturnSeries" });
 
+/** One trading day of the US equity market. */
+export const MarketSessionSchema = z
+  .object({
+    /** The session's New York calendar date, YYYY-MM-DD. */
+    date: z.iso.date(),
+    opensAt: z.iso.datetime(),
+    /** 16:00 New York, or earlier on a half day. */
+    closesAt: z.iso.datetime(),
+  })
+  .meta({ id: "MarketSession" });
+
+/**
+ * Body of `GET /api/market/status`: whether the US equity market is trading
+ * now, and the session that opens next.
+ */
+export const MarketStatusSchema = z
+  .object({
+    /** The instant the answer is for. */
+    asOf: z.iso.datetime(),
+    open: z.boolean(),
+    /** The session trading now; null while the market is closed. */
+    session: MarketSessionSchema.nullable(),
+    /** The first session that opens after `asOf`. */
+    nextSession: MarketSessionSchema,
+    /**
+     * Where the sessions come from: `exchange` is the exchange calendar,
+     * with holidays and half days. `weekdays` is the fallback where the
+     * calendar isn't loaded for these days: Monday to Friday, 09:30 to
+     * 16:00 New York, so a holiday reads as a trading day.
+     */
+    calendar: z.enum(["exchange", "weekdays"]),
+  })
+  .meta({ id: "MarketStatus" });
+
+export type MarketSessionTimes = z.infer<typeof MarketSessionSchema>;
+export type MarketStatus = z.infer<typeof MarketStatusSchema>;
 export type LatestClose = z.infer<typeof LatestCloseSchema>;
 export type SymbolSummary = z.infer<typeof SymbolSummarySchema>;
 export type SymbolSearchQuery = z.infer<typeof SymbolSearchQuerySchema>;
