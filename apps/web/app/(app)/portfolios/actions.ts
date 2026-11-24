@@ -127,6 +127,25 @@ export async function transferCash(
 }
 
 /**
+ * The signed-in user's portfolios as the order ticket lists them, for the
+ * ticket the command palette opens: it can open on any page, so no page
+ * has loaded them for it.
+ */
+export async function listTicketPortfolios(): Promise<
+  ActionResult<{ id: string; name: string }[]>
+> {
+  const client = await userApi();
+  const { data, response } = await client.GET("/api/portfolios", {
+    cache: "no-store",
+  });
+  if (!data) return failure(response, "Couldn't load your portfolios");
+  return {
+    ok: true,
+    value: data.portfolios.map(({ id, name }) => ({ id, name })),
+  };
+}
+
+/**
  * What placing the order now would do (the order ticket's preview and its
  * inline guards): when it fills, the estimated cost, the cash after, and
  * the api's refusal if it would refuse. Places nothing.

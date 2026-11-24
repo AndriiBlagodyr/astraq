@@ -1,7 +1,7 @@
 "use client";
 
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -25,6 +25,7 @@ import {
   actionCommands,
   parseRecent,
   rememberRecent,
+  tickerOfPath,
   type PaletteCommand,
 } from "@/lib/command-palette";
 import { createLocalStore } from "@/lib/local-store";
@@ -34,6 +35,7 @@ import {
   isTypingTarget,
   type Shortcut,
 } from "@/lib/shortcuts";
+import { OrderTicketDrawer } from "./OrderTicket";
 import { PaletteSearch, type PaletteSearchProps } from "./PaletteSearch";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 
@@ -76,6 +78,11 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const { mode, theme, toggleMode, setTheme } = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // The order ticket the palette opens (docs/ui-plan.md § Order ticket). On
+  // a stock page it is for that symbol; the ticker is kept from the moment
+  // it opened, so the drawer doesn't change under a navigation.
+  const pageTicker = tickerOfPath(usePathname());
+  const [ticket, setTicket] = useState<{ ticker: string | null } | null>(null);
   // Both read browser state, so they render their server values first and
   // settle after hydration; the trigger's hint flips from Ctrl to ⌘ then.
   const apple = useSyncExternalStore(
@@ -134,6 +141,9 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
         return;
       }
       switch (command.action) {
+        case "trade":
+          setTicket({ ticker: pageTicker });
+          break;
         case "toggle-mode":
           toggleMode();
           break;
@@ -148,7 +158,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
           break;
       }
     },
-    [nextTheme, recent, router, setTheme, signOut, toggleMode]
+    [nextTheme, pageTicker, recent, router, setTheme, signOut, toggleMode]
   );
 
   const runShortcut = useCallback(
@@ -217,7 +227,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
         recent={recent}
-        actions={actionCommands({ mode, nextTheme })}
+        actions={actionCommands({ mode, nextTheme, ticker: pageTicker })}
         apple={apple}
         onRun={run}
         finalFocus={finalFocus}
@@ -226,6 +236,13 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
         open={shortcutsOpen}
         onOpenChange={setShortcutsOpen}
         apple={apple}
+      />
+      <OrderTicketDrawer
+        open={ticket !== null}
+        onOpenChange={(open) => {
+          if (!open) setTicket(null);
+        }}
+        ticker={ticket?.ticker ?? undefined}
       />
     </CommandPaletteContext.Provider>
   );

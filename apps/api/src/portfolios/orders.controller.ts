@@ -61,7 +61,10 @@ export class OrdersController {
     description:
       'A market order placed during the session fills at once at the latest known price; ' +
       'every other order waits for the next session it can fill in. An order the portfolio ' +
-      "can't cover, or one over its limit per order, is a 422 and isn't stored. Repeating the request " +
+      "can't cover, or one over its limit per order, is a 422 and isn't stored. An order is sized by " +
+      '`quantity` (shares) or by `amount` (dollars, before commission): an amount is turned into shares ' +
+      'at the latest close with slippage, or at the limit, rounded down to a millionth of a share, and ' +
+      'the order is stored in those shares. Repeating the request ' +
       'with the same Idempotency-Key returns the order the first one placed, with the ' +
       'response header `Idempotency-Replayed: true`; the same key with a different order is a 409.',
   })
@@ -102,7 +105,8 @@ export class OrdersController {
     summary: 'What placing an order would do, without placing it',
     description:
       'When the order would fill, what it is expected to cost at the latest close or its limit, ' +
-      'the cash left after it, and the reason it would be refused, if any. Writes nothing.',
+      'the cash left after it, and the reason it would be refused, if any. For an order sized by ' +
+      '`amount`, `quantity` is the shares it comes to. Writes nothing.',
   })
   @ZodResponse({ status: 200, type: OrderPreviewDto })
   preview(

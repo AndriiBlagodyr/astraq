@@ -1,9 +1,11 @@
 import {
   CASH_PLACES,
+  QUANTITY_PLACES,
   ZERO,
   add,
   compare,
   decimal,
+  divide,
   format,
   round,
   subtract,
@@ -13,6 +15,7 @@ import type { LedgerState } from '../ledger/ledger';
 import {
   fillAtLastPrice,
   fillAtLimit,
+  quotedPrice,
   type Fill,
   type FillCosts,
   type FillOrder,
@@ -34,7 +37,9 @@ export interface RiskOrder extends FillOrder {
 export type RefusalCode =
   | 'insufficient_cash'
   | 'insufficient_shares'
-  | 'max_notional';
+  | 'max_notional'
+  /** A dollar amount that can't be turned into shares (`sharesFor`). */
+  | 'unsized';
 
 export interface Refusal {
   code: RefusalCode;
@@ -80,6 +85,34 @@ export function estimate(
     return lastPrice === undefined
       ? null
       : fillAtLastPrice(order, lastPrice, costs);
+  } catch (error) {
+    if (error instanceof RangeError) return null;
+    throw error;
+  }
+}
+
+/**
+ * The shares a dollar amount comes to at the price the estimate uses
+ * (`quotedPrice`), rounded down to a millionth of a share: the estimate of
+ * the sized order is then never more than the amount. "0" when the amount
+ * buys less than a millionth; null without a usable price.
+ */
+export function sharesFor(
+  order: Pick<FillOrder, 'side' | 'type' | 'limitPrice'>,
+  amount: string,
+  lastPrice: string | undefined,
+  costs: FillCosts,
+): { quantity: string; price: string } | null {
+  try {
+    const price = quotedPrice(order, lastPrice, costs);
+    if (price === null) return null;
+    const shares = divide(
+      decimal(amount),
+      decimal(price),
+      QUANTITY_PLACES,
+      'floor',
+    );
+    return { quantity: format(shares), price };
   } catch (error) {
     if (error instanceof RangeError) return null;
     throw error;

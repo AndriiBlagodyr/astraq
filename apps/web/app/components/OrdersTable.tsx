@@ -43,16 +43,29 @@ const STATUS: Record<
   rejected: { label: "Rejected", tone: "negative" },
 };
 
-/** What was asked for: side, shares, symbol, and the limit if it has one. */
+/**
+ * What was asked for: side, shares, symbol, and the limit if it has one.
+ * An order asked for in dollars says so; while it is on its way to the api
+ * it has no shares yet, and reads "Buy 500.00 of NVDA".
+ */
 function Asked({
   order,
 }: {
-  order: Pick<Order, "side" | "type" | "quantity" | "ticker" | "limitPrice">;
+  order: Pick<Order, "side" | "type" | "ticker" | "limitPrice" | "amount"> & {
+    quantity: string | null;
+  };
 }) {
+  const terms =
+    order.type === "limit" && order.limitPrice
+      ? `Limit ${formatPrice(order.limitPrice)}`
+      : "Market";
   return (
     <>
       <span className="font-semibold text-foreground">
-        {order.side === "buy" ? "Buy" : "Sell"} {formatShares(order.quantity)}{" "}
+        {order.side === "buy" ? "Buy" : "Sell"}{" "}
+        {order.quantity !== null
+          ? formatShares(order.quantity)
+          : `${formatMoney(order.amount ?? "")} of`}{" "}
         <Link
           href={`/stocks/${order.ticker}`}
           className="underline-offset-4 hover:underline"
@@ -61,9 +74,9 @@ function Asked({
         </Link>
       </span>
       <span className="block text-sm text-muted">
-        {order.type === "limit" && order.limitPrice
-          ? `Limit ${formatPrice(order.limitPrice)}`
-          : "Market"}
+        {order.amount !== null && order.quantity !== null
+          ? `${terms} · sized from ${formatMoney(order.amount)}`
+          : terms}
       </span>
     </>
   );

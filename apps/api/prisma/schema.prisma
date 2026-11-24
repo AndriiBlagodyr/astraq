@@ -417,6 +417,9 @@ model Order {
   type           OrderType
   /// Shares, above zero.
   quantity       Decimal           @db.Decimal(24, 6)
+  /// The dollar amount `quantity` was sized from when the order was placed;
+  /// null for an order placed in shares.
+  amount         Decimal?          @db.Decimal(18, 2)
   /// Set on a limit order and only there (CHECK constraint in the migration).
   limitPrice     Decimal?          @map("limit_price") @db.Decimal(18, 6)
   status         OrderStatus       @default(OPEN)

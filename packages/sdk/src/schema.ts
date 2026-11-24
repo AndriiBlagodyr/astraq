@@ -279,7 +279,7 @@ export interface paths {
         put?: never;
         /**
          * Place an order, at most once per Idempotency-Key
-         * @description A market order placed during the session fills at once at the latest known price; every other order waits for the next session it can fill in. An order the portfolio can't cover, or one over its limit per order, is a 422 and isn't stored. Repeating the request with the same Idempotency-Key returns the order the first one placed, with the response header `Idempotency-Replayed: true`; the same key with a different order is a 409.
+         * @description A market order placed during the session fills at once at the latest known price; every other order waits for the next session it can fill in. An order the portfolio can't cover, or one over its limit per order, is a 422 and isn't stored. An order is sized by `quantity` (shares) or by `amount` (dollars, before commission): an amount is turned into shares at the latest close with slippage, or at the limit, rounded down to a millionth of a share, and the order is stored in those shares. Repeating the request with the same Idempotency-Key returns the order the first one placed, with the response header `Idempotency-Replayed: true`; the same key with a different order is a 409.
          */
         post: operations["placeOrder"];
         delete?: never;
@@ -299,7 +299,7 @@ export interface paths {
         put?: never;
         /**
          * What placing an order would do, without placing it
-         * @description When the order would fill, what it is expected to cost at the latest close or its limit, the cash left after it, and the reason it would be refused, if any. Writes nothing.
+         * @description When the order would fill, what it is expected to cost at the latest close or its limit, the cash left after it, and the reason it would be refused, if any. For an order sized by `amount`, `quantity` is the shares it comes to. Writes nothing.
          */
         post: operations["previewOrder"];
         delete?: never;
@@ -664,6 +664,7 @@ export interface components {
             side: components["schemas"]["OrderSide_Output"];
             type: components["schemas"]["OrderType_Output"];
             quantity: string;
+            amount: string | null;
             limitPrice: string | null;
             status: components["schemas"]["OrderStatus_Output"];
             closeReason: components["schemas"]["OrderCloseReason_Output"] | null;
@@ -703,11 +704,12 @@ export interface components {
             ticker: string;
             side: components["schemas"]["OrderSide"];
             type: components["schemas"]["OrderType"];
-            quantity: string;
+            quantity?: string | null;
+            amount?: string | null;
             limitPrice?: string | null;
         };
         /** @enum {string} */
-        OrderRefusalCode_Output: "insufficient_cash" | "insufficient_shares" | "max_notional";
+        OrderRefusalCode_Output: "insufficient_cash" | "insufficient_shares" | "max_notional" | "unsized";
         OrderPreview_Output: {
             /** @enum {string} */
             timing: "immediate" | "next_session";
@@ -715,6 +717,7 @@ export interface components {
             fillSession: string;
             estimatedPrice: string | null;
             priceDate: string | null;
+            quantity: string | null;
             notional: string | null;
             commission: string | null;
             cashAfter: string | null;
