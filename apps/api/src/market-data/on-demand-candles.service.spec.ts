@@ -1,5 +1,5 @@
-import { BootstrapService } from './bootstrap/bootstrap.service';
 import { BOOTSTRAP_FROM } from './bootstrap/bootstrap-symbols';
+import { IngestionService } from './ingestion.service';
 import { MarketDataRepository } from './market-data.repository';
 import { OnDemandCandlesService } from './on-demand-candles.service';
 
@@ -9,20 +9,20 @@ describe('OnDemandCandlesService', () => {
     hasCandles: vi.fn(),
     findSeed: vi.fn().mockResolvedValue(seed),
   };
-  const bootstrap = { run: vi.fn() };
+  const ingestion = { available: true, backfill: vi.fn() };
   const service = new OnDemandCandlesService(
     repository as unknown as MarketDataRepository,
-    bootstrap as unknown as BootstrapService,
+    ingestion as unknown as IngestionService,
   );
 
   beforeEach(() => {
-    bootstrap.run.mockReset();
+    ingestion.backfill.mockReset();
   });
 
   it('loads the full history once for a symbol without candles', async () => {
     repository.hasCandles.mockResolvedValue(false);
     let finish!: () => void;
-    bootstrap.run.mockReturnValue(new Promise<void>((r) => (finish = r)));
+    ingestion.backfill.mockReturnValue(new Promise<void>((r) => (finish = r)));
 
     // Two adds while the first load is in flight share it.
     const first = service.ensureCandles(42);
@@ -30,8 +30,8 @@ describe('OnDemandCandlesService', () => {
     finish();
     await Promise.all([first, second]);
 
-    expect(bootstrap.run).toHaveBeenCalledTimes(1);
-    expect(bootstrap.run).toHaveBeenCalledWith([seed], {
+    expect(ingestion.backfill).toHaveBeenCalledTimes(1);
+    expect(ingestion.backfill).toHaveBeenCalledWith([seed], {
       from: BOOTSTRAP_FROM,
       to: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     });
@@ -40,22 +40,22 @@ describe('OnDemandCandlesService', () => {
   it('does nothing for a symbol that already has candles', async () => {
     repository.hasCandles.mockResolvedValue(true);
     await service.ensureCandles(42);
-    expect(bootstrap.run).not.toHaveBeenCalled();
+    expect(ingestion.backfill).not.toHaveBeenCalled();
   });
 
   it('swallows a provider failure: the watch succeeds, the next add retries', async () => {
     repository.hasCandles.mockResolvedValue(false);
-    bootstrap.run.mockRejectedValue(new Error('Alpaca down'));
+    ingestion.backfill.mockRejectedValue(new Error('Alpaca down'));
     await expect(service.ensureCandles(42)).resolves.toBeUndefined();
-    bootstrap.run.mockResolvedValue(undefined);
+    ingestion.backfill.mockResolvedValue(undefined);
     await service.ensureCandles(42);
-    expect(bootstrap.run).toHaveBeenCalledTimes(2);
+    expect(ingestion.backfill).toHaveBeenCalledTimes(2);
   });
 
-  it('is a no-op without Alpaca keys', async () => {
+  it('is a no-op without a provider', async () => {
     const offline = new OnDemandCandlesService(
       repository as unknown as MarketDataRepository,
-      null,
+      { available: false } as unknown as IngestionService,
     );
     repository.hasCandles.mockClear();
     await offline.ensureCandles(42);

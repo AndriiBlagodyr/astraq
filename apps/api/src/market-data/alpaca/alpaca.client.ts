@@ -11,16 +11,22 @@ import {
   alpacaCalendarSchema,
   alpacaCorporateActionsPageSchema,
 } from './alpaca.schemas';
-import { parseJsonExact } from './exact-json';
+import { ProviderError } from '../provider/market-data-provider';
+import { type Fetch, providerGet } from '../provider/provider-http';
 
 /**
  * A minimal, hand-written client for the four Alpaca endpoints the market
  * data loaders need: bars and corporate actions from the data API, the asset
- * list and the exchange calendar from the trading API. No retries or rate limiting on purpose: every
- * loader is idempotent, so a failed run is simply run again (ROADMAP Phase 1).
+ * list and the exchange calendar from the trading API. No retries or rate
+ * limiting here: a failure is a `ProviderError` that says whether trying
+ * again can help, every loader is idempotent, and the retrying is the job
+ * queue's (ROADMAP Phase 4 item 2).
  */
 export class AlpacaClient {
-  constructor(private readonly config: AlpacaEnv) {}
+  constructor(
+    private readonly config: AlpacaEnv,
+    private readonly fetch: Fetch = globalThis.fetch,
+  ) {}
 
   /**
    * Every active US equity Alpaca knows, in one response (about 11,000
@@ -124,23 +130,21 @@ export class AlpacaClient {
     for (const [key, value] of Object.entries(params)) {
       if (value !== null) url.searchParams.set(key, value);
     }
-
-    const response = await fetch(url, {
+    const data = await providerGet({
+      provider: 'alpaca',
+      fetch: this.fetch,
+      url,
       headers: {
         'APCA-API-KEY-ID': this.config.ALPACA_API_KEY_ID,
         'APCA-API-SECRET-KEY': this.config.ALPACA_API_SECRET_KEY,
-        accept: 'application/json',
       },
-      // One page of one request. Without it a stalled response holds the
-      // caller (a watchlist add waits on this) for undici's 5 minutes.
-      signal: AbortSignal.timeout(30_000),
+      schema,
     });
-    const body = await response.text();
-    if (!response.ok) {
-      throw new Error(
-        `Alpaca ${path} failed with ${response.status}: ${body.slice(0, 500)}`,
-      );
+    // None of these endpoints answers 404 for a ticker it doesn't know (it
+    // leaves the ticker out), so a 404 here is a wrong host or path.
+    if (data === null) {
+      throw new ProviderError('alpaca', 'rejected', `alpaca ${path} is not there (404)`);
     }
-    return schema.parse(parseJsonExact(body));
+    return data;
   }
 }

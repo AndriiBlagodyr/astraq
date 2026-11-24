@@ -7,7 +7,7 @@ import {
 } from './alpaca.mapper';
 import type { AlpacaAsset } from './alpaca.schemas';
 import { alpacaBarsPageSchema } from './alpaca.schemas';
-import { parseJsonExact } from './exact-json';
+import { parseJsonExact } from '../provider/exact-json';
 
 describe('alpaca mapping', () => {
   it('keeps listed, tradable equities with a routable ticker, by MIC code', () => {

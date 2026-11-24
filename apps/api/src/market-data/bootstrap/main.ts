@@ -7,7 +7,7 @@ import { MarketDataRepository } from '../market-data.repository';
 import type { SymbolSeed } from '../market-data.types';
 import { BOOTSTRAP_FROM, BOOTSTRAP_SYMBOLS } from './bootstrap-symbols';
 import { BootstrapModule } from './bootstrap.module';
-import { BootstrapService } from './bootstrap.service';
+import { IngestionService } from '../ingestion.service';
 
 // `pnpm --filter @astraq/api bootstrap [--tickers NVDA,AAPL]`
 // Loads daily bars from BOOTSTRAP_FROM through yesterday (UTC) for the
@@ -51,8 +51,8 @@ async function main() {
       app.get(MarketDataRepository),
     );
     await app
-      .get(BootstrapService)
-      .run(symbols, { from: BOOTSTRAP_FROM, to: yesterdayUtc() });
+      .get(IngestionService)
+      .backfill(symbols, { from: BOOTSTRAP_FROM, to: yesterdayUtc() });
   } finally {
     await app.close();
   }

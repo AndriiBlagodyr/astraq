@@ -53,7 +53,7 @@ jobs:
       - run: pnpm turbo run lint typecheck test:unit
 
   api-integration:
-    name: API — integration tests (TimescaleDB)
+    name: API — integration tests (TimescaleDB, Redis)
     runs-on: ubuntu-latest
     services:
       # Same image as infra/docker/compose.yml.
@@ -70,8 +70,19 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      # The job queue's tests (retries, dead letters) run against real Redis.
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
       DATABASE_URL: postgres://veracand:veracand@localhost:5432/veracand
+      REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v5
 
