@@ -196,6 +196,26 @@ export function fillAtLimit(order: FillOrder, costs: FillCosts): Fill | null {
 }
 
 /**
+ * The price per share an estimate goes by, before the order has a size: the
+ * limit for a limit order, the latest known price with slippage for a
+ * market order. It is the `price` of `fillAtLimit` and `fillAtLastPrice`,
+ * so an order sized from a dollar amount at this price is estimated at it
+ * too. Null for a market order without a last price.
+ */
+export function quotedPrice(
+  order: Pick<FillOrder, 'side' | 'type' | 'limitPrice'>,
+  lastPrice: string | undefined,
+  costs: FillCosts,
+): string | null {
+  if (order.type === 'limit') {
+    return format(positive(order.limitPrice ?? '', 'limitPrice', PRICE_PLACES));
+  }
+  if (lastPrice === undefined) return null;
+  const last = positive(lastPrice, 'lastPrice', PRICE_PLACES);
+  return format(slip(last, order.side, costs.slippageBps));
+}
+
+/**
  * A market order placed while the market is open: fills at the latest known
  * price plus slippage. Until realtime prices exist (Phase 9) that price is
  * the latest stored close. A limit order never fills here; it waits for the

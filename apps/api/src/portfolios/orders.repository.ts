@@ -34,6 +34,8 @@ export interface OrderRow {
   side: OrderSide;
   type: OrderType;
   quantity: string;
+  /** The dollar amount the shares were sized from; null for an order placed in shares. */
+  amount: string | null;
   limitPrice: string | null;
   status: 'open' | 'filled' | 'cancelled' | 'rejected';
   closeReason: CloseReason | null;
@@ -82,6 +84,7 @@ const orderColumns = {
   side: true,
   type: true,
   quantity: true,
+  amount: true,
   limitPrice: true,
   status: true,
   closeReason: true,
@@ -109,6 +112,7 @@ function toRow({ symbol, fill, ...order }: StoredOrder): OrderRow {
     side: lower(order.side),
     type: lower(order.type),
     quantity: order.quantity.toFixed(),
+    amount: order.amount?.toFixed(2) ?? null,
     limitPrice: order.limitPrice?.toFixed() ?? null,
     status: lower(order.status),
     closeReason: order.closeReason && lower(order.closeReason),
@@ -365,6 +369,7 @@ export class OrdersRepository {
           side: upper(placed.side) as DbOrderSide,
           type: upper(placed.type) as DbOrderType,
           quantity: placed.quantity,
+          amount: placed.amount ?? null,
           limitPrice: placed.limitPrice,
           status: upper(placed.status) as DbOrderStatus,
           closeReason: placed.reason && (upper(placed.reason) as DbCloseReason),

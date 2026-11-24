@@ -428,6 +428,7 @@ describe('preview', () => {
       fillSession: TUE,
       estimatedPrice: '100.000000',
       priceDate: MON,
+      quantity: '10',
       notional: '1000.00',
       commission: '0.00',
       cashAfter: '4000.00',
@@ -467,6 +468,61 @@ describe('preview', () => {
     expect(
       preview(book({ history: funded('5000') }), buyTen, lastBars, at(TUE, '15:00'), null, '999.99').refusal,
     ).toMatchObject({ code: 'max_notional' });
+  });
+
+  it('sizes an order asked for in dollars at the price it is estimated at', () => {
+    const inDollars = { ...buyTen, quantity: null, amount: '250' };
+    const slipped = { slippageBps: 100, commissionPerOrder: '1', commissionPerShare: '0' };
+
+    // 250 at 101 (the close with 1% slippage) is 2.475247 shares, rounded
+    // down, so the estimate stays within the 250; the commission is on top.
+    const market = preview(
+      book({ history: funded('5000'), costs: slipped }),
+      inDollars,
+      lastBars,
+      at(TUE, '15:00'),
+      null,
+      null,
+    );
+    expect(market).toMatchObject({
+      estimatedPrice: '101.000000',
+      quantity: '2.475247',
+      notional: '250.00',
+      commission: '1.00',
+      cashAfter: '4749.00',
+      refusal: null,
+    });
+
+    // A limit order is sized at its limit, and the guards see the shares.
+    const limit = preview(
+      book({ history: funded('200') }),
+      { ...inDollars, type: 'limit', limitPrice: '80' },
+      lastBars,
+      at(TUE, '15:00'),
+      null,
+      null,
+    );
+    expect(limit).toMatchObject({ quantity: '3.125000', notional: '250.00' });
+    expect(limit.refusal?.code).toBe('insufficient_cash');
+  });
+
+  it('refuses a dollar amount it has no shares for', () => {
+    const inDollars = { ...buyTen, quantity: null, amount: '250' };
+    const unpriced = preview(book({ history: funded('5000') }), inDollars, new Map(), at(TUE, '15:00'), null, null);
+    expect(unpriced).toMatchObject({ quantity: null, estimatedPrice: null, notional: null });
+    expect(unpriced.refusal?.code).toBe('unsized');
+
+    // A cent of a 100000 share is less than a millionth of one.
+    const tiny = preview(
+      book({ history: funded('5000') }),
+      { ...inDollars, amount: '0.01' },
+      new Map([[SYMBOL, { date: MON, close: '100000' }]]),
+      at(TUE, '15:00'),
+      null,
+      null,
+    );
+    expect(tiny.refusal).toMatchObject({ code: 'unsized' });
+    expect(tiny.quantity).toBeNull();
   });
 });
 

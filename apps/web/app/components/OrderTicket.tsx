@@ -9,6 +9,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import { PlaceOrderBodySchema, type PlaceOrderBody } from "@astraq/shared";
 import {
   Autocomplete,
@@ -32,12 +33,17 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
+  buttonVariants,
   useToastManager,
   type ButtonProps,
 } from "@astraq/ui";
-import { placeOrder, previewOrder } from "@/app/(app)/portfolios/actions";
+import {
+  listTicketPortfolios,
+  placeOrder,
+  previewOrder,
+} from "@/app/(app)/portfolios/actions";
 import type { ActionResult } from "@/lib/action-result";
-import { formatMoney, formatPrice } from "@/lib/format";
+import { formatMoney, formatPrice, formatShares } from "@/lib/format";
 import type { SymbolSummary } from "@/lib/market-data";
 import { fillTiming, placedMessage } from "@/lib/orders";
 import { addPendingOrder, removePendingOrder } from "@/lib/pending-orders";
@@ -86,10 +92,7 @@ export function OrderTicket({
       <DrawerTrigger render={<Button variant={variant} size={size} />}>
         {children}
       </DrawerTrigger>
-      <DrawerContent
-        title={ticker ? `Paper order · ${ticker}` : "Paper order"}
-        description="Simulated: fills follow the shared fill model on daily bars."
-      >
+      <DrawerContent title={ticketTitle(ticker)} description={TICKET_NOTE}>
         <TicketForm
           portfolios={portfolios}
           initialPortfolioId={portfolioId ?? portfolios[0]?.id ?? ""}
@@ -99,6 +102,98 @@ export function OrderTicket({
         />
       </DrawerContent>
     </Drawer>
+  );
+}
+
+const ticketTitle = (ticker?: string) =>
+  ticker ? `Paper order · ${ticker}` : "Paper order";
+const TICKET_NOTE =
+  "Simulated: fills follow the shared fill model on daily bars.";
+
+/**
+ * The ticket without a trigger of its own, for the command palette ("New
+ * paper order"): the palette can open on any page, so the portfolios are
+ * asked for when the drawer opens instead of being handed in by a page.
+ * `ticker` fixes the symbol, as on the stock page the palette was opened on.
+ */
+export function OrderTicketDrawer({
+  open,
+  onOpenChange,
+  ticker,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  ticker?: string;
+}) {
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent title={ticketTitle(ticker)} description={TICKET_NOTE}>
+        <LoadedTicket ticker={ticker} onDone={() => onOpenChange(false)} />
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+/** Mounted per opening: loads the user's portfolios, then shows the form. */
+function LoadedTicket({
+  ticker,
+  onDone,
+}: {
+  ticker?: string;
+  onDone: () => void;
+}) {
+  const [loaded, setLoaded] = useState<ActionResult<TicketPortfolio[]> | null>(
+    null
+  );
+
+  useEffect(() => {
+    let current = true;
+    listTicketPortfolios()
+      .catch(
+        (): ActionResult<TicketPortfolio[]> => ({
+          ok: false,
+          error: "Your portfolios didn't load. Close this and try again.",
+        })
+      )
+      .then((result) => {
+        if (current) setLoaded(result);
+      });
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  if (!loaded) {
+    return (
+      <p role="status" className="m-0 text-sm text-muted">
+        Loading your portfolios…
+      </p>
+    );
+  }
+  if (!loaded.ok) {
+    return <Feedback tone="danger" title={loaded.error} />;
+  }
+  if (loaded.value.length === 0) {
+    return (
+      <div className="grid justify-items-start gap-4">
+        <p className="m-0 text-sm text-muted">
+          An order needs a paper portfolio to trade in, and you don’t have one
+          yet.
+        </p>
+        <Link href="/portfolios" onClick={onDone} className={buttonVariants()}>
+          Open a portfolio
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <TicketForm
+      portfolios={loaded.value}
+      initialPortfolioId={loaded.value[0]!.id}
+      fixedTicker={ticker}
+      initialSide="buy"
+      onPlaced={onDone}
+    />
   );
 }
 
@@ -169,7 +264,10 @@ function TicketForm({
   const [ticker, setTicker] = useState(fixedTicker ?? "");
   const [side, setSide] = useState<"buy" | "sell">(initialSide);
   const [type, setType] = useState<"market" | "limit">("market");
-  const [quantity, setQuantity] = useState("");
+  // The order's size, in shares or in dollars: the api turns dollars into
+  // shares at the price it estimates the order at, and the preview shows them.
+  const [sizeBy, setSizeBy] = useState<"shares" | "dollars">("shares");
+  const [size, setSize] = useState("");
   const [limitPrice, setLimitPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [placing, startTransition] = useTransition();
@@ -184,10 +282,12 @@ function TicketForm({
         ticker: ticker.trim().toUpperCase(),
         side,
         type,
-        quantity: typedNumber(quantity),
+        ...(sizeBy === "shares"
+          ? { quantity: typedNumber(size) }
+          : { amount: typedNumber(size) }),
         limitPrice: type === "limit" ? typedNumber(limitPrice) : undefined,
       }),
-    [ticker, side, type, quantity, limitPrice]
+    [ticker, side, type, sizeBy, size, limitPrice]
   );
   const body = parsed.success ? parsed.data : null;
   const {
@@ -212,7 +312,8 @@ function TicketForm({
       ticker: body.ticker,
       side: body.side,
       type: body.type,
-      quantity: body.quantity,
+      quantity: body.quantity ?? null,
+      amount: body.amount ?? null,
       limitPrice: body.limitPrice ?? null,
     });
     startTransition(async () => {
@@ -328,15 +429,45 @@ function TicketForm({
         <SegmentedControlItem value="limit">Limit</SegmentedControlItem>
       </SegmentedControl>
 
-      <FormField label="Shares" description="Fractions down to a millionth.">
-        <Input
-          value={quantity}
-          onChange={(event) => setQuantity(event.target.value)}
-          inputMode="decimal"
-          placeholder="10"
-          autoComplete="off"
-        />
-      </FormField>
+      <SegmentedControl
+        aria-label="Size the order in"
+        value={sizeBy}
+        onValueChange={(value) => {
+          // A number of shares isn't a number of dollars: start the field over.
+          setSizeBy(value === "dollars" ? "dollars" : "shares");
+          setSize("");
+        }}
+      >
+        <SegmentedControlItem value="shares">Shares</SegmentedControlItem>
+        <SegmentedControlItem value="dollars">Dollars</SegmentedControlItem>
+      </SegmentedControl>
+
+      {sizeBy === "shares" ? (
+        <FormField label="Shares" description="Fractions down to a millionth.">
+          <Input
+            value={size}
+            onChange={(event) => setSize(event.target.value)}
+            inputMode="decimal"
+            placeholder="10"
+            autoComplete="off"
+          />
+        </FormField>
+      ) : (
+        <FormField
+          label="Amount"
+          description={`Dollars to ${side}, before commission. Turned into shares ${
+            type === "limit" ? "at your limit" : "at the latest close"
+          } when the order is placed.`}
+        >
+          <Input
+            value={size}
+            onChange={(event) => setSize(event.target.value)}
+            inputMode="decimal"
+            placeholder="500.00"
+            autoComplete="off"
+          />
+        </FormField>
+      )}
 
       {type === "limit" ? (
         <FormField
@@ -365,6 +496,16 @@ function TicketForm({
               {fillTiming(preview, type)}
             </p>
             <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-sm tabular-nums">
+              {sizeBy === "dollars" ? (
+                <>
+                  <dt className="text-muted">Shares</dt>
+                  <dd className="m-0 text-right">
+                    {preview.quantity === null
+                      ? "—"
+                      : formatShares(preview.quantity)}
+                  </dd>
+                </>
+              ) : null}
               <dt className="text-muted">Estimated price</dt>
               <dd className="m-0 text-right">
                 {preview.estimatedPrice === null
@@ -409,8 +550,9 @@ function TicketForm({
           </p>
         ) : (
           <p className="m-0 text-sm text-muted">
-            Enter {fixedTicker ? "" : "a symbol and "}a number of shares to see
-            what the order would cost and when it would fill.
+            Enter {fixedTicker ? "" : "a symbol and "}
+            {sizeBy === "shares" ? "a number of shares" : "a dollar amount"} to
+            see what the order would cost and when it would fill.
           </p>
         )}
       </div>

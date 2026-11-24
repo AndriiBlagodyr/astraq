@@ -157,6 +157,50 @@ describe('Orders (database)', () => {
     expect(await prisma.order.count({ where: { portfolioId: portfolio.id } })).toBe(1);
   });
 
+  it('sizes an order asked for in dollars, and replays it by its amount', async () => {
+    const portfolio = await portfolios.create(userId, {
+      name: 'In dollars',
+      startingCash: '10000',
+      slippageBps: 0,
+      commissionPerOrder: '1',
+      commissionPerShare: '0',
+    });
+    const buy250 = { ticker: TICKER, side: 'buy', type: 'market', amount: '250' } as const;
+
+    // 250 at the last close of 100 is 2.5 shares; the commission is on top.
+    expect(await orders.preview(userId, portfolio.id, buy250, at(TUE, '15:00'))).toMatchObject({
+      quantity: '2.500000',
+      notional: '250.00',
+      cashAfter: '9749.00',
+      refusal: null,
+    });
+    const placed = await orders.place(userId, portfolio.id, 'usd-1', buy250, at(TUE, '15:00'));
+    expect(placed.order).toMatchObject({
+      quantity: '2.5',
+      amount: '250.00',
+      status: 'filled',
+      fill: { notional: '250.00', commission: '1.00' },
+    });
+
+    // The same key and amount is the same order, whatever the price is by
+    // then; another amount, or the shares it came to, is a different one.
+    const again = await orders.place(userId, portfolio.id, 'usd-1', buy250, at(TUE, '15:01'));
+    expect(again).toMatchObject({ replayed: true, order: { id: placed.order.id } });
+    await expect(
+      orders.place(userId, portfolio.id, 'usd-1', { ...buy250, amount: '300' }, at(TUE, '15:02')),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      orders.place(
+        userId,
+        portfolio.id,
+        'usd-1',
+        { ticker: TICKER, side: 'buy', type: 'market', quantity: '2.5' },
+        at(TUE, '15:02'),
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(await prisma.order.count({ where: { portfolioId: portfolio.id } })).toBe(1);
+  });
+
   it('refuses an order the portfolio cannot cover, and stores nothing for it', async () => {
     const portfolio = await portfolios.create(userId, {
       name: 'Guarded',

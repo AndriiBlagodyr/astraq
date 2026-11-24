@@ -17,7 +17,10 @@ export type PendingOrder = {
   ticker: string;
   side: "buy" | "sell";
   type: "market" | "limit";
-  quantity: string;
+  /** Null for an order asked for in dollars: the api hasn't sized it yet. */
+  quantity: string | null;
+  /** The dollar amount asked for instead of shares, or null. */
+  amount: string | null;
   limitPrice: string | null;
 };
 

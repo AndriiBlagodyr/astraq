@@ -24,7 +24,7 @@ import {
   preview,
   settle,
   transfer,
-  type OrderRequest,
+  type OrderAsk,
 } from '../trading/settlement';
 import { type OrderRow, OrdersRepository } from './orders.repository';
 
@@ -38,6 +38,7 @@ function toOrder(row: OrderRow): Order {
     side: row.side,
     type: row.type,
     quantity: row.quantity,
+    amount: row.amount,
     limitPrice: row.limitPrice,
     status: row.status,
     closeReason: row.closeReason,
@@ -148,6 +149,11 @@ export class OrdersService {
    * never stored. Both run under the same lock as the write, so two orders
    * can't each be told the same cash is free.
    *
+   * An order asked for in dollars (`amount`) is sized in that same step,
+   * and stored in the shares it came to with the amount beside them. A
+   * repeat of its key is compared by the amount, since the shares depend on
+   * the price at the time.
+   *
    * Each placement is one span, `order.place` (ROADMAP Phase 3 item 7): the
    * lock, the reads, and the writes below are its children, and it says how
    * the order came out.
@@ -166,7 +172,9 @@ export class OrdersService {
         'order.ticker': body.ticker,
         'order.side': body.side,
         'order.type': body.type,
-        'order.quantity': body.quantity,
+        ...(body.amount != null
+          ? { 'order.amount': body.amount }
+          : { 'order.quantity': body.quantity ?? '' }),
       },
       async (span) => {
         const placed = await this.placeOnce(
@@ -178,6 +186,7 @@ export class OrdersService {
         );
         span.setAttributes({
           'order.id': placed.order.id,
+          'order.quantity': placed.order.quantity,
           'order.status': placed.order.status,
           'order.replayed': placed.replayed,
         });
@@ -201,7 +210,7 @@ export class OrdersService {
       { userId, portfolioId, idempotencyKey, symbolId },
       ({ book, lastBars, maxOrderNotional, existing }) => {
         if (!existing) {
-          const { refusal } = preview(
+          const { refusal, quantity } = preview(
             book,
             request,
             lastBars,
@@ -209,10 +218,15 @@ export class OrdersService {
             calendar,
             maxOrderNotional,
           );
-          if (refusal) throw new UnprocessableEntityException(refusal.message);
+          // Without a refusal the order has its shares, asked for or sized.
+          if (refusal || quantity === null) {
+            throw new UnprocessableEntityException(
+              refusal?.message ?? "The order couldn't be sized",
+            );
+          }
           const lastBar = lastBars.get(symbolId) ?? null;
           return {
-            plan: place(book, request, lastBar, now, calendar),
+            plan: place(book, { ...request, quantity }, lastBar, now, calendar),
             result: null,
           };
         }
@@ -220,7 +234,10 @@ export class OrdersService {
           existing.symbolId === request.symbolId &&
           existing.side === request.side &&
           existing.type === request.type &&
-          sameNumber(existing.quantity, request.quantity) &&
+          (request.quantity === null
+            ? sameNumber(existing.amount, request.amount ?? null)
+            : existing.amount === null &&
+              sameNumber(existing.quantity, request.quantity)) &&
           sameNumber(existing.limitPrice, request.limitPrice);
         if (!same) {
           throw new ConflictException(
@@ -261,7 +278,7 @@ export class OrdersService {
   }
 
   /** The order a body asks for, with its ticker resolved; 404 for an unknown one. */
-  private async request(body: PlaceOrderBody): Promise<OrderRequest> {
+  private async request(body: PlaceOrderBody): Promise<OrderAsk> {
     const { symbolId } = await resolveTicker(this.symbols, body.ticker);
     // A symbol nobody has watched yet has no bars to price or fill on.
     await this.onDemand.ensureCandles(symbolId);
@@ -269,7 +286,8 @@ export class OrdersService {
       symbolId,
       side: body.side,
       type: body.type,
-      quantity: body.quantity,
+      quantity: body.quantity ?? null,
+      amount: body.amount ?? null,
       limitPrice: body.limitPrice ?? null,
     };
   }

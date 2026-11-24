@@ -8,6 +8,7 @@ import { type Shortcut, shortcuts } from "./shortcuts";
 export type PaletteGroupName = "Recent" | "Pages" | "Symbols" | "Actions";
 
 export type PaletteAction =
+  | "trade"
   | "toggle-mode"
   | "next-theme"
   | "shortcuts"
@@ -41,14 +42,38 @@ export const pageCommands: readonly PaletteCommand[] = appNavigation.map(
   })
 );
 
+/**
+ * The ticker of the stock page at `pathname`, or null anywhere else: the
+ * palette's order ticket opens for the symbol being looked at.
+ */
+export function tickerOfPath(pathname: string): string | null {
+  const match = /^\/stocks\/([^/]+)/.exec(pathname);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]!).toUpperCase();
+  } catch {
+    return null;
+  }
+}
+
 export function actionCommands({
   mode,
   nextTheme,
+  ticker = null,
 }: {
   mode: "light" | "dark";
   nextTheme: string;
+  /** The stock page the palette is open on, if it is on one. */
+  ticker?: string | null;
 }): PaletteCommand[] {
   return [
+    {
+      id: "action:trade",
+      label: ticker ? `Trade ${ticker}` : "New paper order",
+      hint: "Opens the order ticket",
+      keywords: ["trade", "buy", "sell", "order", "ticket", "paper"],
+      action: "trade",
+    },
     {
       id: "action:toggle-mode",
       label: `Switch to ${mode === "dark" ? "light" : "dark"} mode`,

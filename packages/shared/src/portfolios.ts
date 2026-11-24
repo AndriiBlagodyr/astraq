@@ -120,19 +120,33 @@ export const FillRuleSchema = z
  * Body of `POST /api/portfolios/{id}/orders`. The request also carries an
  * `Idempotency-Key` header: sending the same key again returns the order
  * the first request placed.
+ *
+ * An order is sized one of two ways: `quantity` (shares) or `amount`
+ * (dollars). The api turns an amount into shares when the order is placed,
+ * at the price its estimate uses (the latest close with the portfolio's
+ * slippage, or the limit), rounded down to a millionth of a share, so the
+ * estimate never comes to more than the amount. The commission is on top.
+ * The order is stored, and fills, in those shares.
  */
 export const PlaceOrderBodySchema = z
   .object({
     ticker: TickerParamSchema.shape.ticker,
     side: OrderSideSchema,
     type: OrderTypeSchema,
-    quantity: quantityString,
+    /** Shares. Absent or null when the order is sized by `amount`. */
+    quantity: quantityString.nullish(),
+    /** Dollars to buy or sell, before commission, instead of `quantity`. */
+    amount: positiveCashString.nullish(),
     /** Required for a limit order, absent or null for a market order. */
     limitPrice: priceString.nullish(),
   })
   .refine((order) => (order.type === "limit") === (order.limitPrice != null), {
     message: "A limit order needs a limit price, and a market order has none",
     path: ["limitPrice"],
+  })
+  .refine((order) => (order.quantity != null) !== (order.amount != null), {
+    message: "An order needs a number of shares or a dollar amount, not both",
+    path: ["quantity"],
   })
   .meta({ id: "PlaceOrderBody" });
 
@@ -254,6 +268,8 @@ export const OrderSchema = z
     side: OrderSideSchema,
     type: OrderTypeSchema,
     quantity: decimalString,
+    /** The dollar amount the shares were sized from; null for an order placed in shares. */
+    amount: decimalString.nullable(),
     /** Null on a market order. */
     limitPrice: decimalString.nullable(),
     status: OrderStatusSchema,
@@ -273,10 +289,12 @@ export const OrderSchema = z
  *   close or the limit, after what open buy orders are expected to take;
  * - `insufficient_shares`: a sell of more shares than are held and not
  *   already promised to open sell orders (no short selling);
- * - `max_notional`: over the portfolio's `maxOrderNotional`.
+ * - `max_notional`: over the portfolio's `maxOrderNotional`;
+ * - `unsized`: a dollar amount that can't be turned into shares: the symbol
+ *   has no price yet, or the amount buys less than a millionth of a share.
  */
 export const OrderRefusalCodeSchema = z
-  .enum(["insufficient_cash", "insufficient_shares", "max_notional"])
+  .enum(["insufficient_cash", "insufficient_shares", "max_notional", "unsized"])
   .meta({ id: "OrderRefusalCode" });
 
 /**
@@ -301,6 +319,11 @@ export const OrderPreviewSchema = z
     estimatedPrice: decimalString.nullable(),
     /** The session the latest close is from; null on a limit order. */
     priceDate: z.iso.date().nullable(),
+    /**
+     * The shares the order is for: as asked, or what its `amount` buys at
+     * `estimatedPrice`. Null when an amount can't be sized (`unsized`).
+     */
+    quantity: decimalString.nullable(),
     /** `quantity × estimatedPrice`, in cents. */
     notional: decimalString.nullable(),
     commission: decimalString.nullable(),

@@ -8,10 +8,12 @@ import {
   RECENT_LIMIT,
   rememberRecent,
   symbolCommand,
+  tickerOfPath,
   type PaletteCommand,
 } from "./command-palette";
 
 const actions = actionCommands({ mode: "dark", nextTheme: "aurora" });
+const modeToggle = actions.find((item) => item.action === "toggle-mode")!;
 
 describe("matchScore", () => {
   const watchlists = pageCommands.find((page) => page.label === "Watchlists")!;
@@ -23,7 +25,7 @@ describe("matchScore", () => {
 
   it("prefers a label prefix to a word start to a run inside a word", () => {
     const prefix = matchScore("wat", watchlists)!;
-    const wordStart = matchScore("mode", actions[0])!; // "Switch to light mode"
+    const wordStart = matchScore("mode", modeToggle)!; // "Switch to light mode"
     const inside = matchScore("atch", watchlists)!;
     expect(prefix).toBeGreaterThan(wordStart);
     expect(wordStart).toBeGreaterThan(inside);
@@ -32,7 +34,7 @@ describe("matchScore", () => {
   it("falls back to the hint and keywords, then to scattered letters", () => {
     const nvidia = symbolCommand({ ticker: "NVDA", name: "NVIDIA Corp" });
     expect(matchScore("nvidia", nvidia)).toBe(50);
-    expect(matchScore("dark", actions[0])).toBe(50);
+    expect(matchScore("dark", modeToggle)).toBe(50);
     // n·v·d·a read out of "nvda" in order: a subsequence with no gaps...
     expect(matchScore("nda", nvidia)).toBe(29); // ...skipping one letter.
     expect(matchScore("xyz", nvidia)).toBeNull();
@@ -56,6 +58,30 @@ describe("rankCommands", () => {
       "b",
       "c",
     ]);
+  });
+});
+
+describe("the order ticket command", () => {
+  it("is found by what a trader would type", () => {
+    for (const query of ["trade", "buy", "sell", "order"]) {
+      expect(rankCommands(query, actions)[0]?.action).toBe("trade");
+    }
+  });
+
+  it("names the symbol of the stock page it is opened on", () => {
+    expect(tickerOfPath("/stocks/nvda")).toBe("NVDA");
+    expect(tickerOfPath("/stocks/BRK.B/forecast")).toBe("BRK.B");
+    expect(tickerOfPath("/stocks")).toBeNull();
+    expect(tickerOfPath("/portfolios/1")).toBeNull();
+    expect(tickerOfPath("/stocks/%E0%A4%A")).toBeNull();
+
+    const onStock = actionCommands({
+      mode: "dark",
+      nextTheme: "aurora",
+      ticker: "NVDA",
+    });
+    expect(onStock[0]).toMatchObject({ label: "Trade NVDA", action: "trade" });
+    expect(actions[0]?.label).toBe("New paper order");
   });
 });
 
@@ -86,7 +112,7 @@ describe("rememberRecent", () => {
   });
 
   it("does not remember actions, and strips the shortcut from pages", () => {
-    expect(rememberRecent([nvda], actions[0])).toEqual([nvda]);
+    expect(rememberRecent([nvda], modeToggle)).toEqual([nvda]);
     const [page] = rememberRecent([], pageCommands[0]);
     expect(page).not.toHaveProperty("shortcut");
     expect(page.href).toBe("/");

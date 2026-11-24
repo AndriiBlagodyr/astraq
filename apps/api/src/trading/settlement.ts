@@ -41,7 +41,7 @@ import {
   sessionOpen,
   type SessionCalendar,
 } from './market-hours';
-import { assess, type Refusal } from './risk';
+import { assess, sharesFor, type Refusal } from './risk';
 
 // What happens to a portfolio between two looks at it (ROADMAP Phase 3
 // items 3 and 4, ADR 0009 section 7), as pure functions. Given the ledger,
@@ -129,6 +129,8 @@ export interface ClosedOrder {
 /** A new order and how it starts. A filled one has a posting with `orderId: null`. */
 export interface PlacedOrder extends FillOrder {
   symbolId: number;
+  /** The dollar amount it was sized from; absent or null for one placed in shares. */
+  amount?: string | null;
   placedAt: Date;
   status: 'open' | 'filled' | 'rejected';
   reason: CloseReason | null;
@@ -142,9 +144,19 @@ export interface Plan {
   placed: PlacedOrder | null;
 }
 
-/** An order as the client asks for it. */
+/** An order to place, sized in shares. */
 export interface OrderRequest extends FillOrder {
   symbolId: number;
+  /** The dollar amount `quantity` was sized from, kept on the order. */
+  amount?: string | null;
+}
+
+/**
+ * An order as the client asks for it: in shares (`quantity`), or in dollars
+ * (`amount`, with `quantity` null), which `preview` turns into shares.
+ */
+export interface OrderAsk extends Omit<OrderRequest, 'quantity'> {
+  quantity: string | null;
 }
 
 /** Cash paid in or taken out, as the client asks for it. */
@@ -172,6 +184,11 @@ export interface OrderPreview {
   estimatedPrice: string | null;
   /** The session the latest close is from; null on a limit order. */
   priceDate: string | null;
+  /**
+   * The shares the order is for: as asked, or what its dollar amount comes
+   * to at `estimatedPrice`. Null when an amount can't be sized.
+   */
+  quantity: string | null;
   notional: string | null;
   commission: string | null;
   /** Cash once the order fills at the estimate. */
@@ -445,7 +462,7 @@ function lastPriceToday(
 
 /** A market order with a price to fill at, placed while the market trades. */
 const fillsAtOnce = (
-  request: OrderRequest,
+  request: Pick<OrderRequest, 'type'>,
   lastBar: LastBar | null,
   now: Date,
   calendar: SessionCalendar | null,
@@ -463,10 +480,15 @@ const fillsAtOnce = (
  * `lastBars` holds the latest stored session of the order's symbol and of
  * every symbol with an open order: open buy orders are priced too, since
  * the cash they will take isn't free.
+ *
+ * An order asked for in dollars is sized here, under the same lock and at
+ * the same price as its estimate (`sharesFor`), and the answer's `quantity`
+ * is what `place` is then given. An amount that can't be sized is a
+ * refusal like any other.
  */
 export function preview(
   book: Book,
-  request: OrderRequest,
+  ask: OrderAsk,
   lastBars: ReadonlyMap<number, LastBar>,
   now: Date,
   calendar: SessionCalendar | null,
@@ -474,13 +496,49 @@ export function preview(
 ): OrderPreview {
   const settlement = run(book, now);
   const today = sessionDate(now);
-  const lastBar = lastBars.get(request.symbolId) ?? null;
+  const lastBar = lastBars.get(ask.symbolId) ?? null;
   const prices = new Map(
     [...lastBars].map(([symbolId, bar]) => [
       symbolId,
       lastPriceToday(bar, book.actions, symbolId, today),
     ]),
   );
+  const immediate = fillsAtOnce(ask, lastBar, now, calendar);
+  const when = {
+    timing: immediate ? ('immediate' as const) : ('next_session' as const),
+    fillSession: immediate ? today : nextSession(now, calendar).date,
+    priceDate: ask.type === 'market' ? (lastBar?.date ?? null) : null,
+  };
+
+  let quantity = ask.quantity;
+  if (quantity === null) {
+    const sized = sharesFor(
+      ask,
+      ask.amount ?? '0',
+      prices.get(ask.symbolId),
+      book.costs,
+    );
+    if (!sized || !isPositive(sized.quantity)) {
+      return {
+        ...when,
+        estimatedPrice: sized?.price ?? null,
+        quantity: null,
+        notional: null,
+        commission: null,
+        cashAfter: null,
+        refusal: {
+          code: 'unsized',
+          message: sized
+            ? `${ask.amount} is less than a millionth of a share at ${sized.price}.`
+            : "There is no price for this symbol yet, so a dollar amount can't be " +
+              'turned into shares. Size the order in shares instead.',
+        },
+      };
+    }
+    quantity = sized.quantity;
+  }
+  const request: OrderRequest = { ...ask, quantity };
+
   const { estimate, cashAfter, refusal } = assess({
     state: settlement.state,
     open: settlement.open,
@@ -489,12 +547,10 @@ export function preview(
     costs: book.costs,
     maxOrderNotional,
   });
-  const immediate = fillsAtOnce(request, lastBar, now, calendar);
   return {
-    timing: immediate ? 'immediate' : 'next_session',
-    fillSession: immediate ? today : nextSession(now, calendar).date,
+    ...when,
     estimatedPrice: estimate?.price ?? null,
-    priceDate: request.type === 'market' ? (lastBar?.date ?? null) : null,
+    quantity,
     notional: estimate?.notional ?? null,
     commission: estimate?.commission ?? null,
     cashAfter: cashAfter && format(round(cashAfter, CASH_PLACES)),

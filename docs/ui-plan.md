@@ -69,6 +69,7 @@ Phase 2 onward, for visitors who aren't signed in: the logo, Sign in, and the th
 | `/backtests`, `/backtests/[id]` | Backtests | 5 | signed in |
 | `/analysis/returns` | Returns distribution (`d3`) | 2 | signed in |
 | `/analysis`, `/analysis/*` | Analysis index and the other views | 6 | signed in |
+| `/analysis/models` | Model lab | 8 | signed in |
 | `/journal`, `/journal/[id]` | Research journal | 6 | signed in |
 | `/alerts` | Alerts | 9 | signed in |
 | `/settings/*` | Settings | 2, 7 | signed in |
@@ -120,7 +121,7 @@ Each page lists what it's for and what it does in each phase. Every data page ha
 - **Phase 6, on the Chart tab:** indicator overlays (SMA, EMA, Bollinger) and RSI / MACD panes with synced crosshairs. Saved chart layouts.
 - **Notes tab (Phase 6):** journal notes attached to this symbol, plus "New note".
 - **News tab (Phase 6):** headlines for the symbol with source and time.
-- **Forecast tab (Phase 8):** the model card for each forecast (data window, validation method, out-of-sample score vs naive). Forecast bands can be turned on as a chart overlay.
+- **Forecast tab (Phase 8):** price bands (50% and 80%) for 1, 5, and 20 sessions ahead, the model card for each forecast (data window, validation method, out-of-sample score vs naive), and the scorecard: how past forecasts for this symbol held against what happened. The time machine: pick a past date and the chart shows the band forecast that day with the candles that followed, read from the stored forecasts. Forecast bands can be turned on as a chart overlay. A model that doesn't beat naive says so. The models and their order are in [forecasting-plan.md](forecasting-plan.md).
 - **Phase 9:** a live price in the header, plus "Create alert".
 
 ### Order ticket (Phase 3)
@@ -132,7 +133,8 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
 - **Guards shown inline:** insufficient cash, max order notional, short selling not allowed.
 - **Submitting:** an idempotency key is created when the ticket opens, so a double submit places one order. The order appears optimistically and rolls back with a toast if rejected.
 - **Api (done):** `POST /api/portfolios/{id}/orders` with an `Idempotency-Key` header. The response is the order, already `filled` or `rejected` (with `closeReason`) for a market order placed during the session, `open` otherwise; an order the portfolio can't cover, or over its limit per order, is a 422 whose `detail` says why. `POST /api/portfolios/{id}/orders/preview` takes the same body and returns `timing` (`immediate` or `next_session`), `fillSession` (from the exchange calendar), the estimated price, notional, and commission, `cashAfter`, and `refusal` (`insufficient_cash`, `insufficient_shares`, `max_notional`, with a message) or null. That is everything the preview and the inline guards show.
-- **Done (2026-11-18):** `OrderTicket.tsx`, opened by Trade on the portfolio pages (any symbol, with search), on a holdings row and the stock page (that symbol). Fields: portfolio when there are several, symbol, side, market or limit with a limit price, shares. The preview is debounced and shows the timing, estimated price, cost or proceeds, commission, and cash after; a refusal shows inline and disables the button. A submitted order shows on the Orders tab as "Placing" until the api answers, and a failure removes it with a toast and leaves the ticket open with the reason. Open: a dollar amount instead of shares, and opening it from the command palette.
+- **Done (2026-11-18):** `OrderTicket.tsx`, opened by Trade on the portfolio pages (any symbol, with search), on a holdings row and the stock page (that symbol). Fields: portfolio when there are several, symbol, side, market or limit with a limit price, shares. The preview is debounced and shows the timing, estimated price, cost or proceeds, commission, and cash after; a refusal shows inline and disables the button. A submitted order shows on the Orders tab as "Placing" until the api answers, and a failure removes it with a toast and leaves the ticket open with the reason.
+- **Done (2026-11-21):** a dollar amount, and the palette. A Shares / Dollars switch sits above the size field; in dollars the field is the amount to buy or sell before commission, the api turns it into shares at the latest close (or the limit) when the order is placed, and the preview shows the shares it comes to. An amount the api can't size (no price yet, or less than a millionth of a share) shows as a refusal. On the Orders tab such an order reads in shares with "sized from 500.00" under it. In the command palette, "New paper order" opens the ticket on any page (`OrderTicketDrawer`, which loads the portfolios when it opens, and offers to open a portfolio when there is none); on a stock page the command reads "Trade NVDA" and the symbol is fixed.
 
 ### Watchlists — `/watchlists`, `/watchlists/[id]` (Phase 2)
 
@@ -185,6 +187,9 @@ A `Drawer`, not a page. It opens from the stock page, holdings rows, and the com
 - `/analysis/drawdowns`: drawdown chart for a symbol or portfolio.
 - `/analysis/returns` (Phase 2): daily-returns histogram for one symbol over a range, with a normal-curve overlay and a stats table (mean, standard deviation, skew, best and worst day, share of up days). The first `d3` view; see ROADMAP Phase 2 item 7 and ADR 0007. Done: the range presets and date picker are the stock chart's, the basis toggles total return (dividends included, the default) and price only, and without a symbol the page asks for one.
 - `/analysis/seasonality`: monthly or weekday seasonality heatmap (`d3`).
+- `/analysis/years`: one symbol's years on one January-to-December axis, one line per year from 0% at its first session, the current year over the median and the middle half of the past ones. Each week or month says "up in N of M years", and a toggle shows the return relative to the index. See [forecasting-plan.md](forecasting-plan.md), "What you look at".
+- `/analysis/after-move`: every past time a symbol moved as much as it just did (or a chosen size), and what the next 5 and 20 sessions brought, with the count of cases.
+- `/analysis/models` (Phase 8): the Model lab. Every served model's score against naive, out of sample and live, over time and per regime, with a calibration chart. A model that stops beating naive is marked so. An analysis view, not a sidebar section.
 
 ### Journal — `/journal`, `/journal/[id]` (Phase 6)
 

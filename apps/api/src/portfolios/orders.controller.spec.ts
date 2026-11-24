@@ -38,6 +38,7 @@ describe('Portfolio and order endpoints', () => {
     side: 'buy',
     type: 'limit',
     quantity: '10',
+    amount: null,
     limitPrice: '120.5',
     status: 'open',
     closeReason: null,
@@ -112,6 +113,10 @@ describe('Portfolio and order endpoints', () => {
     await keyed().send({ ...body, type: 'market' }).expect(400);
     await keyed().send({ ...body, quantity: '0' }).expect(400);
     await keyed().send({ ...body, quantity: '1.0000001' }).expect(400);
+    // Sized by shares or by a dollar amount: one of them, never both.
+    await keyed().send({ ...body, amount: '500' }).expect(400);
+    await keyed().send({ ...body, quantity: undefined }).expect(400);
+    await keyed().send({ ...body, quantity: undefined, amount: '500.001' }).expect(400);
     expect(orders.place).not.toHaveBeenCalled();
   });
 
@@ -121,6 +126,7 @@ describe('Portfolio and order endpoints', () => {
       fillSession: '2026-06-03',
       estimatedPrice: '120.500000',
       priceDate: null,
+      quantity: '10',
       notional: '1205.00',
       commission: '0.00',
       cashAfter: '-205.00',
