@@ -16,6 +16,9 @@ export type SymbolSyncSummary = {
   deactivated: number;
 };
 
+/** A symbol ingestion keeps fresh, with its last stored session. */
+export type TrackedSymbol = { ticker: string; lastBar: string };
+
 /** Writes provider market data. Every method is idempotent. */
 @Injectable()
 export class MarketDataRepository {
@@ -94,6 +97,45 @@ export class MarketDataRepository {
       where: { id: symbolId },
       select: { ticker: true, name: true, exchange: true },
     });
+  }
+
+  /** The ids of the stored symbols among these tickers, by ticker. */
+  async findSymbolIds(tickers: string[]): Promise<Map<string, number>> {
+    const symbols = await this.prisma.symbol.findMany({
+      where: { ticker: { in: tickers } },
+      select: { id: true, ticker: true },
+      orderBy: { ticker: 'asc' },
+    });
+    return new Map(symbols.map((symbol) => [symbol.ticker, symbol.id]));
+  }
+
+  /**
+   * The symbols ingestion keeps fresh: active, with at least one bar stored
+   * (watching a symbol or ordering it loads its history, so "has bars" is
+   * "someone asked for it"). Each with the date of its last bar, the
+   * stalest first. The lateral join reads one index entry per symbol
+   * instead of grouping the whole hypertable.
+   */
+  async findTrackedSymbols(): Promise<TrackedSymbol[]> {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ ticker: string; last_bar: Date }>
+    >`
+      SELECT s.ticker, latest.ts AS last_bar
+      FROM symbols s
+      CROSS JOIN LATERAL (
+        SELECT c.ts
+        FROM candles_daily c
+        WHERE c.symbol_id = s.id
+        ORDER BY c.ts DESC
+        LIMIT 1
+      ) latest
+      WHERE s.active
+      ORDER BY latest.ts, s.ticker
+    `;
+    return rows.map((row) => ({
+      ticker: row.ticker,
+      lastBar: toIsoDate(row.last_bar),
+    }));
   }
 
   /** Whether at least one daily bar is stored for the symbol. */

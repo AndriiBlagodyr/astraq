@@ -22,3 +22,10 @@ export function yesterdayUtc(): string {
   date.setUTCDate(date.getUTCDate() - 1);
   return toIsoDate(date);
 }
+
+/** A date moved by a number of calendar days. */
+export function shiftDays(isoDate: string, days: number): string {
+  const moved = utcMidnight(isoDate);
+  moved.setUTCDate(moved.getUTCDate() + days);
+  return toIsoDate(moved);
+}

@@ -1,33 +1,25 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
-import { AlpacaClient } from '../alpaca/alpaca.client';
-import { loadAlpacaEnv } from '../alpaca/alpaca.env';
+import { IngestionService } from '../ingestion.service';
 import { MarketCalendarService } from '../market-calendar.service';
 import { MarketDataRepository } from '../market-data.repository';
+import { ProviderModule } from '../provider/provider.module';
 import { SymbolUniverseService } from '../universe/universe.service';
-import { BootstrapService } from './bootstrap.service';
 
 /**
- * The market-data CLIs' container (bootstrap, symbols:sync, calendar:sync). Not imported
- * by `AppModule`: here Alpaca keys are required, there they're optional
- * (see MarketDataModule).
+ * The container of the market-data CLIs (bootstrap, symbols:sync,
+ * calendar:sync, jobs) and of the worker. Not imported by `AppModule`: it
+ * has no HTTP surface. Each of them fails with a readable error when the
+ * source it needs isn't configured (see ProviderModule).
  */
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, ProviderModule],
   providers: [
-    {
-      provide: AlpacaClient,
-      useFactory: () => new AlpacaClient(loadAlpacaEnv()),
-    },
     MarketDataRepository,
-    BootstrapService,
+    IngestionService,
     SymbolUniverseService,
-    {
-      provide: MarketCalendarService,
-      inject: [MarketDataRepository, AlpacaClient],
-      useFactory: (repository: MarketDataRepository, alpaca: AlpacaClient) =>
-        new MarketCalendarService(repository, alpaca),
-    },
+    MarketCalendarService,
   ],
+  exports: [MarketDataRepository, IngestionService, ProviderModule],
 })
 export class BootstrapModule {}

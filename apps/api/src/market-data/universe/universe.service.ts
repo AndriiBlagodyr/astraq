@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AlpacaClient } from '../alpaca/alpaca.client';
 import { toSymbolSeeds } from '../alpaca/alpaca.mapper';
 import {
   MarketDataRepository,
   type SymbolSyncSummary,
 } from '../market-data.repository';
+import { ALPACA } from '../provider/provider.module';
 
 /**
  * Replaces the active symbol universe with Alpaca's current US equity list
@@ -17,11 +18,17 @@ export class SymbolUniverseService {
   private readonly logger = new Logger(SymbolUniverseService.name);
 
   constructor(
-    private readonly alpaca: AlpacaClient,
+    /** Null without Alpaca keys: no other provider has an asset list. */
+    @Inject(ALPACA) private readonly alpaca: AlpacaClient | null,
     private readonly repository: MarketDataRepository,
   ) {}
 
   async sync(): Promise<SymbolSyncSummary> {
+    if (this.alpaca === null) {
+      throw new Error(
+        'The symbol list needs Alpaca keys (apps/api/.env.example)',
+      );
+    }
     const assets = await this.alpaca.activeUsEquities();
     const seeds = toSymbolSeeds(assets);
     this.logger.log(

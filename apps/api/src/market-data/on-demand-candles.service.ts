@@ -1,18 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { yesterdayUtc } from '../common/dates';
 import { BOOTSTRAP_FROM } from './bootstrap/bootstrap-symbols';
-import { BootstrapService } from './bootstrap/bootstrap.service';
+import { IngestionService } from './ingestion.service';
 import { MarketDataRepository } from './market-data.repository';
 
 /**
  * Loads a symbol's history the first time it's watched, through the same
- * bootstrap path as the CLI, so the whole universe is searchable without
+ * ingestion path as the CLI and the jobs, so the whole universe is searchable without
  * storing candles for 11,000 tickers up front (ROADMAP Phase 2, item 6).
  *
  * Runs inline in the request: one corporate-actions request and one bars
  * request, a second or two, after which the new watchlist row already has
- * its close and sparkline. A queue (Phase 4) would only turn that wait into
- * a loading state. Failures are logged, never thrown: the symbol is on the
+ * its close and sparkline. The `symbol-backfill` job does the same load
+ * from the queue; here a queue would only turn that wait into a loading
+ * state. Failures are logged, never thrown: the symbol is on the
  * list either way, and the next add retries.
  */
 @Injectable()
@@ -23,30 +24,33 @@ export class OnDemandCandlesService {
 
   constructor(
     private readonly repository: MarketDataRepository,
-    /** Null when the api runs without Alpaca keys (see MarketDataModule). */
-    private readonly bootstrap: BootstrapService | null,
+    private readonly ingestion: IngestionService,
   ) {}
 
   /** Resolves once the symbol has candles, or once loading them has failed. */
   async ensureCandles(symbolId: number): Promise<void> {
-    if (this.bootstrap === null) return;
+    // Without a provider (see ProviderModule) the api serves what is stored.
+    if (!this.ingestion.available) return;
     if (await this.repository.hasCandles(symbolId)) return;
 
     const pending = this.inFlight.get(symbolId);
     if (pending !== undefined) return pending;
 
-    const load = this.load(symbolId, this.bootstrap).finally(() => {
+    const load = this.load(symbolId).finally(() => {
       this.inFlight.delete(symbolId);
     });
     this.inFlight.set(symbolId, load);
     return load;
   }
 
-  private async load(symbolId: number, bootstrap: BootstrapService) {
+  private async load(symbolId: number) {
     try {
       const seed = await this.repository.findSeed(symbolId);
       if (seed === null) return;
-      await bootstrap.run([seed], { from: BOOTSTRAP_FROM, to: yesterdayUtc() });
+      await this.ingestion.backfill([seed], {
+        from: BOOTSTRAP_FROM,
+        to: yesterdayUtc(),
+      });
     } catch (error) {
       this.logger.warn(
         `Loading candles for symbol ${symbolId} failed: ` +

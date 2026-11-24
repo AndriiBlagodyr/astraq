@@ -147,6 +147,16 @@ pnpm dev
 
 Swagger UI runs at `http://localhost:4000/api/docs` outside production.
 
+Market data jobs run in a second process. It needs `pnpm infra:up` and a provider: Alpaca keys in `apps/api/.env.local`, or `MARKET_DATA_PROVIDER=yahoo` there for a keyless local database (`apps/api/.env.example`).
+
+```bash
+pnpm --filter @astraq/api worker                        # works the queue until stopped
+pnpm --filter @astraq/api jobs backfill --tickers NVDA  # one symbol's history
+pnpm --filter @astraq/api jobs eod-refresh              # the bars of every symbol that has any
+pnpm --filter @astraq/api jobs actions-refresh          # their splits and dividends
+pnpm --filter @astraq/api jobs status                   # also: dead, retry-dead
+```
+
 #### Changing an endpoint
 
 The contract runs from a Zod schema in `packages/shared`, to the Nest DTO and handler (`@ZodResponse`), to `apps/api/openapi.json`, to the generated `packages/sdk/src/schema.ts`. After changing any of the first two, run at the root:

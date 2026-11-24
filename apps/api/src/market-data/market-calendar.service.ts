@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { toIsoDate, utcMidnight } from '../common/dates';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { shiftDays as shift } from '../common/dates';
 import type { MarketStatus } from '@astraq/shared';
 import {
   marketStatus,
@@ -11,14 +11,8 @@ import {
 import { AlpacaClient } from './alpaca/alpaca.client';
 import { toMarketSessions } from './alpaca/alpaca.mapper';
 import { MarketDataRepository } from './market-data.repository';
+import { ALPACA } from './provider/provider.module';
 import type { DateRange } from './market-data.types';
-
-/** `date` moved by a number of calendar days. */
-function shift(date: string, days: number): string {
-  const moved = utcMidnight(date);
-  moved.setUTCDate(moved.getUTCDate() + days);
-  return toIsoDate(moved);
-}
 
 /** How far ahead the stored calendar must reach before it's reloaded. */
 const MIN_DAYS_AHEAD = 7;
@@ -50,8 +44,8 @@ export class MarketCalendarService {
 
   constructor(
     private readonly repository: MarketDataRepository,
-    /** Null when the api runs without Alpaca keys (see MarketDataModule). */
-    private readonly alpaca: AlpacaClient | null,
+    /** Null when the api runs without Alpaca keys (see ProviderModule). */
+    @Inject(ALPACA) private readonly alpaca: AlpacaClient | null,
   ) {}
 
   /**
