@@ -26,9 +26,11 @@ import {
 import { utcMidnight } from "@/lib/dates";
 import { formatPrice, formatShares } from "@/lib/format";
 import {
+  barOn,
   splitLabel,
   type Candle,
   type ChartFill,
+  type ChartInterval,
   type Split,
 } from "@/lib/stock-chart";
 
@@ -37,6 +39,8 @@ type PlacedFill = ChartFill & { time: string };
 
 type CandleChartProps = {
   candles: Candle[];
+  /** What a bar spans; a weekly bar is dated by its week's first session. */
+  interval?: ChartInterval;
   /** Accessible name, e.g. "NVDA daily candles, split-adjusted". */
   label: string;
   /** Splits to mark above their ex-date bar; pass them for raw prices only. */
@@ -63,7 +67,7 @@ const volumeFormat = new Intl.NumberFormat("en-US", {
 });
 
 /**
- * Daily candles over a volume pane (lightweight-charts). Prices arrive as
+ * Daily or weekly candles over a volume pane (lightweight-charts). Prices arrive as
  * decimal strings and become numbers only here, at the drawing edge.
  *
  * The first chart a mount shows draws in left to right. New data on a
@@ -72,6 +76,7 @@ const volumeFormat = new Intl.NumberFormat("en-US", {
  */
 export function CandleChart({
   candles,
+  interval = "1d",
   label,
   splits = noSplits,
   fills = noFills,
@@ -185,15 +190,22 @@ export function CandleChart({
       );
       const lastShown = priceBars[shown - 1]?.time ?? 0;
       const marks: SeriesMarker<UTCTimestamp>[] = [
-        ...splits.map(
-          (split): SeriesMarker<UTCTimestamp> => ({
-            time: toTime(split.exDate),
-            position: "aboveBar",
-            shape: "arrowDown",
-            color: colors.marker,
-            text: splitLabel(split),
-          })
-        ),
+        // A marker needs a bar to sit on: on weekly bars a split's ex-date is
+        // rarely one, so it goes on the week it fell in.
+        ...splits.flatMap((split): SeriesMarker<UTCTimestamp>[] => {
+          const bar = barOn(candles, split.exDate);
+          return bar === undefined
+            ? []
+            : [
+                {
+                  time: toTime(bar),
+                  position: "aboveBar",
+                  shape: "arrowDown",
+                  color: colors.marker,
+                  text: splitLabel(split),
+                },
+              ];
+        }),
         // The letter carries the side, so it doesn't rest on color alone.
         ...fills.map(
           (fill): SeriesMarker<UTCTimestamp> => ({
@@ -275,9 +287,10 @@ export function CandleChart({
     <figure className="m-0 grid gap-3">
       {shown ? (
         <p className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-sm tabular-nums text-secondary">
-          <time dateTime={shown.time} className="text-foreground">
-            {shown.time}
-          </time>
+          <span className="text-foreground">
+            {interval === "1w" ? "Week of " : null}
+            <time dateTime={shown.time}>{shown.time}</time>
+          </span>
           <span>O {formatPrice(shown.open)}</span>
           <span>H {formatPrice(shown.high)}</span>
           <span>L {formatPrice(shown.low)}</span>

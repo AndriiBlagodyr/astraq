@@ -2,7 +2,7 @@ import type { components } from "@astraq/sdk";
 import { api, apiFailure, fresh } from "./api";
 import type { MarketStatus } from "./market-status";
 import type { ReturnsAdjustment, ReturnSeries } from "./returns-view";
-import type { ChartAdjustment } from "./stock-chart";
+import type { ChartAdjustment, ChartInterval } from "./stock-chart";
 
 // Server-side reads of market data through the generated SDK. Server
 // components only, like lib/api.ts.
@@ -36,17 +36,23 @@ export async function getMarketStatus(): Promise<MarketStatus> {
   return data;
 }
 
-/** Daily candles, or null when the API doesn't know the ticker. */
-export async function getDailyCandles(
+/** Daily or weekly candles, or null when the API doesn't know the ticker. */
+export async function getCandles(
   ticker: string,
   {
     from,
     to,
     adjustment,
-  }: { from?: string; to?: string; adjustment: ChartAdjustment }
+    interval,
+  }: {
+    from?: string;
+    to?: string;
+    adjustment: ChartAdjustment;
+    interval: ChartInterval;
+  }
 ): Promise<CandleSeries | null> {
   const { data, response } = await api.GET("/api/symbols/{ticker}/candles", {
-    params: { path: { ticker }, query: { from, to, adjustment } },
+    params: { path: { ticker }, query: { from, to, adjustment, interval } },
     ...fresh,
   });
   if (response.status === 404) return null;

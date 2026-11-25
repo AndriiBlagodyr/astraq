@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { MarketDataCache } from './cache/market-data-cache';
 import { MarketDataRepository } from './market-data.repository';
 import type { DateRange, SymbolSeed } from './market-data.types';
 import type { MarketDataProvider } from './provider/market-data-provider';
@@ -15,6 +16,11 @@ type Counts = { bars: number; splits: number; dividends: number };
  * in the range are replaced with what the provider reports now. Running one
  * again after a failure, or to pick up new days and corrections, changes
  * only what differs, which is what lets a job be retried without care.
+ *
+ * After a write it refreshes the weeks that range covers (the continuous
+ * aggregate would otherwise hide them for up to an hour) and drops the
+ * Redis closes for those symbols. A search can't be deleted by key, so a
+ * write that changes what a search finds bumps the search generation.
  */
 @Injectable()
 export class IngestionService {
@@ -22,6 +28,7 @@ export class IngestionService {
 
   constructor(
     private readonly repository: MarketDataRepository,
+    private readonly cache: MarketDataCache,
     /** Null when no provider is configured (see ProviderModule). */
     @Inject(PROVIDER) private readonly provider: MarketDataProvider | null,
   ) {}
@@ -53,6 +60,8 @@ export class IngestionService {
         `${range.from} to ${range.to}`,
     );
     const ids = await this.repository.upsertSymbols(symbols);
+    // Listings and renames change what a search finds.
+    await this.cache.forgetSearches();
     const actions = await this.loadActions(provider, ids, range);
     const bars = await this.loadBars(provider, ids, range);
 
@@ -111,6 +120,7 @@ export class IngestionService {
         dividends: rows.filter((row) => row.type === 'DIVIDEND').length,
       });
     }
+    await this.cache.forgetCloses([...ids.values()]);
     return counts;
   }
 
@@ -128,6 +138,12 @@ export class IngestionService {
         counts.set(ticker, (counts.get(ticker) ?? 0) + changed);
       }
     }
+    // Materialized weeks older than the last hourly refresh stay wrong until
+    // we ask for them; a backfill would otherwise show empty weeks for an hour.
+    await this.repository.refreshWeeklyBars(range);
+    await this.cache.forgetCloses([...ids.values()]);
+    // A symbol's first bars change the empty search (symbols that have any).
+    await this.cache.forgetSearches();
     return counts;
   }
 }

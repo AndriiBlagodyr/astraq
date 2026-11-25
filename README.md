@@ -160,6 +160,17 @@ pnpm --filter @astraq/api jobs status                   # also: schedule, dead, 
 
 While the worker runs, nothing else is needed: half an hour after each close of the exchange it refreshes every symbol that has bars and checks them. A worker started after a missed close catches up by itself.
 
+Two more jobs run inside Postgres, on TimescaleDB's scheduler: one compresses the daily bars older than 90 days, one keeps the weekly bars (`candles_weekly`) current. To see how they are doing:
+
+```sql
+SELECT j.proc_name, s.last_run_status, s.last_successful_finish, s.next_start, s.total_failures
+FROM timescaledb_information.jobs j
+JOIN timescaledb_information.job_stats s USING (job_id)
+WHERE j.proc_name IN ('policy_compression', 'policy_refresh_continuous_aggregate');
+```
+
+The latest closes and the symbol search are cached in Redis under `cache:*`. Rows written around the api (psql, a seed script) don't invalidate it; `redis-cli --scan --pattern 'cache:*' | xargs redis-cli del` empties it.
+
 #### Changing an endpoint
 
 The contract runs from a Zod schema in `packages/shared`, to the Nest DTO and handler (`@ZodResponse`), to `apps/api/openapi.json`, to the generated `packages/sdk/src/schema.ts`. After changing any of the first two, run at the root:

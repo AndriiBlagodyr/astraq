@@ -3,6 +3,7 @@ import { APP_PIPE } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ZodValidationPipe } from 'nestjs-zod';
 import request from 'supertest';
+import { CacheStore, NoCacheStore } from '../common/cache-store';
 import { AllExceptionsFilter } from '../common/filters/http-exception.filter';
 import { PrismaService } from '../database/prisma.service';
 import { CandlesRepository } from './candles.repository';
@@ -16,6 +17,7 @@ describe('SymbolsController', () => {
   const symbols = { search: vi.fn(), findIdByTicker: vi.fn() };
   const candles = {
     findDaily: vi.fn(),
+    findWeekly: vi.fn(),
     findLatestCloses: vi.fn(),
     findSplits: vi.fn(),
   };
@@ -27,6 +29,9 @@ describe('SymbolsController', () => {
     })
       .overrideProvider(PrismaService)
       .useValue({})
+      // The cache has its own spec; here every read reaches the repositories.
+      .overrideProvider(CacheStore)
+      .useValue(new NoCacheStore())
       .overrideProvider(SymbolsRepository)
       .useValue(symbols)
       .overrideProvider(CandlesRepository)
@@ -85,9 +90,43 @@ describe('SymbolsController', () => {
     expect(res.body).toEqual({
       ticker: 'NVDA',
       adjustment: 'split',
+      interval: '1d',
       candles: [],
       splits: [{ exDate: '2024-06-10', from: '1', to: '10' }],
     });
+  });
+
+  it('serves weekly bars from the weekly read when asked for them', async () => {
+    symbols.findIdByTicker.mockResolvedValueOnce(7);
+    candles.findDaily.mockClear();
+    const week = {
+      time: '2024-06-03',
+      open: '113.62',
+      high: '125.59',
+      low: '112',
+      close: '120.888',
+      volume: '2180000000',
+    };
+    candles.findWeekly.mockResolvedValueOnce([week]);
+    candles.findSplits.mockResolvedValueOnce([]);
+
+    const res = await request(app.getHttpServer())
+      .get('/symbols/NVDA/candles?interval=1w&adjustment=all')
+      .expect(200);
+
+    expect(candles.findWeekly).toHaveBeenCalledWith(
+      7,
+      { from: null, to: null },
+      'all',
+    );
+    expect(candles.findDaily).not.toHaveBeenCalled();
+    expect(res.body).toMatchObject({ interval: '1w', candles: [week] });
+  });
+
+  it('rejects an interval it has no bars for', async () => {
+    await request(app.getHttpServer())
+      .get('/symbols/NVDA/candles?interval=1m')
+      .expect(400);
   });
 
   it('returns 404 for an unknown ticker', async () => {

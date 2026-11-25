@@ -1076,6 +1076,15 @@
               "default": "split",
               "$ref": "#/components/schemas/Adjustment"
             }
+          },
+          {
+            "name": "interval",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "1d",
+              "$ref": "#/components/schemas/CandleInterval"
+            }
           }
         ],
         "responses": {
@@ -3158,6 +3167,13 @@
           "all"
         ]
       },
+      "CandleInterval_Output": {
+        "type": "string",
+        "enum": [
+          "1d",
+          "1w"
+        ]
+      },
       "Candle_Output": {
         "type": "object",
         "properties": {
@@ -3230,6 +3246,9 @@
           "adjustment": {
             "$ref": "#/components/schemas/Adjustment_Output"
           },
+          "interval": {
+            "$ref": "#/components/schemas/CandleInterval_Output"
+          },
           "candles": {
             "type": "array",
             "items": {
@@ -3246,6 +3265,7 @@
         "required": [
           "ticker",
           "adjustment",
+          "interval",
           "candles",
           "splits"
         ],
@@ -3609,6 +3629,13 @@
           "raw",
           "split",
           "all"
+        ]
+      },
+      "CandleInterval": {
+        "type": "string",
+        "enum": [
+          "1d",
+          "1w"
         ]
       }
     }

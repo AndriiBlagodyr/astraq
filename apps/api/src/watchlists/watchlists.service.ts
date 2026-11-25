@@ -8,6 +8,7 @@ import { OnDemandCandlesService } from '../market-data/on-demand-candles.service
 import { CandlesRepository } from '../symbols/candles.repository';
 import { resolveTicker } from '../symbols/resolve-ticker';
 import { SymbolsRepository } from '../symbols/symbols.repository';
+import { SymbolsService } from '../symbols/symbols.service';
 import { type MoverCandidate, pickMovers } from './movers';
 import {
   type WatchlistRow,
@@ -23,20 +24,21 @@ export class WatchlistsService {
     private readonly watchlists: WatchlistsRepository,
     private readonly symbols: SymbolsRepository,
     private readonly candles: CandlesRepository,
+    private readonly quotes: SymbolsService,
     private readonly onDemand: OnDemandCandlesService,
   ) {}
 
   /**
    * The index: each list with its symbol count and its movers. Two queries
-   * for the lists and their symbols, one for the closes of every symbol on
-   * any list, however many lists there are.
+   * for the lists and their symbols, and the closes of every symbol on any
+   * list from the cache, with one query for the ones it doesn't hold.
    */
   async list(userId: string): Promise<WatchlistList> {
     const [rows, items] = await Promise.all([
       this.watchlists.findAll(userId),
       this.watchlists.findAllItems(userId),
     ]);
-    const closes = await this.candles.findLatestCloses([
+    const closes = await this.quotes.latestCloses([
       ...new Set(items.map((item) => item.symbolId)),
     ]);
 
@@ -146,7 +148,7 @@ export class WatchlistsService {
     const items = await this.watchlists.findItems(userId, row.id);
     const symbolIds = items.map((item) => item.symbolId);
     const [closes, sparklines] = await Promise.all([
-      this.candles.findLatestCloses(symbolIds),
+      this.quotes.latestCloses(symbolIds),
       this.candles.findRecentCloses(symbolIds, SPARKLINE_SESSIONS),
     ]);
     return {

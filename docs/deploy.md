@@ -21,9 +21,13 @@ Create one Railway project (`veracand`) with four services, in the same region y
 
 4. **Networking:** leave it private, no TCP proxy. The api reaches it at `timescaledb.railway.internal:5432`.
 
+The migrations add two jobs that TimescaleDB runs by itself in this container, with no service of their own: daily compression of the bars older than 90 days, and an hourly refresh of the weekly bars. They need the image's default background workers, so don't set `timescaledb.max_background_workers` to 0. `SELECT * FROM timescaledb_information.job_stats` shows each job's last run.
+
 ### Redis (`redis`)
 
 **New → Database → Redis.** Name the service `redis` and leave it private. It holds the api's rate-limit counters and the market data job queue, so it needs its volume: the schedule of the next refresh is a delayed job in it.
+
+It also holds the cache of latest closes and symbol searches (`cache:*`). Leave `maxmemory-policy` at `noeviction`, Redis's default: the queue must never lose a job to make room. The cache doesn't need eviction, every key of it expires within the hour.
 
 ### API (`api`)
 
