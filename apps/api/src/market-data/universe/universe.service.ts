@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AlpacaClient } from '../alpaca/alpaca.client';
 import { toSymbolSeeds } from '../alpaca/alpaca.mapper';
+import { MarketDataCache } from '../cache/market-data-cache';
 import {
   MarketDataRepository,
   type SymbolSyncSummary,
@@ -21,6 +22,7 @@ export class SymbolUniverseService {
     /** Null without Alpaca keys: no other provider has an asset list. */
     @Inject(ALPACA) private readonly alpaca: AlpacaClient | null,
     private readonly repository: MarketDataRepository,
+    private readonly cache: MarketDataCache,
   ) {}
 
   async sync(): Promise<SymbolSyncSummary> {
@@ -37,6 +39,8 @@ export class SymbolUniverseService {
     );
 
     const summary = await this.repository.syncSymbols(seeds);
+    // Listings, delistings, and renames all change what a search finds.
+    await this.cache.forgetSearches();
     this.logger.log(
       `Symbols inserted: ${summary.inserted}, updated: ${summary.updated}, ` +
         `deactivated: ${summary.deactivated}`,

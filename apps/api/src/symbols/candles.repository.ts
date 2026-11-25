@@ -134,6 +134,93 @@ export class CandlesRepository {
   }
 
   /**
+   * Adjusted weekly bars, oldest first: every week the range touches, whole.
+   * Each bar carries the date of its first session.
+   *
+   * The weeks come from `candles_weekly`, a continuous aggregate of the raw
+   * daily bars (see its migration), so a week is one stored row instead of
+   * five bars aggregated per request. Raw is the catch: an adjustment factor
+   * belongs to a day, and a week is adjusted correctly by one multiplication
+   * only when all its days share the factor. So:
+   *
+   * - `weeks` marks a week `mixed` when an ex-date falls after its first
+   *   session and no later than its last. Before a 10:1 split on a Wednesday,
+   *   Monday's high is in old shares and Thursday's in new ones: `max(high)`
+   *   over the raw bars compares 1,200 with 125 and no single factor fixes it.
+   * - Unmixed weeks (nearly all of them) take the aggregate's row times the
+   *   factor of its first session. Rounding after `max` equals `max` after
+   *   rounding, since the factor is positive, so the bar is exactly what the
+   *   adjusted daily bars would give. Volume is rounded once for the week,
+   *   where the daily bars round per day: after a reverse split the two can
+   *   differ by a share or two.
+   * - Mixed weeks are rebuilt from `candles_daily`, each bar adjusted before
+   *   it is aggregated. A quarterly dividend makes four such weeks a year.
+   *
+   * With `raw` nothing is adjusted, so no week is mixed.
+   */
+  async findWeekly(
+    symbolId: number,
+    range: CandleRange,
+    adjustment: Adjustment,
+  ): Promise<Candle[]> {
+    return this.prisma.$queryRaw<Candle[]>`
+      WITH ${this.adjustmentFactors(symbolId)},
+      weeks AS (
+        SELECT w.bucket, w.first_ts AS ts,
+               w.open, w.high, w.low, w.close, w.volume,
+               ${adjustment}::text <> 'raw' AND EXISTS (
+                 SELECT 1
+                 FROM cumulative f
+                 WHERE f.ex_date > (w.first_ts AT TIME ZONE 'UTC')::date
+                   AND f.ex_date <= (w.last_ts AT TIME ZONE 'UTC')::date
+               ) AS mixed
+        FROM candles_weekly w
+        WHERE w.symbol_id = ${symbolId}::int
+          AND (${range.from}::date IS NULL
+               OR w.bucket >= time_bucket(
+                    INTERVAL '1 week',
+                    ${range.from}::date::timestamp AT TIME ZONE 'UTC'))
+          AND (${range.to}::date IS NULL
+               OR w.bucket <= (${range.to}::date::timestamp AT TIME ZONE 'UTC'))
+      ),
+      bars AS (
+        SELECT b.ts,
+               b.open * k.price AS open,
+               b.high * k.price AS high,
+               b.low * k.price AS low,
+               b.close * k.price AS close,
+               round(b.volume / k.volume_divisor) AS volume
+        FROM weeks b
+        ${this.factorsForBar(adjustment)}
+        WHERE NOT b.mixed
+        UNION ALL
+        SELECT min(b.ts),
+               first(b.open * k.price, b.ts),
+               max(b.high * k.price),
+               min(b.low * k.price),
+               last(b.close * k.price, b.ts),
+               sum(round(b.volume / k.volume_divisor))
+        FROM weeks w
+        JOIN candles_daily b
+          ON b.symbol_id = ${symbolId}::int
+         AND b.ts >= w.bucket
+         AND b.ts < w.bucket + INTERVAL '1 week'
+        ${this.factorsForBar(adjustment)}
+        WHERE w.mixed
+        GROUP BY w.bucket
+      )
+      SELECT to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS time,
+             trim_scale(round(open, 6))::text AS open,
+             trim_scale(round(high, 6))::text AS high,
+             trim_scale(round(low, 6))::text AS low,
+             trim_scale(round(close, 6))::text AS close,
+             volume::bigint::text AS volume
+      FROM bars
+      ORDER BY ts
+    `;
+  }
+
+  /**
    * Daily simple returns in the range and their summary, in one query:
    *
    * - `closes`: adjusted closes up to `to`, starting one session *before*

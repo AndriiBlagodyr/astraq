@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { toIsoDate, utcMidnight } from '../common/dates';
+import { shiftDays, toIsoDate, utcMidnight } from '../common/dates';
 import { PrismaService } from '../database/prisma.service';
 import type { MarketSession } from '../trading/market-hours';
 import type {
@@ -197,6 +197,35 @@ export class MarketDataRepository {
   }
 
   /**
+   * Recomputes the weekly bars (`candles_weekly`, a continuous aggregate)
+   * of the weeks that the sessions `range.from` to `range.to` fall in.
+   *
+   * The aggregate has its own hourly policy, and serves weeks newer than
+   * its last refresh straight from `candles_daily`. Neither helps the
+   * reader of a week that was already materialized when its bars changed:
+   * a symbol backfilled today has twenty years of weeks the aggregate
+   * thinks it knows, and would show none of them for up to an hour. So the
+   * writer asks for the refresh itself.
+   *
+   * The window must be whole buckets (`weekWindow`), or Timescale refuses
+   * it as too small. It recomputes only what the invalidation log says
+   * changed inside it, for every symbol with bars in those weeks.
+   *
+   * A procedure that commits as it goes, so it can't run inside a
+   * transaction: `$executeRaw` outside `$transaction` sends it alone.
+   */
+  async refreshWeeklyBars(range: DateRange): Promise<void> {
+    const { from, to } = weekWindow(range);
+    await this.prisma.$executeRaw`
+      CALL refresh_continuous_aggregate(
+        'candles_weekly',
+        ${from}::date::timestamp AT TIME ZONE 'UTC',
+        ${to}::date::timestamp AT TIME ZONE 'UTC'
+      )
+    `;
+  }
+
+  /**
    * Makes the symbol's actions with an ex-date in `range` exactly `rows`:
    * upserts each on its natural key `(symbol_id, type, ex_date)` and deletes
    * the ones the provider no longer reports. Without the delete, a corrected
@@ -315,4 +344,20 @@ export class MarketDataRepository {
       })),
     };
   }
+}
+
+/**
+ * The whole weeks around a range of session dates, as the weekly aggregate
+ * buckets them: from the Monday on or before `range.from` to the Monday
+ * after `range.to` (the end is exclusive). `time_bucket('1 week')` cuts at
+ * Monday 00:00 UTC.
+ */
+export function weekWindow(range: DateRange): DateRange {
+  // getUTCDay counts from Sunday; this counts the days since Monday.
+  const sinceMonday = (date: string) =>
+    (utcMidnight(date).getUTCDay() + 6) % 7;
+  return {
+    from: shiftDays(range.from, -sinceMonday(range.from)),
+    to: shiftDays(range.to, 7 - sinceMonday(range.to)),
+  };
 }

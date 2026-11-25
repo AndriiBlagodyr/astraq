@@ -21,6 +21,10 @@ const rangeMonths: Record<Exclude<ChartRange, "Max">, number> = {
 export const chartAdjustments = ["split", "raw"] as const;
 export type ChartAdjustment = (typeof chartAdjustments)[number];
 
+/** How long a bar spans: a session, or a week of them. */
+export const chartIntervals = ["1d", "1w"] as const;
+export type ChartInterval = (typeof chartIntervals)[number];
+
 /** A picked range of session dates, both ends inclusive, as YYYY-MM-DD. */
 export type CustomRange = { from: string; to: string };
 
@@ -51,20 +55,28 @@ export function rangeQuery(view: RangeView): Record<string, string> {
     : { range: view.range };
 }
 
-/** Reads the stock page's `?range=&from=&to=&adjustment=`. */
+/** Reads the stock page's `?range=&from=&to=&adjustment=&interval=`. */
 export function parseChartParams(params: SearchParams) {
   const adjustment =
     chartAdjustments.find((value) => value === params.adjustment) ?? "split";
-  return { ...parseRangeParams(params), adjustment };
+  const interval =
+    chartIntervals.find((value) => value === params.interval) ?? "1d";
+  return { ...parseRangeParams(params), adjustment, interval };
 }
 
-/** The stock page URL for a preset range or a custom one. */
+/**
+ * The stock page URL for a preset range or a custom one. Daily bars are the
+ * default and stay out of the URL, so the links from before there was a
+ * choice are still the canonical ones.
+ */
 export function chartHref(
   ticker: string,
-  view: { adjustment: ChartAdjustment } & RangeView
+  view: { adjustment: ChartAdjustment; interval?: ChartInterval } & RangeView
 ): string {
   const query = new URLSearchParams(rangeQuery(view));
   query.set("adjustment", view.adjustment);
+  if (view.interval && view.interval !== "1d")
+    query.set("interval", view.interval);
   return `/stocks/${ticker}?${query}`;
 }
 
@@ -126,11 +138,30 @@ export type ChartFill = {
 };
 
 /**
- * Each fill with the bar it is marked on: its session's, or the last bar
- * before it. A market order placed mid-session fills on a day whose bar
- * isn't stored until that evening, so it sits on the latest bar until then.
- * A fill before the first bar, or after `until` (a custom range's end),
- * isn't in view and is left out. `candles` and the result are oldest first.
+ * The bar a date belongs to: the last one that starts on or before it, or
+ * undefined for a date before the first bar. A daily bar starts on its
+ * session; a weekly bar on its week's first session, so any later day of
+ * that week lands on it. `candles` is oldest first.
+ */
+export function barOn(
+  candles: Pick<Candle, "time">[],
+  date: string
+): string | undefined {
+  let time: string | undefined;
+  for (const candle of candles) {
+    if (candle.time > date) break;
+    time = candle.time;
+  }
+  return time;
+}
+
+/**
+ * Each fill with the bar it is marked on: its session's (on weekly bars,
+ * its week's), or the last bar before it. A market order placed mid-session
+ * fills on a day whose bar isn't stored until that evening, so it sits on
+ * the latest bar until then. A fill before the first bar, or after `until`
+ * (a custom range's end), isn't in view and is left out. `candles` and the
+ * result are oldest first.
  */
 export function placeFills<Fill extends ChartFill>(
   fills: Fill[],
@@ -140,11 +171,7 @@ export function placeFills<Fill extends ChartFill>(
   const placed: (Fill & { time: string })[] = [];
   for (const fill of fills) {
     if (until !== undefined && fill.sessionDate > until) continue;
-    let time: string | undefined;
-    for (const candle of candles) {
-      if (candle.time > fill.sessionDate) break;
-      time = candle.time;
-    }
+    const time = barOn(candles, fill.sessionDate);
     if (time !== undefined) placed.push({ ...fill, time });
   }
   return placed.sort((a, b) => a.time.localeCompare(b.time));

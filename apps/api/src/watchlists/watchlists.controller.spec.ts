@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { ZodValidationPipe } from 'nestjs-zod';
 import request from 'supertest';
 import { signJwt } from '../auth/jwt';
+import { CacheStore, NoCacheStore } from '../common/cache-store';
 import { env } from '../common/env';
 import { AllExceptionsFilter } from '../common/filters/http-exception.filter';
 import { PrismaService } from '../database/prisma.service';
@@ -52,6 +53,8 @@ describe('WatchlistsController', () => {
       imports: [WatchlistsModule],
       providers: [{ provide: APP_PIPE, useClass: ZodValidationPipe }],
     })
+      .overrideProvider(CacheStore)
+      .useValue(new NoCacheStore())
       .overrideProvider(PrismaService)
       .useValue({})
       .overrideProvider(WatchlistsRepository)

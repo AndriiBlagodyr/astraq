@@ -12,12 +12,13 @@ import { PositionSummary } from "@/app/components/PositionSummary";
 import { RangeControls } from "@/app/components/RangeControls";
 import { RecordStockView } from "@/app/components/RecentStocks";
 import { formatPrice } from "@/lib/format";
-import { findSymbol, getDailyCandles } from "@/lib/market-data";
+import { findSymbol, getCandles } from "@/lib/market-data";
 import { listPortfolios, symbolTrading } from "@/lib/portfolios";
 import { listWatchlists } from "@/lib/watchlists";
 import {
   chartAdjustments,
   chartHref,
+  chartIntervals,
   fillCounts,
   marketDate,
   parseChartParams,
@@ -26,6 +27,7 @@ import {
   sessionChange,
   splitLabel,
   type ChartAdjustment,
+  type ChartInterval,
   type ChartRange,
 } from "@/lib/stock-chart";
 
@@ -45,11 +47,17 @@ const adjustmentLabels: Record<ChartAdjustment, string> = {
   split: "Split-adjusted",
   raw: "Raw",
 };
+const intervalLabels: Record<ChartInterval, string> = {
+  "1d": "Daily",
+  "1w": "Weekly",
+};
 
 // The stock page's Chart tab (docs/ui-plan.md § Stock page). Range and
 // adjustment live in the URL, so every view is a link and the server renders
 // it; only the chart itself is a client component. Since Phase 3 it also
 // shows what the user holds of the symbol and marks their fills on the chart.
+// Weekly bars (Phase 4) are the api's, from its weekly aggregate: the page
+// only asks for another interval.
 export default async function StockPage({
   params,
   searchParams,
@@ -58,7 +66,9 @@ export default async function StockPage({
   // Not a ticker at all (`/stocks/123`): the api would answer 400, which
   // reads as "the chart couldn't load". It's a page that doesn't exist.
   if (!TickerParamSchema.safeParse({ ticker: symbol }).success) notFound();
-  const { range, adjustment, custom } = parseChartParams(await searchParams);
+  const { range, adjustment, interval, custom } = parseChartParams(
+    await searchParams
+  );
   const ticker = symbol.toUpperCase();
   const today = marketDate();
 
@@ -71,10 +81,11 @@ export default async function StockPage({
   const [summary, series, watchlists, { portfolios, holdings, fills }] =
     await Promise.all([
       findSymbol(ticker),
-      getDailyCandles(ticker, {
+      getCandles(ticker, {
         from: custom ? custom.from : rangeStart(range, today),
         to: custom?.to,
         adjustment,
+        interval,
       }),
       listWatchlists(),
       trading,
@@ -86,15 +97,23 @@ export default async function StockPage({
   // mode: a custom range or raw prices mustn't turn it into a historical
   // price or a split into a -90% "day".
   const last = summary?.latestClose ? sessionChange(summary.latestClose) : null;
-  // A preset link drops the custom dates; a price link keeps whichever is on.
-  const href = (next: { range?: ChartRange; adjustment?: ChartAdjustment }) => {
+  // A preset link drops the custom dates; a price or bars link keeps
+  // whichever is on.
+  const href = (next: {
+    range?: ChartRange;
+    adjustment?: ChartAdjustment;
+    interval?: ChartInterval;
+  }) => {
     const view = next.range ?? custom ?? range;
-    const nextAdjustment = next.adjustment ?? adjustment;
+    const rest = {
+      adjustment: next.adjustment ?? adjustment,
+      interval: next.interval ?? interval,
+    };
     return chartHref(
       ticker,
       typeof view === "string"
-        ? { range: view, adjustment: nextAdjustment }
-        : { custom: view, adjustment: nextAdjustment }
+        ? { range: view, ...rest }
+        : { custom: view, ...rest }
     ) as Route;
   };
   const rangeLabel = custom ? `${custom.from} to ${custom.to}` : range;
@@ -162,32 +181,45 @@ export default async function StockPage({
             range={range}
             custom={custom}
             today={today}
-            target={{ page: "stock", ticker, adjustment }}
+            target={{ page: "stock", ticker, adjustment, interval }}
             hrefFor={(value) => href({ range: value })}
           />
-          <PillLinks
-            label="Prices"
-            items={chartAdjustments.map((value) => ({
-              key: value,
-              text: adjustmentLabels[value],
-              href: href({ adjustment: value }),
-              current: value === adjustment,
-            }))}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <PillLinks
+              label="Bars"
+              items={chartIntervals.map((value) => ({
+                key: value,
+                text: intervalLabels[value],
+                href: href({ interval: value }),
+                current: value === interval,
+              }))}
+            />
+            <PillLinks
+              label="Prices"
+              items={chartAdjustments.map((value) => ({
+                key: value,
+                text: adjustmentLabels[value],
+                href: href({ adjustment: value }),
+                current: value === adjustment,
+              }))}
+            />
+          </div>
         </div>
 
         {series.candles.length > 0 ? (
           <>
             <CandleChart
               candles={series.candles}
-              label={`${ticker} daily candles, ${adjustmentLabels[adjustment].toLowerCase()}, ${rangeLabel}`}
+              interval={interval}
+              label={`${ticker} ${intervalLabels[interval].toLowerCase()} candles, ${adjustmentLabels[adjustment].toLowerCase()}, ${rangeLabel}`}
               splits={adjustment === "raw" ? series.splits : undefined}
               fills={marked}
             />
             {marked.length > 0 ? (
               <p className="m-0 text-sm text-muted">
                 Your fills in this range: {fillCounts(marked)}, marked B and S
-                on the session each filled in. Point at a bar to read its fills
+                on the {interval === "1w" ? "week" : "session"} each filled in.
+                Point at a bar to read its fills
                 {adjustment === "split" && series.splits.length > 0
                   ? "; their prices are as traded, before any later split"
                   : null}

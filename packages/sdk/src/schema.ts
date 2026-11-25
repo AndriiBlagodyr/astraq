@@ -805,6 +805,8 @@ export interface components {
         };
         /** @enum {string} */
         Adjustment_Output: "raw" | "split" | "all";
+        /** @enum {string} */
+        CandleInterval_Output: "1d" | "1w";
         Candle_Output: {
             /** Format: date */
             time: string;
@@ -823,6 +825,7 @@ export interface components {
         CandleSeries_Output: {
             ticker: string;
             adjustment: components["schemas"]["Adjustment_Output"];
+            interval: components["schemas"]["CandleInterval_Output"];
             candles: components["schemas"]["Candle_Output"][];
             splits: components["schemas"]["Split_Output"][];
         };
@@ -903,6 +906,8 @@ export interface components {
         };
         /** @enum {string} */
         Adjustment: "raw" | "split" | "all";
+        /** @enum {string} */
+        CandleInterval: "1d" | "1w";
     };
     responses: never;
     parameters: never;
@@ -1640,6 +1645,7 @@ export interface operations {
                 from?: string;
                 to?: string;
                 adjustment?: components["schemas"]["Adjustment"];
+                interval?: components["schemas"]["CandleInterval"];
             };
             header?: never;
             path: {

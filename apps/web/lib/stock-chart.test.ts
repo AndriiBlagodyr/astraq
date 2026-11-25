@@ -1,4 +1,5 @@
 import {
+  barOn,
   chartHref,
   fillCounts,
   marketDate,
@@ -27,18 +28,26 @@ describe("parseChartParams", () => {
     expect(parseChartParams({})).toEqual({
       range: "1Y",
       adjustment: "split",
+      interval: "1d",
       custom: null,
     });
     expect(parseChartParams({ range: "2W", adjustment: ["raw"] })).toEqual({
       range: "1Y",
       adjustment: "split",
+      interval: "1d",
       custom: null,
     });
     expect(parseChartParams({ range: "Max", adjustment: "raw" })).toEqual({
       range: "Max",
       adjustment: "raw",
+      interval: "1d",
       custom: null,
     });
+  });
+
+  it("reads weekly bars, and falls back to daily for anything else", () => {
+    expect(parseChartParams({ interval: "1w" }).interval).toBe("1w");
+    expect(parseChartParams({ interval: "1m" }).interval).toBe("1d");
   });
 
   it("reads a valid from/to pair as a custom range, inclusive of one day", () => {
@@ -73,6 +82,30 @@ describe("chartHref", () => {
         adjustment: "split",
       })
     ).toBe("/stocks/NVDA?from=2024-05-01&to=2024-06-28&adjustment=split");
+  });
+
+  it("names the interval only when it isn't daily", () => {
+    expect(
+      chartHref("NVDA", { range: "5Y", adjustment: "split", interval: "1w" })
+    ).toBe("/stocks/NVDA?range=5Y&adjustment=split&interval=1w");
+    expect(
+      chartHref("NVDA", { range: "5Y", adjustment: "split", interval: "1d" })
+    ).toBe("/stocks/NVDA?range=5Y&adjustment=split");
+  });
+});
+
+describe("barOn", () => {
+  // Weekly bars: each starts on its week's first session.
+  const weeks = [{ time: "2024-06-03" }, { time: "2024-06-10" }];
+
+  it("finds the week a later session of it falls in", () => {
+    expect(barOn(weeks, "2024-06-07")).toBe("2024-06-03");
+    expect(barOn(weeks, "2024-06-10")).toBe("2024-06-10");
+    expect(barOn(weeks, "2024-06-14")).toBe("2024-06-10");
+  });
+
+  it("has no bar for a date before the first", () => {
+    expect(barOn(weeks, "2024-05-31")).toBeUndefined();
   });
 });
 

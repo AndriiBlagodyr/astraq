@@ -8,6 +8,7 @@ import { returnsHref, type ReturnsAdjustment } from "@/lib/returns-view";
 import {
   chartHref,
   type ChartAdjustment,
+  type ChartInterval,
   type CustomRange,
 } from "@/lib/stock-chart";
 
@@ -16,7 +17,12 @@ import {
  * href builder, because a server component can't pass a function here.
  */
 export type RangeTarget =
-  | { page: "stock"; ticker: string; adjustment: ChartAdjustment }
+  | {
+      page: "stock";
+      ticker: string;
+      adjustment: ChartAdjustment;
+      interval: ChartInterval;
+    }
   | { page: "returns"; symbol: string; adjustment: ReturnsAdjustment };
 
 type CustomRangePickerProps = {
@@ -30,7 +36,11 @@ type CustomRangePickerProps = {
 /** The target page's URL for a custom range. */
 export function rangeHref(target: RangeTarget, custom: CustomRange): string {
   return target.page === "stock"
-    ? chartHref(target.ticker, { custom, adjustment: target.adjustment })
+    ? chartHref(target.ticker, {
+        custom,
+        adjustment: target.adjustment,
+        interval: target.interval,
+      })
     : returnsHref({
         symbol: target.symbol,
         custom,

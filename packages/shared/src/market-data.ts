@@ -81,19 +81,32 @@ export const AdjustmentSchema = z
   .enum(["raw", "split", "all"])
   .meta({ id: "Adjustment" });
 
-/** Query of `GET /api/symbols/{ticker}/candles`. Dates are session dates. */
+/**
+ * How long a bar spans: `1d` is one session, `1w` one week, Monday to
+ * Sunday in UTC, built from that week's sessions.
+ */
+export const CandleIntervalSchema = z
+  .enum(["1d", "1w"])
+  .meta({ id: "CandleInterval" });
+
+/**
+ * Query of `GET /api/symbols/{ticker}/candles`. Dates are session dates.
+ * Weekly bars come whole: the range takes every week that `from` to `to`
+ * touches, so its first and last bar can reach past the two dates.
+ */
 export const CandlesQuerySchema = orderedRange(
   z.object({
     from: z.iso.date().optional(),
     to: z.iso.date().optional(),
     adjustment: AdjustmentSchema.default("split"),
+    interval: CandleIntervalSchema.default("1d"),
   }),
 );
 
-/** One daily bar. */
+/** One bar: a session, or a week of them. */
 export const CandleSchema = z
   .object({
-    /** Session date, YYYY-MM-DD. */
+    /** Session date, YYYY-MM-DD. A weekly bar carries its first session's. */
     time: z.iso.date(),
     open: decimalString,
     high: decimalString,
@@ -118,6 +131,7 @@ export const CandleSeriesSchema = z
   .object({
     ticker: z.string(),
     adjustment: AdjustmentSchema,
+    interval: CandleIntervalSchema,
     candles: z.array(CandleSchema),
     /** Splits that went ex within the range, oldest first. */
     splits: z.array(SplitSchema),
@@ -286,6 +300,7 @@ export type SymbolSearchQuery = z.infer<typeof SymbolSearchQuerySchema>;
 export type TickerParam = z.infer<typeof TickerParamSchema>;
 export type SymbolList = z.infer<typeof SymbolListSchema>;
 export type Adjustment = z.infer<typeof AdjustmentSchema>;
+export type CandleInterval = z.infer<typeof CandleIntervalSchema>;
 export type CandlesQuery = z.infer<typeof CandlesQuerySchema>;
 export type Candle = z.infer<typeof CandleSchema>;
 export type Split = z.infer<typeof SplitSchema>;
