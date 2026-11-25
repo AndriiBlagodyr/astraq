@@ -44,11 +44,23 @@ It also holds the cache of latest closes and symbol searches (`cache:*`). Leave 
    | `LOG_LEVEL` | `info` |
    | `BFF_SHARED_SECRET` | a long random string (32 characters or more), marked **sealed**; the same value goes to Vercel. With it the api rate-limits per browser. Without it every user shares the web server's bucket: ten failed sign-ins by anyone block sign-in for all |
    | `ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY` | Alpaca keys, marked **sealed**. The loaders need them; the api uses them to load a newly watched symbol's candles |
+   | `ADMIN_EMAILS` | your own email, the one you register with. Those users see the job queue at `/admin/queue` and on `/status`. Unset: nobody does |
+   | `MONGODB_URL` | optional, see [MongoDB](#mongodb-mongo-optional). Unset: no raw payload archive, everything else works |
 
    `NODE_ENV=production` is baked into the image. Railway sets `PORT`, and `RAILWAY_GIT_COMMIT_SHA`, which `/health` reports as `version`.
 4. **Networking → Generate Domain.** That URL is the web app's `API_URL`.
 
 The first deploy builds the image, runs the migrations against the empty database (the `init` migration creates the `timescaledb` extension and the hypertable), and goes live once `/health/ready` returns 200.
+
+### MongoDB (`mongo`), optional
+
+The archive of raw provider answers ([ADR 0011](decisions/0011-mongodb-vs-jsonb-for-the-raw-payload-archive.md)). Nothing depends on it: leave it out of the first deploy and add it when you want to replay what a provider sent.
+
+1. **New → Database → MongoDB.** Name the service `mongo` and leave it private.
+2. On the `api` service set `MONGODB_URL` to its private URL with a database name as the path, e.g. `${{mongo.MONGO_URL}}/veracand?authSource=admin`. The worker references the api's variables, so it gets it too; the worker is the one that writes.
+3. `RAW_ARCHIVE_DAYS` (default 90) is how long an answer is kept. MongoDB deletes expired ones by itself (a TTL index the api creates on its first write).
+
+No backup is planned for it: it holds copies of what the providers can be asked again, and it expires.
 
 ### Worker (`worker`)
 
@@ -60,7 +72,7 @@ The same image as the api, started as the market data worker: it takes jobs off 
 
 It runs no migrations: the api's pre-deploy step does. Deployed together after a migration, the worker may start a moment before the new table exists; a job that fails on that is retried.
 
-When it starts it logs the two sessions it made sure are scheduled, the last one that closed and the next to close. From then on each close schedules the next. Nothing else is needed: no cron entry, no timer. To look at the queue:
+When it starts it logs the two sessions it made sure are scheduled, the last one that closed and the next to close. From then on each close schedules the next. Nothing else is needed: no cron entry, no timer. The queue is at `/admin/queue` in the web app for the users in `ADMIN_EMAILS`. From a shell:
 
 ```sh
 railway ssh --service worker

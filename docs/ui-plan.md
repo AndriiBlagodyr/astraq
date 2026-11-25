@@ -74,6 +74,7 @@ Phase 2 onward, for visitors who aren't signed in: the logo, Sign in, and the th
 | `/alerts` | Alerts | 9 | signed in |
 | `/settings/*` | Settings | 2, 7 | signed in |
 | `/status` | System and data status | 0, 4 | public until 7, then admin |
+| `/admin/queue` | Job queue | 4 | admin (the api's `ADMIN_EMAILS`); not found for everyone else |
 | `/admin/users` | User admin | 7 | admin |
 
 ## Pages
@@ -223,7 +224,7 @@ Appearance (theme, mode, density) stays in the top-bar theme menu, not Settings,
 **For:** whether the system and the data can be trusted right now.
 
 - **Phase 0:** live API and ML service health (`/health/ready`, `/health`) with response and latency, checked on every request. `/health/ready` checks the database from Phase 1. The deployed version (web and api commit) is shown from Phase 1; service addresses are listed only outside production.
-- **Phase 4:** data quality results (missing sessions, duplicate bars, OHLC sanity, stale symbols) with when and for which session they were checked, and a warning when the check is older than the last close: built. Job failures and a link to Bull Board (admin) come with the queue dashboard (roadmap Phase 4 item 8).
+- **Phase 4:** data quality results (missing sessions, duplicate bars, OHLC sanity, stale symbols) with when and for which session they were checked, and a warning when the check is older than the last close: built. The job queue: built (2026-11-25), by hand instead of Bull Board. An admin (a user named in the api's `ADMIN_EMAILS`; roles come in Phase 7) gets a Jobs card on `/status` with one badge (healthy, retrying, given up on, or nothing scheduled) and a link to `/admin/queue`. That page lists what is running, what is waiting out a retry and when it tries next, the scheduled after-close refresh, the jobs that were given up on with their errors and a button to put them back, and the recent failures. For anyone else the card isn't rendered and the page is the not-found page. It shows the queue as of the page's load; it doesn't poll.
 - **Phase 7:** becomes admin-only. `/admin/users` joins it.
 - **Phase 10:** SLO status (candle freshness, API p95, alert delivery time) and links to the dashboards.
 

@@ -30,7 +30,7 @@ astraq/
 │   ├── shared/      Zod schemas shared by the apps (the contract's source)
 │   └── sdk/         Typed API client generated from the OpenAPI spec
 └── infra/
-    └── docker/      Local Postgres + TimescaleDB and Redis (compose)
+    └── docker/      Local Postgres + TimescaleDB, Redis, MongoDB, and Jaeger (compose)
 ```
 
 ## Key documents
@@ -92,7 +92,7 @@ Storybook is a second process (`pnpm dev:storybook` on `:6006`). Tunnel it with 
 
 ### Local infra
 
-`pnpm infra:up` starts Postgres 16 + TimescaleDB (`localhost:5432`) and Redis 7 (`localhost:6379`) from `infra/docker/compose.yml`, and waits until both are healthy. It needs Docker running. The local database and user are both `veracand` (password `veracand`). To change a port or the credentials, copy `infra/docker/.env.example` to `infra/docker/.env`.
+`pnpm infra:up` starts Postgres 16 + TimescaleDB (`localhost:5432`), Redis 7 (`localhost:6379`), and MongoDB 7 (`localhost:27017`, with Mongo Express on <http://localhost:8081> to browse it) from `infra/docker/compose.yml`, and waits until they are healthy. It needs Docker running. The local database and user are both `veracand` (password `veracand`). To change a port or the credentials, copy `infra/docker/.env.example` to `infra/docker/.env`.
 
 The api applies pending Prisma migrations (`prisma migrate deploy`) every time `pnpm dev` starts it. If the database is down it logs the error and starts anyway, and `/health/ready` reports 503. After editing `apps/api/prisma/schema.prisma`, run `pnpm db:migrate` to create and apply a new migration. `pnpm install` generates the Prisma Client into `apps/api/src/generated/`, which is gitignored; after editing the schema, `pnpm --filter @astraq/api db:generate` refreshes it.
 
@@ -110,6 +110,9 @@ Every service validates its env at boot and exits with a readable error on a bad
 | api | `LOG_LEVEL` | `info` |
 | api, ml | `DATABASE_URL` | `postgres://veracand:veracand@localhost:5432/veracand` |
 | api, ml | `REDIS_URL` | `redis://localhost:6379` |
+| api | `MONGODB_URL` | `mongodb://localhost:27017/veracand` in development; unset anywhere else, which turns the raw payload archive off |
+| api | `RAW_ARCHIVE_DAYS` | `90`: how long an archived provider answer is kept |
+| api | `ADMIN_EMAILS` | none: comma-separated emails of the users who may open `/admin/queue` |
 | api | `CORS_ORIGINS` | `http://localhost:3000` (comma-separated origins, no paths) |
 | ml | `LOG_LEVEL` | `info` |
 | web | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` |
@@ -168,6 +171,15 @@ FROM timescaledb_information.jobs j
 JOIN timescaledb_information.job_stats s USING (job_id)
 WHERE j.proc_name IN ('policy_compression', 'policy_refresh_continuous_aggregate');
 ```
+
+Every answer a provider gives to ingestion is archived in MongoDB for 90 days (`raw_payloads`, [ADR 0011](docs/decisions/0011-mongodb-vs-jsonb-for-the-raw-payload-archive.md)), and can be run through its adapter again to see whether it still produces what is stored. If MongoDB is down, ingestion carries on and logs a warning.
+
+```bash
+pnpm --filter @astraq/api archive list --ticker AAPL    # the newest captures: one per provider call
+pnpm --filter @astraq/api archive replay <capture id>   # re-read it and compare with the stored bars and actions
+```
+
+The queue is also at `/admin/queue` in the web app (running, retrying, scheduled, and given-up-on jobs, with a button to put the last ones back) for the users named in the api's `ADMIN_EMAILS`. Set it in `apps/api/.env.local`, to the email you registered with.
 
 The latest closes and the symbol search are cached in Redis under `cache:*`. Rows written around the api (psql, a seed script) don't invalidate it; `redis-cli --scan --pattern 'cache:*' | xargs redis-cli del` empties it.
 

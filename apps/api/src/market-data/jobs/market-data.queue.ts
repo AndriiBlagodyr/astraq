@@ -1,3 +1,4 @@
+import type { QueueJob, QueueStatus } from '@astraq/shared';
 import type { OnModuleDestroy } from '@nestjs/common';
 import { FlowProducer, type Job, Queue } from 'bullmq';
 import Redis from 'ioredis';
@@ -169,6 +170,65 @@ export class MarketDataQueue implements OnModuleDestroy {
     };
   }
 
+  /**
+   * The queue as a person wants to see it (`GET /api/admin/queue`): the
+   * counts, and up to `limit` jobs of each list that says something: what
+   * runs now, what runs next, what was given up on.
+   *
+   * BullMQ's getters return a delayed job without the time it is due. That
+   * time is the job's score in the `delayed` sorted set, shifted left 12
+   * bits to leave room for a counter that keeps same-millisecond jobs in
+   * order, so it is read from the set itself. Computing it from the job
+   * (created + delay) is right for a scheduled job and wrong for one
+   * waiting out a retry, whose delay is the backoff and counts from the
+   * failed try.
+   */
+  async inspect(limit = 25): Promise<QueueStatus> {
+    const last = limit - 1;
+    const [counts, active, due, failed, dead] = await Promise.all([
+      this.counts(),
+      this.jobs.getJobs(['active'], 0, last, true),
+      this.connection.zrange(this.jobs.toKey('delayed'), 0, last, 'WITHSCORES'),
+      // The failed set is ordered by when a job finished: newest first.
+      this.jobs.getJobs(['failed'], 0, last, false),
+      this.dead.getJobs(['waiting'], 0, last, true),
+    ]);
+
+    const delayed: QueueJob[] = [];
+    for (let index = 0; index < due.length; index += 2) {
+      const job = await this.jobs.getJob(due[index]!);
+      // Gone between the two reads: it ran.
+      if (job === undefined) continue;
+      delayed.push(view(job, Math.floor(Number(due[index + 1]) / 0x1000)));
+    }
+
+    return {
+      queue: this.name,
+      asOf: new Date().toISOString(),
+      counts: {
+        waiting: counts.waiting ?? 0,
+        active: counts.active ?? 0,
+        delayed: counts.delayed ?? 0,
+        waitingChildren: counts['waiting-children'] ?? 0,
+        completed: counts.completed ?? 0,
+        failed: counts.failed ?? 0,
+        dead: counts.dead ?? 0,
+      },
+      active: active.map((job) => view(job, job.processedOn)),
+      delayed,
+      failed: failed.map((job) => view(job, job.finishedOn)),
+      dead: dead.map((job) => ({
+        id: job.data.jobId,
+        name: job.name,
+        data: asRecord(job.data.data),
+        attempts: job.data.attempts,
+        maxAttempts: JOB_OPTIONS.attempts,
+        error: job.data.error,
+        at: job.data.failedAt,
+      })),
+    };
+  }
+
   /** Deletes both queues and everything in them. For the tests. */
   async obliterate(): Promise<void> {
     await this.jobs.obliterate({ force: true });
@@ -181,4 +241,23 @@ export class MarketDataQueue implements OnModuleDestroy {
     await this.flows.close();
     await this.connection.quit();
   }
+}
+
+/** A payload is an object by its schema; anything else is shown wrapped. */
+function asRecord(data: unknown): Record<string, unknown> {
+  return typeof data === 'object' && data !== null && !Array.isArray(data)
+    ? (data as Record<string, unknown>)
+    : { value: data };
+}
+
+function view(job: Job, at: number | undefined): QueueJob {
+  return {
+    id: String(job.id),
+    name: job.name,
+    data: asRecord(job.data),
+    attempts: job.attemptsMade,
+    maxAttempts: job.opts.attempts ?? 1,
+    error: job.failedReason || null,
+    at: at === undefined ? null : new Date(at).toISOString(),
+  };
 }

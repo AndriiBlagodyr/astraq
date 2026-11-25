@@ -12,9 +12,11 @@ import {
   Tr,
 } from "@astraq/ui";
 import { DataQualityPanel } from "@/app/components/DataQualityPanel";
+import { QueuePanel } from "@/app/components/QueuePanel";
 import { getDataQuality } from "@/lib/data-quality";
 import { env } from "@/lib/env";
 import { checkServices, shortVersion, type ServiceHealth } from "@/lib/health";
+import { getQueueStatus } from "@/lib/queue-api";
 
 export const metadata = {
   title: "Status",
@@ -29,14 +31,16 @@ const statusBadges = {
   { tone: string; text: string }
 >;
 
-// Live health of the services behind the app, and the last data quality
-// check of the stored bars. SLOs join in Phase 10 (docs/ui-plan.md § Status).
+// Live health of the services behind the app, the last data quality check
+// of the stored bars, and for an admin the job queue. SLOs join in Phase 10
+// (docs/ui-plan.md § Status).
 export default async function StatusPage() {
   // Checked on every request: a cached "up" would defeat the page.
   await connection();
-  const [services, dataQuality] = await Promise.all([
+  const [services, dataQuality, queue] = await Promise.all([
     checkServices(),
     getDataQuality(),
+    getQueueStatus(),
   ]);
   // A service this deploy doesn't include isn't a problem.
   const allUp = services.every((service) => service.status !== "down");
@@ -113,6 +117,10 @@ export default async function StatusPage() {
       </TableWrap>
 
       <DataQualityPanel report={dataQuality} />
+
+      {/* Only an admin is told there is a queue (the api's ADMIN_EMAILS).
+          When the api is down nobody can be told apart, so nobody sees it. */}
+      {queue.kind === "ok" ? <QueuePanel status={queue.status} /> : null}
     </main>
   );
 }

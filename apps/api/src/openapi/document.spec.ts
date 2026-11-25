@@ -52,6 +52,8 @@ describe('buildOpenApiDocument', () => {
       '/api/auth/refresh',
       '/api/auth/logout',
       '/api/auth/logout-all',
+      '/api/admin/queue',
+      '/api/admin/queue/dead/retry',
       '/health/live',
       '/health/ready',
       '/api/portfolios',

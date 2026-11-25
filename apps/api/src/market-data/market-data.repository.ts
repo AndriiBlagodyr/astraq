@@ -147,6 +147,50 @@ export class MarketDataRepository {
     return bar !== null;
   }
 
+  /**
+   * A symbol's stored raw bars over a range, oldest first, in the shape a
+   * provider hands them over: what an archive replay is compared with.
+   */
+  async findCandles(symbolId: number, range: DateRange): Promise<CandleRow[]> {
+    return this.prisma.$queryRaw<CandleRow[]>`
+      SELECT ts, open::text, high::text, low::text, close::text, volume::text
+      FROM candles_daily
+      WHERE symbol_id = ${symbolId}
+        AND ts >= ${range.from}::date::timestamp AT TIME ZONE 'UTC'
+        AND ts <= ${range.to}::date::timestamp AT TIME ZONE 'UTC'
+      ORDER BY ts
+    `;
+  }
+
+  /** A symbol's stored splits and dividends with an ex-date in the range. */
+  async findCorporateActions(
+    symbolId: number,
+    range: DateRange,
+  ): Promise<CorporateActionRow[]> {
+    const rows = await this.prisma.corporateAction.findMany({
+      where: {
+        symbolId,
+        exDate: { gte: utcMidnight(range.from), lte: utcMidnight(range.to) },
+      },
+      orderBy: { exDate: 'asc' },
+    });
+    return rows.map((row) =>
+      row.type === 'SPLIT'
+        ? {
+            type: 'SPLIT',
+            exDate: toIsoDate(row.exDate),
+            splitFrom: String(row.splitFrom),
+            splitTo: String(row.splitTo),
+          }
+        : {
+            type: 'DIVIDEND',
+            exDate: toIsoDate(row.exDate),
+            cashAmount: String(row.cashAmount),
+            payDate: row.payDate && toIsoDate(row.payDate),
+          },
+    );
+  }
+
   /** Upserts symbols by ticker and returns their ids by ticker. */
   async upsertSymbols(seeds: SymbolSeed[]): Promise<Map<string, number>> {
     const ids = new Map<string, number>();
