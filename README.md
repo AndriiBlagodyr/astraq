@@ -154,8 +154,11 @@ pnpm --filter @astraq/api worker                        # works the queue until 
 pnpm --filter @astraq/api jobs backfill --tickers NVDA  # one symbol's history
 pnpm --filter @astraq/api jobs eod-refresh              # the bars of every symbol that has any
 pnpm --filter @astraq/api jobs actions-refresh          # their splits and dividends
-pnpm --filter @astraq/api jobs status                   # also: dead, retry-dead
+pnpm --filter @astraq/api jobs quality-check            # check the stored bars; /status shows the result
+pnpm --filter @astraq/api jobs status                   # also: schedule, dead, retry-dead
 ```
+
+While the worker runs, nothing else is needed: half an hour after each close of the exchange it refreshes every symbol that has bars and checks them. A worker started after a missed close catches up by itself.
 
 #### Changing an endpoint
 

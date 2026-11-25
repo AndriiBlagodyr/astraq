@@ -4,15 +4,20 @@ import { MarketDataProcessor } from './market-data.processor';
 import { MarketDataQueue } from './market-data.queue';
 import { MarketDataWorker } from './market-data.worker';
 import { RefreshService } from './refresh.service';
+import { SessionScheduler } from './session-scheduler';
 
-/** The producing side: the queue and what enqueues on it (the `jobs` CLI). */
+/**
+ * The producing side: the queue and what enqueues on it, by hand (the
+ * `jobs` CLI) and after each close (`SessionScheduler`).
+ */
 @Module({
   imports: [BootstrapModule],
   providers: [
     { provide: MarketDataQueue, useFactory: () => new MarketDataQueue() },
     RefreshService,
+    SessionScheduler,
   ],
-  exports: [MarketDataQueue, RefreshService, BootstrapModule],
+  exports: [MarketDataQueue, RefreshService, SessionScheduler, BootstrapModule],
 })
 export class JobsModule {}
 

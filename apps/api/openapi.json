@@ -960,6 +960,38 @@
         ]
       }
     },
+    "/api/market/data-quality": {
+      "get": {
+        "operationId": "getDataQuality",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataQualityReport_Output"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Any error, as an RFC 9457 problem detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem_Output"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The latest data quality check of the stored daily bars",
+        "tags": [
+          "market"
+        ]
+      }
+    },
     "/api/symbols": {
       "get": {
         "operationId": "searchSymbols",
@@ -2904,6 +2936,140 @@
           "session",
           "nextSession",
           "calendar"
+        ],
+        "additionalProperties": false
+      },
+      "DataQualityRun_Output": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "symbols": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DataQualityCheck_Output"
+            }
+          }
+        },
+        "required": [
+          "session",
+          "checkedAt",
+          "symbols",
+          "checks"
+        ],
+        "additionalProperties": false
+      },
+      "DataQualityCheck_Output": {
+        "type": "object",
+        "properties": {
+          "check": {
+            "$ref": "#/components/schemas/DataQualityCheckName_Output"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "skipped"
+            ]
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DataQualityIssue_Output"
+            }
+          }
+        },
+        "required": [
+          "check",
+          "status",
+          "count",
+          "issues"
+        ],
+        "additionalProperties": false
+      },
+      "DataQualityCheckName_Output": {
+        "type": "string",
+        "enum": [
+          "missing_sessions",
+          "duplicate_bars",
+          "ohlc_sanity",
+          "stale_symbols"
+        ]
+      },
+      "DataQualityIssue_Output": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string"
+          },
+          "session": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "session",
+          "detail"
+        ],
+        "additionalProperties": false
+      },
+      "DataQualityReport_Output": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataQualityRun_Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expectedSession": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "current": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run",
+          "expectedSession",
+          "current"
         ],
         "additionalProperties": false
       },

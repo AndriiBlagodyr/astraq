@@ -5,14 +5,17 @@ import { BOOTSTRAP_FROM } from '../bootstrap/bootstrap-symbols';
 import { IngestionService } from '../ingestion.service';
 import { MarketDataRepository } from '../market-data.repository';
 import { ProviderError } from '../provider/market-data-provider';
+import { DataQualityService } from '../quality/data-quality.service';
 import { JOB_SCHEMAS, type JobData, type JobName } from './market-data.jobs';
+import { SessionScheduler } from './session-scheduler';
 
 /** What a job did, kept on it in Redis and printed in the worker's log. */
 export type JobResult = Record<string, number | string>;
 
 /**
- * Runs one market data job: parses its payload and calls ingestion. No
- * Redis in here, so a job's work can be tested, and run, without a queue.
+ * Runs one market data job: parses its payload and calls what does the
+ * work. The three loading jobs touch no Redis, so their work can be tested,
+ * and run, without a queue; `session-close` is the one that enqueues.
  *
  * Every job may run more than once (a retry, a worker that died after
  * writing but before reporting), and each is safe to: ingestion upserts
@@ -24,6 +27,8 @@ export class MarketDataProcessor {
   constructor(
     private readonly ingestion: IngestionService,
     private readonly repository: MarketDataRepository,
+    private readonly scheduler: SessionScheduler,
+    private readonly quality: DataQualityService,
   ) {}
 
   async process(name: string, payload: unknown): Promise<JobResult> {
@@ -55,6 +60,10 @@ export class MarketDataProcessor {
         });
         return { symbols: tickers.length, from, to, actions };
       }
+      case 'session-close':
+        return this.scheduler.close(read(job, payload).session);
+      case 'data-quality-check':
+        return this.quality.run(read(job, payload).session);
     }
   }
 }

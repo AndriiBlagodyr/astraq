@@ -4,6 +4,8 @@ import { IngestionService } from '../ingestion.service';
 import { MarketCalendarService } from '../market-calendar.service';
 import { MarketDataRepository } from '../market-data.repository';
 import { ProviderModule } from '../provider/provider.module';
+import { DataQualityRepository } from '../quality/data-quality.repository';
+import { DataQualityService } from '../quality/data-quality.service';
 import { SymbolUniverseService } from '../universe/universe.service';
 
 /**
@@ -19,7 +21,15 @@ import { SymbolUniverseService } from '../universe/universe.service';
     IngestionService,
     SymbolUniverseService,
     MarketCalendarService,
+    DataQualityRepository,
+    DataQualityService,
   ],
-  exports: [MarketDataRepository, IngestionService, ProviderModule],
+  exports: [
+    MarketDataRepository,
+    IngestionService,
+    MarketCalendarService,
+    DataQualityService,
+    ProviderModule,
+  ],
 })
 export class BootstrapModule {}

@@ -11,6 +11,8 @@ import {
   Thead,
   Tr,
 } from "@astraq/ui";
+import { DataQualityPanel } from "@/app/components/DataQualityPanel";
+import { getDataQuality } from "@/lib/data-quality";
 import { env } from "@/lib/env";
 import { checkServices, shortVersion, type ServiceHealth } from "@/lib/health";
 
@@ -27,12 +29,15 @@ const statusBadges = {
   { tone: string; text: string }
 >;
 
-// Live health of the services behind the app. Data quality joins in Phase 4,
-// SLOs in Phase 10 (docs/ui-plan.md § Status).
+// Live health of the services behind the app, and the last data quality
+// check of the stored bars. SLOs join in Phase 10 (docs/ui-plan.md § Status).
 export default async function StatusPage() {
   // Checked on every request: a cached "up" would defeat the page.
   await connection();
-  const services = await checkServices();
+  const [services, dataQuality] = await Promise.all([
+    checkServices(),
+    getDataQuality(),
+  ]);
   // A service this deploy doesn't include isn't a problem.
   const allUp = services.every((service) => service.status !== "down");
   const checkedAt = new Date().toISOString();
@@ -106,6 +111,8 @@ export default async function StatusPage() {
           </Tbody>
         </Table>
       </TableWrap>
+
+      <DataQualityPanel report={dataQuality} />
     </main>
   );
 }

@@ -30,8 +30,9 @@ const RETRY_AFTER_MS = 10 * 60_000;
  *
  * The calendar keeps itself loaded: a read that finds less than a week
  * stored ahead of the day it's asked about reloads the next year inline,
- * one request to Alpaca. Until a job exists (Phase 4) that is what stops
- * the table from running out. A failed reload is logged, never thrown, and
+ * one request to Alpaca. The worker's scheduler reads it at every close
+ * (`jobs/session-scheduler.ts`), so the table doesn't run out even when no
+ * one opens the app. A failed reload is logged, never thrown, and
  * the reader gets what's stored: for a day the calendar doesn't cover the
  * clock falls back to "weekdays, 09:30 to 16:00".
  */
@@ -69,12 +70,13 @@ export class MarketCalendarService {
   }
 
   /**
-   * The calendar around an instant: from the day before it to two weeks
-   * after, as far as it is stored. Null when nothing in that window is.
+   * The calendar around an instant: from the day before it (or `daysBack`
+   * days, for a caller that looks for the last session that closed) to two
+   * weeks after, as far as it is stored. Null when nothing in that window is.
    */
-  async around(instant: Date): Promise<SessionCalendar | null> {
+  async around(instant: Date, daysBack = 1): Promise<SessionCalendar | null> {
     const day = sessionDate(instant);
-    const window = { from: shift(day, -1), to: shift(day, 14) };
+    const window = { from: shift(day, -daysBack), to: shift(day, 14) };
 
     let stored = await this.repository.findMarketSessions(window);
     if (

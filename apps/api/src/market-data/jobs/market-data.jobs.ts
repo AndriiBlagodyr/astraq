@@ -25,11 +25,18 @@ const range = z.object({
  *   ends at the session just closed.
  * - `corporate-actions-refresh`: the same batch's splits and dividends,
  *   replaced with what the provider reports now.
+ * - `session-close`: a trading day has closed. Schedules the next one's
+ *   and enqueues the day's refreshes (`session-scheduler.ts`).
+ * - `data-quality-check`: checks the stored bars once the refreshes of
+ *   `session` are over (`quality/data-quality.service.ts`).
  */
+const session = z.object({ session: z.iso.date() });
 export const JOB_SCHEMAS = {
   'symbol-backfill': z.object({ ticker }),
   'eod-refresh': range,
   'corporate-actions-refresh': range,
+  'session-close': session,
+  'data-quality-check': session,
 } as const;
 
 export type JobName = keyof typeof JOB_SCHEMAS;
@@ -51,6 +58,25 @@ export const JOB_OPTIONS = {
   removeOnComplete: { age: 7 * DAY_SECONDS, count: 1000 },
   removeOnFail: { age: 30 * DAY_SECONDS },
 } satisfies JobsOptions;
+
+/**
+ * How long after a session's close its refresh runs. The day's bar exists
+ * at the close; Alpaca's free plan serves it 15 minutes later, and half an
+ * hour leaves room for the closing auction's late prints. A print corrected
+ * after that is picked up by the next day's overlap (`BAR_OVERLAP_DAYS`).
+ */
+export const SETTLE_MS = 30 * 60_000;
+
+/**
+ * When the `session-close` job of a session that closes at `close` runs,
+ * as a delay from `now`: zero for one that is already due.
+ */
+export function closeDelayMs(close: Date, now: Date): number {
+  return Math.max(0, close.getTime() + SETTLE_MS - now.getTime());
+}
+
+/** The id of a session's `session-close` job: one per session, ever. */
+export const sessionCloseJobId = (session: string) => `session-close-${session}`;
 
 /** A refresh re-reads this many days before a symbol's last bar. */
 export const BAR_OVERLAP_DAYS = 5;
