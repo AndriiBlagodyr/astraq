@@ -214,6 +214,70 @@ export const MarketStatusSchema = z
   })
   .meta({ id: "MarketStatus" });
 
+/** The checks run on the stored daily bars after each session's refresh. */
+export const DataQualityCheckNameSchema = z
+  .enum(["missing_sessions", "duplicate_bars", "ohlc_sanity", "stale_symbols"])
+  .meta({ id: "DataQualityCheckName" });
+
+/** One thing a check found. */
+export const DataQualityIssueSchema = z
+  .object({
+    ticker: z.string(),
+    /** The session it is about; null when it is about the whole symbol. */
+    session: z.iso.date().nullable(),
+    detail: z.string(),
+  })
+  .meta({ id: "DataQualityIssue" });
+
+export const DataQualityCheckSchema = z
+  .object({
+    check: DataQualityCheckNameSchema,
+    /**
+     * `skipped` is a check that couldn't run: missing sessions need the
+     * exchange calendar, and none is stored.
+     */
+    status: z.enum(["passed", "failed", "skipped"]),
+    /** Everything the check found; `issues` may hold fewer. */
+    count: z.number().int().nonnegative(),
+    /** The most recent of them, up to a cap. */
+    issues: z.array(DataQualityIssueSchema),
+  })
+  .meta({ id: "DataQualityCheck" });
+
+export const DataQualityRunSchema = z
+  .object({
+    /** The session the bars were expected to reach. */
+    session: z.iso.date(),
+    checkedAt: z.iso.datetime(),
+    /** How many symbols were checked: the active ones with bars. */
+    symbols: z.number().int().nonnegative(),
+    checks: z.array(DataQualityCheckSchema),
+  })
+  .meta({ id: "DataQualityRun" });
+
+/**
+ * Body of `GET /api/market/data-quality`: the latest check of the stored
+ * bars, and whether it is as recent as it should be.
+ */
+export const DataQualityReportSchema = z
+  .object({
+    /** Null until the first check has run. */
+    run: DataQualityRunSchema.nullable(),
+    /** The latest session a check should have covered by now. */
+    expectedSession: z.iso.date(),
+    /**
+     * Whether `run` covers `expectedSession`. False means the refresh after
+     * a close didn't finish, or didn't run: the checks are then old news.
+     */
+    current: z.boolean(),
+  })
+  .meta({ id: "DataQualityReport" });
+
+export type DataQualityCheckName = z.infer<typeof DataQualityCheckNameSchema>;
+export type DataQualityIssue = z.infer<typeof DataQualityIssueSchema>;
+export type DataQualityCheck = z.infer<typeof DataQualityCheckSchema>;
+export type DataQualityRun = z.infer<typeof DataQualityRunSchema>;
+export type DataQualityReport = z.infer<typeof DataQualityReportSchema>;
 export type MarketSessionTimes = z.infer<typeof MarketSessionSchema>;
 export type MarketStatus = z.infer<typeof MarketStatusSchema>;
 export type LatestClose = z.infer<typeof LatestCloseSchema>;

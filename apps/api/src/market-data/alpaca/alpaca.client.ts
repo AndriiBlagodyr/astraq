@@ -14,6 +14,9 @@ import {
 import { ProviderError } from '../provider/market-data-provider';
 import { type Fetch, providerGet } from '../provider/provider-http';
 
+/** How recent the data a bars request may ask for: 15 minutes, and a margin. */
+const RECENT_DATA_MS = 16 * 60_000;
+
 /**
  * A minimal, hand-written client for the four Alpaca endpoints the market
  * data loaders need: bars and corporate actions from the data API, the asset
@@ -26,6 +29,7 @@ export class AlpacaClient {
   constructor(
     private readonly config: AlpacaEnv,
     private readonly fetch: Fetch = globalThis.fetch,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   /**
@@ -69,10 +73,7 @@ export class AlpacaClient {
           symbols: symbols.join(','),
           timeframe: '1Day',
           start: range.from,
-          // End of the day, not its midnight: daily bars are stamped at
-          // 00:00 New York time (04:00/05:00 UTC), so a date-only end could
-          // drop the bar for `to` itself.
-          end: `${range.to}T23:59:59Z`,
+          end: this.barsEnd(range.to),
           adjustment: 'raw',
           feed: this.config.ALPACA_FEED,
           limit: '10000',
@@ -83,6 +84,24 @@ export class AlpacaClient {
       yield page.bars;
       pageToken = page.next_page_token;
     } while (pageToken);
+  }
+
+  /**
+   * The `end` of a bars request for a range that ends on `to`.
+   *
+   * The end of the day, not its midnight: daily bars are stamped at 00:00
+   * New York time (04:00/05:00 UTC), so a date-only end could drop the bar
+   * for `to` itself. And never later than 16 minutes ago: the free plan
+   * refuses a request that reaches into the last 15 minutes of SIP data,
+   * which the refresh after the close (`to` is today) otherwise would. The
+   * day's bar is stamped hours earlier, so the earlier end still holds it.
+   */
+  private barsEnd(to: string): string {
+    const endOfDay = `${to}T23:59:59Z`;
+    const delayed = new Date(this.now().getTime() - RECENT_DATA_MS)
+      .toISOString()
+      .replace(/\.\d{3}Z$/, 'Z');
+    return delayed < endOfDay ? delayed : endOfDay;
   }
 
   /** Splits and cash dividends with an ex-date in the range, all pages merged. */

@@ -4,7 +4,7 @@ Web on Vercel, the api and Postgres (TimescaleDB) on Railway. [ADR 0005](decisio
 
 ## 1. Railway project
 
-Create one Railway project (`veracand`) with two services, in the same region you'll pin Vercel to (e.g. US East).
+Create one Railway project (`veracand`) with four services, in the same region you'll pin Vercel to (e.g. US East): Postgres, Redis, the api, and the worker that keeps market data fresh.
 
 ### Postgres (`timescaledb`)
 
@@ -21,6 +21,10 @@ Create one Railway project (`veracand`) with two services, in the same region yo
 
 4. **Networking:** leave it private, no TCP proxy. The api reaches it at `timescaledb.railway.internal:5432`.
 
+### Redis (`redis`)
+
+**New → Database → Redis.** Name the service `redis` and leave it private. It holds the api's rate-limit counters and the market data job queue, so it needs its volume: the schedule of the next refresh is a delayed job in it.
+
 ### API (`api`)
 
 1. **New → GitHub Repo** → this repo. Leave the **Root Directory** empty: the image builds from the repo root.
@@ -30,6 +34,8 @@ Create one Railway project (`veracand`) with two services, in the same region yo
    | Variable | Value |
    |---|---|
    | `DATABASE_URL` | `postgres://veracand:${{timescaledb.POSTGRES_PASSWORD}}@timescaledb.railway.internal:5432/veracand` |
+   | `REDIS_URL` | `${{redis.REDIS_URL}}` |
+   | `JWT_SECRET` | a long random string, marked **sealed**. The api refuses to start in production without it |
    | `CORS_ORIGINS` | the Vercel production origin, e.g. `https://veracand.vercel.app` (no trailing slash) |
    | `LOG_LEVEL` | `info` |
    | `BFF_SHARED_SECRET` | a long random string (32 characters or more), marked **sealed**; the same value goes to Vercel. With it the api rate-limits per browser. Without it every user shares the web server's bucket: ten failed sign-ins by anyone block sign-in for all |
@@ -39,6 +45,25 @@ Create one Railway project (`veracand`) with two services, in the same region yo
 4. **Networking → Generate Domain.** That URL is the web app's `API_URL`.
 
 The first deploy builds the image, runs the migrations against the empty database (the `init` migration creates the `timescaledb` extension and the hypertable), and goes live once `/health/ready` returns 200.
+
+### Worker (`worker`)
+
+The same image as the api, started as the market data worker: it takes jobs off the queue in Redis and schedules the refresh after every close (`apps/api/src/market-data/jobs/session-scheduler.ts`). A service of its own so a long backfill can't slow a request and the two restart independently.
+
+1. **New → GitHub Repo** → this repo again, Root Directory empty. Name the service `worker`.
+2. **Settings → Config-as-code path:** `apps/api/railway.worker.json`. It sets the same Dockerfile and watch paths, and `node dist/market-data/jobs/worker.main` as the start command. No healthcheck and no domain: the worker serves no HTTP.
+3. **Variables:** the api's, all of them (the worker validates the same environment at start). The simplest way is a reference per variable, e.g. `DATABASE_URL` = `${{api.DATABASE_URL}}`. It needs the Alpaca keys: without a provider it exits at start.
+
+It runs no migrations: the api's pre-deploy step does. Deployed together after a migration, the worker may start a moment before the new table exists; a job that fails on that is retried.
+
+When it starts it logs the two sessions it made sure are scheduled, the last one that closed and the next to close. From then on each close schedules the next. Nothing else is needed: no cron entry, no timer. To look at the queue:
+
+```sh
+railway ssh --service worker
+node dist/market-data/jobs/main status      # jobs in each state
+node dist/market-data/jobs/main dead        # the ones given up on, and why
+node dist/market-data/jobs/main retry-dead  # put those back
+```
 
 ### Load the symbols and candles
 
@@ -53,7 +78,9 @@ node dist/market-data/bootstrap/main --tickers NVDA,AAPL
 node dist/market-data/calendar/main             # the exchange calendar, 2016 to the end of next year
 ```
 
-All three are idempotent: rerun the first to pick up listings and delistings, the second to backfill new bars, the third after a closure is announced. Any other symbol gets its candles the first time someone adds it to a watchlist, and the api reloads the year ahead of the calendar by itself when it runs short, so the third is for the history.
+All three are idempotent: rerun the first to pick up listings and delistings, the second to backfill new bars, the third after a closure is announced. Any other symbol gets its candles the first time someone adds it to a watchlist, and the api reloads the year ahead of the calendar by itself when it runs short, so the third is for the history. Run it once all the same: the data quality check for missing sessions compares the bars against the stored calendar, and only as far back as it is stored.
+
+After that the worker keeps every symbol that has bars fresh: half an hour after each close it loads the day's bars and the last three months of corporate actions, then checks what is stored. `/status` shows the result.
 
 ## 2. Vercel project
 
@@ -81,6 +108,7 @@ Every push to `master` deploys production. Every PR gets a preview URL that read
 | Build the image | Railway | Build log. The previous deploy keeps serving |
 | `prisma migrate deploy` | Railway pre-deploy, in the new image | Deploy marked failed. The previous deploy keeps serving |
 | `/health/ready` returns 200 | Railway healthcheck | Deploy marked failed. The previous deploy keeps serving |
+| The worker restarts on the new image | Railway, the `worker` service | It exits at start (no provider, a bad variable) and Railway restarts it: the deploy log shows the reason. Jobs wait in Redis meanwhile |
 | `turbo run build --filter=web` | Vercel | Build log. The previous deploy keeps serving |
 
 Migrations must stay backward compatible with the running api (expand, then contract): the pre-deploy step runs them while the old version is still serving.
@@ -90,6 +118,7 @@ Migrations must stay backward compatible with the running api (expand, then cont
 - `https://<api-domain>/health/ready` → `{"status":"ok","version":"<commit>"}`
 - `https://<web-domain>/` → the browser asks for the site password
 - `https://<web-domain>/status` → "All services up": API up with the same commit as `master`, the web version beside it, ML not deployed
+- `https://<web-domain>/status`, the morning after a trading day → under "Market data", a check of last night's session with every check passed (missing sessions says "Not checked" until the calendar is loaded)
 - `https://<web-domain>/robots.txt` → `Disallow: /`, served without the password
 - `https://<web-domain>/stocks/NVDA` → the split-adjusted chart, on a phone too
 

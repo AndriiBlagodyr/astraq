@@ -342,6 +342,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/market/data-quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The latest data quality check of the stored daily bars */
+        get: operations["getDataQuality"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/symbols": {
         parameters: {
             query?: never;
@@ -742,6 +759,34 @@ export interface components {
             nextSession: components["schemas"]["MarketSession_Output"];
             /** @enum {string} */
             calendar: "exchange" | "weekdays";
+        };
+        DataQualityRun_Output: {
+            /** Format: date */
+            session: string;
+            /** Format: date-time */
+            checkedAt: string;
+            symbols: number;
+            checks: components["schemas"]["DataQualityCheck_Output"][];
+        };
+        DataQualityCheck_Output: {
+            check: components["schemas"]["DataQualityCheckName_Output"];
+            /** @enum {string} */
+            status: "passed" | "failed" | "skipped";
+            count: number;
+            issues: components["schemas"]["DataQualityIssue_Output"][];
+        };
+        /** @enum {string} */
+        DataQualityCheckName_Output: "missing_sessions" | "duplicate_bars" | "ohlc_sanity" | "stale_symbols";
+        DataQualityIssue_Output: {
+            ticker: string;
+            session: string | null;
+            detail: string;
+        };
+        DataQualityReport_Output: {
+            run: components["schemas"]["DataQualityRun_Output"] | null;
+            /** Format: date */
+            expectedSession: string;
+            current: boolean;
         };
         SymbolSummary_Output: {
             ticker: string;
@@ -1518,6 +1563,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketStatus_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    getDataQuality: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataQualityReport_Output"];
                 };
             };
             /** @description Any error, as an RFC 9457 problem detail */

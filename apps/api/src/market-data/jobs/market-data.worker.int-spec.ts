@@ -103,6 +103,62 @@ describe('MarketDataWorker (Redis)', () => {
     ]);
   });
 
+  it('adds a job under an id once, however often it is asked', async () => {
+    const run = vi.fn<Process>().mockResolvedValue({ jobs: 0 });
+    const close = { session: '2026-11-20' };
+
+    expect(await queue.addOnce('session-close', close, 'later', 60_000)).toBe(true);
+    expect(await queue.addOnce('session-close', close, 'later', 60_000)).toBe(false);
+    expect(await queue.counts()).toMatchObject({ delayed: 1, waiting: 0 });
+
+    // A job that is done is still there: asking again doesn't run it again.
+    start(run);
+    expect(await queue.addOnce('session-close', close, 'due')).toBe(true);
+    await until(async () => (await queue.counts()).completed === 1);
+    expect(await queue.addOnce('session-close', close, 'due')).toBe(false);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs the last job of a flow after its steps, a dead-lettered one included', async () => {
+    const order: string[] = [];
+    const run = vi.fn<Process>(async (name) => {
+      order.push(name);
+      if (name === 'corporate-actions-refresh') {
+        throw new ProviderError('alpaca', 'rejected', 'alpaca says 403');
+      }
+      return {};
+    });
+    start(run);
+
+    expect(
+      await queue.addThen(
+        [
+          { name: 'eod-refresh', data: payload },
+          { name: 'corporate-actions-refresh', data: payload },
+        ],
+        { name: 'data-quality-check', data: { session: '2026-11-20' } },
+      ),
+    ).toBe(3);
+
+    await until(async () => (await queue.counts()).completed === 2);
+    expect(order).toHaveLength(3);
+    expect(order.at(-1)).toBe('data-quality-check');
+    expect(await queue.counts()).toMatchObject({ failed: 1, dead: 1 });
+  });
+
+  it('runs the last job of a flow at once when it has no steps', async () => {
+    const run = vi.fn<Process>().mockResolvedValue({});
+    start(run);
+    await queue.addThen([], {
+      name: 'data-quality-check',
+      data: { session: '2026-11-20' },
+    });
+    await until(async () => (await queue.counts()).completed === 1);
+    expect(run).toHaveBeenCalledWith('data-quality-check', {
+      session: '2026-11-20',
+    });
+  });
+
   it('puts a dead letter back on the queue with its payload', async () => {
     const run = vi
       .fn<Process>()

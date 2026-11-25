@@ -1,5 +1,5 @@
 import type { OnModuleDestroy } from '@nestjs/common';
-import { type Job, Queue } from 'bullmq';
+import { FlowProducer, type Job, Queue } from 'bullmq';
 import Redis from 'ioredis';
 import { env } from '../../common/env';
 import {
@@ -45,6 +45,7 @@ export class MarketDataQueue implements OnModuleDestroy {
   readonly name: string;
   private readonly jobs: Queue;
   private readonly dead: Queue<DeadLetter>;
+  private readonly flows: FlowProducer;
 
   /** `name` is overridden by the integration tests only. */
   constructor(name: string = MARKET_DATA_QUEUE) {
@@ -53,6 +54,7 @@ export class MarketDataQueue implements OnModuleDestroy {
     this.dead = new Queue<DeadLetter>(`${name}-dead`, {
       connection: this.connection,
     });
+    this.flows = new FlowProducer({ connection: this.connection });
   }
 
   /** Enqueues one job per payload, all or none. */
@@ -65,6 +67,53 @@ export class MarketDataQueue implements OnModuleDestroy {
       payloads.map((data) => ({ name, data, opts: JOB_OPTIONS })),
     );
     return added.length;
+  }
+
+  /**
+   * Enqueues a job under an id of its own, to run after `delayMs`, unless a
+   * job with that id is already there in any state (waiting, done, failed).
+   * Returns whether it was added. This is what makes scheduling safe to
+   * repeat: every worker start and every close asks for the same ids.
+   *
+   * "Already there" lasts as long as the job is kept (`JOB_OPTIONS`: a week
+   * once done), which is longer than anything asks again.
+   */
+  async addOnce<Name extends JobName>(
+    name: Name,
+    data: JobData<Name>,
+    jobId: string,
+    delayMs = 0,
+  ): Promise<boolean> {
+    if ((await this.jobs.getJob(jobId)) !== undefined) return false;
+    await this.jobs.add(name, data, { ...JOB_OPTIONS, jobId, delay: delayMs });
+    return true;
+  }
+
+  /**
+   * Enqueues `steps` and one job that runs after all of them are over: a
+   * BullMQ flow, where the last job is the parent and waits for its
+   * children. "Over" includes given up on: a step that fails for good is
+   * dead-lettered like any job and stops counting, instead of leaving the
+   * parent waiting forever (`ignoreDependencyOnFailure`). With no steps the
+   * last job runs at once. All of it is added in one Redis transaction.
+   */
+  async addThen<Last extends JobName>(
+    steps: Array<{ name: JobName; data: JobData }>,
+    last: { name: Last; data: JobData<Last> },
+  ): Promise<number> {
+    await this.flows.add({
+      name: last.name,
+      queueName: this.name,
+      data: last.data,
+      opts: JOB_OPTIONS,
+      children: steps.map((step) => ({
+        name: step.name,
+        queueName: this.name,
+        data: step.data,
+        opts: { ...JOB_OPTIONS, ignoreDependencyOnFailure: true },
+      })),
+    });
+    return steps.length + 1;
   }
 
   /**
@@ -112,6 +161,7 @@ export class MarketDataQueue implements OnModuleDestroy {
         'waiting',
         'active',
         'delayed',
+        'waiting-children',
         'completed',
         'failed',
       )),
@@ -128,6 +178,7 @@ export class MarketDataQueue implements OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     await this.jobs.close();
     await this.dead.close();
+    await this.flows.close();
     await this.connection.quit();
   }
 }

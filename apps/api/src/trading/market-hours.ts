@@ -191,6 +191,57 @@ export function marketStatus(
   };
 }
 
+/**
+ * The session on a date, or null on a day the market is closed: the
+ * calendar's where it covers the date, otherwise a weekday's 09:30 to 16:00.
+ */
+export function sessionOn(
+  date: string,
+  calendar: SessionCalendar | null = null,
+): MarketSession | null {
+  if (covers(calendar, date)) return calendar.sessions.get(date) ?? null;
+  const weekday = new Date(`${date}T12:00:00.000Z`).getUTCDay();
+  if (weekday === 0 || weekday === 6) return null;
+  return {
+    date,
+    open: sessionOpen(date),
+    close: newYorkInstant(date, CLOSE_MINUTES),
+  };
+}
+
+/**
+ * The latest session that had closed by `instant`: the one whose daily bar
+ * is the newest that can exist. At the closing instant itself the session
+ * counts as closed, as it does for `isRegularSession`.
+ */
+export function lastClosedSession(
+  instant: Date,
+  calendar: SessionCalendar | null = null,
+): MarketSession {
+  const date = new Date(`${sessionDate(instant)}T00:00:00.000Z`);
+  // The longest closure on record is under two weeks.
+  for (let day = 0; day < 30; day += 1) {
+    const session = sessionOn(date.toISOString().slice(0, 10), calendar);
+    if (session !== null && session.close.getTime() <= instant.getTime()) {
+      return session;
+    }
+    date.setUTCDate(date.getUTCDate() - 1);
+  }
+  throw new RangeError(`No session closed within 30 days of ${instant.toISOString()}`);
+}
+
+/**
+ * The first session that closes after `instant`: the one trading now, or
+ * the next to open.
+ */
+export function nextSessionToClose(
+  instant: Date,
+  calendar: SessionCalendar | null = null,
+): MarketSession {
+  const { session, next } = marketStatus(instant, calendar);
+  return session ?? next;
+}
+
 /** The calendar date after `date`. */
 export function nextDate(date: string): string {
   const next = new Date(`${date}T00:00:00.000Z`);

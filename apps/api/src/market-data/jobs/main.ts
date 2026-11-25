@@ -5,12 +5,15 @@ import { NestFactory } from '@nestjs/core';
 import { JobsModule } from './jobs.module';
 import { MarketDataQueue } from './market-data.queue';
 import { RefreshService } from './refresh.service';
+import { SessionScheduler } from './session-scheduler';
 
 // `pnpm --filter @astraq/api jobs <command>`
 //
 //   backfill --tickers NVDA,AAPL   one symbol-backfill job per ticker
 //   eod-refresh [--to YYYY-MM-DD]  the tracked symbols' bars, a job per batch
 //   actions-refresh [--to ...]     their splits and dividends
+//   quality-check [--to ...]       check the stored bars up to a session
+//   schedule                       make sure the next close has its job
 //   status                         how many jobs are in each state
 //   dead                           the jobs that were given up on, and why
 //   retry-dead                     put those back on the queue
@@ -19,7 +22,8 @@ import { RefreshService } from './refresh.service';
 
 const USAGE =
   'Usage: jobs <backfill --tickers A,B | eod-refresh [--to DATE] | ' +
-  'actions-refresh [--to DATE] | status | dead | retry-dead>';
+  'actions-refresh [--to DATE] | quality-check [--to DATE] | schedule | ' +
+  'status | dead | retry-dead>';
 
 async function main() {
   const { values, positionals } = parseArgs({
@@ -55,6 +59,20 @@ async function main() {
         logger.log(
           `Enqueued ${await refresh.enqueueCorporateActionsRefresh(values.to)} jobs`,
         );
+        break;
+      case 'quality-check':
+        logger.log(`Enqueued ${await refresh.enqueueQualityCheck(values.to)} jobs`);
+        break;
+      case 'schedule':
+        // The worker does this when it starts; this is for looking.
+        for (const close of await app.get(SessionScheduler).ensure()) {
+          logger.log(
+            `Session ${close.session}: refresh ` +
+              (close.added
+                ? `scheduled for ${close.runsAt}`
+                : 'already scheduled or done'),
+          );
+        }
         break;
       case 'status':
         logger.log(JSON.stringify(await queue.counts()));

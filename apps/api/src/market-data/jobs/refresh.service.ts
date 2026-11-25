@@ -12,8 +12,8 @@ import { MarketDataQueue } from './market-data.queue';
 /**
  * Turns "refresh everything" into jobs: reads the tracked symbols, cuts
  * them into batches the provider takes in one call (`planRefresh`), and
- * enqueues a job per batch. Called by the `jobs` CLI today; the scheduler
- * that calls it after each close is ROADMAP Phase 4 item 3.
+ * enqueues a job per batch. Called after each close by the scheduler
+ * (`session-scheduler.ts`) and by hand through the `jobs` CLI.
  *
  * `to` is the last session to load, by default yesterday (UTC): the last
  * one whose bar is certainly final.
@@ -40,6 +40,32 @@ export class RefreshService {
       'symbol-backfill',
       tickers.map((ticker) => ({ ticker })),
     );
+  }
+
+  /**
+   * Everything a closed session needs, as one flow: the bars and the
+   * corporate actions of the tracked symbols up to `session`, and a data
+   * quality check that runs once those are over. Returns how many jobs.
+   */
+  async enqueueSessionRefresh(session: string): Promise<number> {
+    const tracked = await this.repository.findTrackedSymbols();
+    const batchSize = this.ingestion.source.batchSize;
+    return this.queue.addThen(
+      [
+        ...planRefresh(tracked, session, batchSize, BAR_OVERLAP_DAYS).map(
+          (data) => ({ name: 'eod-refresh' as const, data }),
+        ),
+        ...planRefresh(tracked, session, batchSize, ACTION_LOOKBACK_DAYS).map(
+          (data) => ({ name: 'corporate-actions-refresh' as const, data }),
+        ),
+      ],
+      { name: 'data-quality-check', data: { session } },
+    );
+  }
+
+  /** One `data-quality-check` job, for a check asked for by hand. */
+  async enqueueQualityCheck(session: string = yesterdayUtc()): Promise<number> {
+    return this.queue.add('data-quality-check', [{ session }]);
   }
 
   async enqueueEodRefresh(to: string = yesterdayUtc()): Promise<number> {

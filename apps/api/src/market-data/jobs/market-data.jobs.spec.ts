@@ -1,4 +1,16 @@
-import { planRefresh, retryDelayMs } from './market-data.jobs';
+import { closeDelayMs, planRefresh, retryDelayMs } from './market-data.jobs';
+
+describe('closeDelayMs', () => {
+  const close = new Date('2026-11-24T21:00:00.000Z');
+
+  it('is half an hour after the close, and zero once that has passed', () => {
+    expect(closeDelayMs(close, new Date('2026-11-24T20:00:00.000Z'))).toBe(
+      90 * 60_000,
+    );
+    expect(closeDelayMs(close, new Date('2026-11-24T21:30:00.000Z'))).toBe(0);
+    expect(closeDelayMs(close, new Date('2026-11-26T09:00:00.000Z'))).toBe(0);
+  });
+});
 
 describe('planRefresh', () => {
   const symbols = [

@@ -76,6 +76,28 @@ model MarketSession {
   @@map("market_sessions")
 }
 
+/// One data quality check of the stored bars (ROADMAP Phase 4 item 4), run
+/// by the worker after each session's refresh. `/status` shows the latest.
+model DataQualityRun {
+  id              Int      @id @default(autoincrement())
+  /// The session the bars were expected to reach.
+  session         DateTime @db.Date
+  checkedAt       DateTime @default(now()) @map("checked_at") @db.Timestamptz(6)
+  /// How many symbols were checked: the active ones with bars.
+  symbols         Int
+  /// Null when no exchange calendar is stored to check against.
+  missingSessions Int?     @map("missing_sessions")
+  duplicateBars   Int      @map("duplicate_bars")
+  ohlcViolations  Int      @map("ohlc_violations")
+  staleSymbols    Int      @map("stale_symbols")
+  /// A capped sample of what was found: `{ check, ticker, session, detail }`.
+  issues          Json
+
+  // "The latest run" and the pruning of old ones.
+  @@index([checkedAt])
+  @@map("data_quality_runs")
+}
+
 /// A split or cash dividend, effective on its ex-date. Which columns are set
 /// depends on `type`; a CHECK constraint in the migration enforces it.
 model CorporateAction {

@@ -222,7 +222,7 @@ Appearance (theme, mode, density) stays in the top-bar theme menu, not Settings,
 **For:** whether the system and the data can be trusted right now.
 
 - **Phase 0:** live API and ML service health (`/health/ready`, `/health`) with response and latency, checked on every request. `/health/ready` checks the database from Phase 1. The deployed version (web and api commit) is shown from Phase 1; service addresses are listed only outside production.
-- **Phase 4:** data quality results (missing sessions, duplicate bars, OHLC sanity, stale symbols), the last end-of-day refresh, and job failures. A link to Bull Board (admin).
+- **Phase 4:** data quality results (missing sessions, duplicate bars, OHLC sanity, stale symbols) with when and for which session they were checked, and a warning when the check is older than the last close: built. Job failures and a link to Bull Board (admin) come with the queue dashboard (roadmap Phase 4 item 8).
 - **Phase 7:** becomes admin-only. `/admin/users` joins it.
 - **Phase 10:** SLO status (candle freshness, API p95, alert delivery time) and links to the dashboards.
 

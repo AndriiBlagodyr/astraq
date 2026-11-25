@@ -4,12 +4,14 @@ import request from 'supertest';
 import { PrismaService } from '../database/prisma.service';
 import { MarketDataModule } from './market-data.module';
 import { MarketDataRepository } from './market-data.repository';
+import { DataQualityRepository } from './quality/data-quality.repository';
 
 // The clock itself is covered in trading/settlement.spec.ts ("market
 // hours"); this checks the endpoint reads the stored calendar through it.
 describe('MarketController', () => {
   let app: INestApplication;
   const repository = { findMarketSessions: vi.fn() };
+  const quality = { findLatestRun: vi.fn() };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -19,6 +21,8 @@ describe('MarketController', () => {
       .useValue({})
       .overrideProvider(MarketDataRepository)
       .useValue(repository)
+      .overrideProvider(DataQualityRepository)
+      .useValue(quality)
       .compile();
 
     app = module.createNestApplication();
@@ -60,6 +64,73 @@ describe('MarketController', () => {
         closesAt: '2026-11-27T18:00:00.000Z',
       },
       calendar: 'exchange',
+    });
+  });
+
+  describe('GET /market/data-quality', () => {
+    const wednesday = {
+      date: '2026-11-25',
+      open: new Date('2026-11-25T14:30:00.000Z'),
+      close: new Date('2026-11-25T21:00:00.000Z'),
+    };
+    const stale = {
+      ticker: 'KO',
+      session: null,
+      detail: 'Last bar 2026-11-24, expected 2026-11-25',
+    };
+    const run = {
+      session: '2026-11-25',
+      checkedAt: new Date('2026-11-25T21:31:04.000Z'),
+      symbols: 20,
+      missingSessions: null,
+      duplicateBars: 0,
+      ohlcViolations: 0,
+      staleSymbols: 1,
+      issues: [{ check: 'stale_symbols', ...stale }],
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers({ now: thanksgiving, toFake: ['Date'] });
+      repository.findMarketSessions.mockResolvedValue({
+        first: '2016-01-04',
+        last: '2027-12-31',
+        sessions: [wednesday, friday],
+      });
+    });
+
+    it('serves the latest run with a status per check, and that it is current', async () => {
+      quality.findLatestRun.mockResolvedValue(run);
+
+      const res = await request(app.getHttpServer())
+        .get('/market/data-quality')
+        .expect(200);
+
+      expect(res.body).toEqual({
+        // The holiday has no session: Wednesday's is the one due.
+        expectedSession: '2026-11-25',
+        current: true,
+        run: {
+          session: '2026-11-25',
+          checkedAt: '2026-11-25T21:31:04.000Z',
+          symbols: 20,
+          checks: [
+            { check: 'missing_sessions', status: 'skipped', count: 0, issues: [] },
+            { check: 'duplicate_bars', status: 'passed', count: 0, issues: [] },
+            { check: 'ohlc_sanity', status: 'passed', count: 0, issues: [] },
+            { check: 'stale_symbols', status: 'failed', count: 1, issues: [stale] },
+          ],
+        },
+      });
+    });
+
+    it('says a run is late when it stops before the session due', async () => {
+      quality.findLatestRun.mockResolvedValue({ ...run, session: '2026-11-24' });
+      const late = await request(app.getHttpServer()).get('/market/data-quality');
+      expect(late.body).toMatchObject({ current: false });
+
+      quality.findLatestRun.mockResolvedValue(null);
+      const never = await request(app.getHttpServer()).get('/market/data-quality');
+      expect(never.body).toMatchObject({ run: null, current: false });
     });
   });
 
