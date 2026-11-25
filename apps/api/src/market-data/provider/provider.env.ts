@@ -3,7 +3,9 @@ import { AlpacaClient } from '../alpaca/alpaca.client';
 import { loadOptionalAlpacaEnv } from '../alpaca/alpaca.env';
 import { AlpacaProvider } from '../alpaca/alpaca.provider';
 import { YahooProvider } from '../yahoo/yahoo.provider';
+import { captureClock, capturingFetch } from './capture';
 import type { MarketDataProvider } from './market-data-provider';
+import type { Fetch } from './provider-http';
 
 const providerEnvSchema = z.object({
   // Which source bars and corporate actions come from. Unset: Alpaca when
@@ -43,8 +45,15 @@ export function loadMarketDataSources(): MarketDataSources {
   }
   const { MARKET_DATA_PROVIDER: chosen, YAHOO_CHART_URL } = parsed.data;
 
+  // Both adapters go out through a `fetch` that reports to the capture a
+  // call is made in, and read the capture's clock (`capture.ts`). Outside a
+  // capture (the asset list, the calendar) those are the plain ones.
+  const fetch: Fetch = (url, init) => globalThis.fetch(url, init);
+
   const alpacaEnv = loadOptionalAlpacaEnv();
-  const alpaca = alpacaEnv ? new AlpacaClient(alpacaEnv) : null;
+  const alpaca = alpacaEnv
+    ? new AlpacaClient(alpacaEnv, capturingFetch('alpaca', fetch), captureClock)
+    : null;
   if (chosen === 'alpaca' && alpaca === null) {
     console.error(
       'MARKET_DATA_PROVIDER=alpaca needs ALPACA_API_KEY_ID and ' +
@@ -55,7 +64,11 @@ export function loadMarketDataSources(): MarketDataSources {
 
   const provider =
     chosen === 'yahoo'
-      ? new YahooProvider(YAHOO_CHART_URL)
+      ? new YahooProvider(
+          YAHOO_CHART_URL,
+          capturingFetch('yahoo', fetch),
+          captureClock,
+        )
       : alpaca && new AlpacaProvider(alpaca);
   return { alpaca, provider };
 }

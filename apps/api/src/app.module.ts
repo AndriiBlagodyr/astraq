@@ -5,6 +5,7 @@ import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
 import { LoggerModule } from 'nestjs-pino';
 import { ZodSerializerInterceptor, ZodValidationPipe } from 'nestjs-zod';
 import { AccountModule } from './account/account.module';
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { env } from './common/env';
 import { rateLimitKey } from './common/rate-limit-key';
@@ -49,6 +50,7 @@ import { WatchlistsModule } from './watchlists/watchlists.module';
       },
     }),
     AccountModule,
+    AdminModule,
     AuthModule,
     HealthModule,
     LedgerModule,

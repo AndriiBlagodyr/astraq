@@ -141,6 +141,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The market data job queue: counts, and the jobs worth a look */
+        get: operations["getQueueStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/queue/dead/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Put every dead-lettered job back on the queue */
+        post: operations["retryDeadJobs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health/live": {
         parameters: {
             query?: never;
@@ -559,6 +593,39 @@ export interface components {
         };
         RefreshBody: {
             refreshToken: string;
+        };
+        QueueCounts_Output: {
+            waiting: number;
+            active: number;
+            delayed: number;
+            waitingChildren: number;
+            completed: number;
+            failed: number;
+            dead: number;
+        };
+        QueueJob_Output: {
+            id: string;
+            name: string;
+            data: {
+                [key: string]: unknown;
+            };
+            attempts: number;
+            maxAttempts: number;
+            error: string | null;
+            at: string | null;
+        };
+        QueueStatus_Output: {
+            queue: string;
+            /** Format: date-time */
+            asOf: string;
+            counts: components["schemas"]["QueueCounts_Output"];
+            active: components["schemas"]["QueueJob_Output"][];
+            delayed: components["schemas"]["QueueJob_Output"][];
+            failed: components["schemas"]["QueueJob_Output"][];
+            dead: components["schemas"]["QueueJob_Output"][];
+        };
+        RetryDeadResult_Output: {
+            retried: number;
         };
         HealthStatus_Output: {
             /** @constant */
@@ -1169,6 +1236,62 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    getQueueStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueStatus_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    retryDeadJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetryDeadResult_Output"];
+                };
             };
             /** @description Any error, as an RFC 9457 problem detail */
             default: {

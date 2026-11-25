@@ -1,6 +1,6 @@
 # Local infra for development. Start with `pnpm infra:up`, stop with
 # `pnpm infra:down` (data survives in named volumes; add `-v` to wipe it).
-# Mongo and Mailhog join in the phases that use them (ROADMAP.md).
+# Mailhog joins in the phase that uses it (ROADMAP.md).
 #
 # Credentials are local-only defaults, not secrets. Override any of them in
 # infra/docker/.env (gitignored), which compose reads automatically.
@@ -55,6 +55,38 @@ services:
       - "127.0.0.1:${JAEGER_OTLP_PORT:-4318}:4318"
     restart: unless-stopped
 
+  mongo:
+    # The raw provider payload archive (ROADMAP Phase 4 item 7, ADR 0011).
+    # A single node without auth, reachable from this machine only. The api
+    # archives to it in development without any configuration; if it is
+    # down, ingestion carries on and says so in the log.
+    image: mongo:7.0
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  mongo-express:
+    # A browser for the archive: http://localhost:8081 (no login: it is
+    # bound to localhost and the database holds nothing private).
+    image: mongo-express:1.0.2-20-alpine3.19
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017
+      ME_CONFIG_BASICAUTH: "false"
+    ports:
+      - "127.0.0.1:${MONGO_EXPRESS_PORT:-8081}:8081"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   redis-data:
+  mongo-data:

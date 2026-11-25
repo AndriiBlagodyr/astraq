@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
+import { RawArchiveModule } from './archive/raw-archive.module';
 import { MarketDataCacheModule } from './cache/market-data-cache.module';
 import { IngestionService } from './ingestion.service';
 import { MarketCalendarService } from './market-calendar.service';
@@ -23,7 +24,12 @@ import { DataQualityService } from './quality/data-quality.service';
  * calendar reloads itself. Validated at boot, like every other variable.
  */
 @Module({
-  imports: [DatabaseModule, ProviderModule, MarketDataCacheModule],
+  imports: [
+    DatabaseModule,
+    ProviderModule,
+    MarketDataCacheModule,
+    RawArchiveModule,
+  ],
   controllers: [MarketController],
   providers: [
     MarketDataRepository,

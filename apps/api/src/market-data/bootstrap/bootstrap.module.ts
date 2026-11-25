@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
+import { RawArchiveModule } from '../archive/raw-archive.module';
 import { MarketDataCacheModule } from '../cache/market-data-cache.module';
 import { IngestionService } from '../ingestion.service';
 import { MarketCalendarService } from '../market-calendar.service';
@@ -16,7 +17,12 @@ import { SymbolUniverseService } from '../universe/universe.service';
  * source it needs isn't configured (see ProviderModule).
  */
 @Module({
-  imports: [DatabaseModule, ProviderModule, MarketDataCacheModule],
+  imports: [
+    DatabaseModule,
+    ProviderModule,
+    MarketDataCacheModule,
+    RawArchiveModule,
+  ],
   providers: [
     MarketDataRepository,
     IngestionService,
@@ -31,6 +37,7 @@ import { SymbolUniverseService } from '../universe/universe.service';
     MarketCalendarService,
     DataQualityService,
     ProviderModule,
+    RawArchiveModule,
   ],
 })
 export class BootstrapModule {}

@@ -4,6 +4,9 @@
 export const LOCAL_DEFAULTS = {
   DATABASE_URL: 'postgres://veracand:veracand@localhost:5432/veracand',
   REDIS_URL: 'redis://localhost:6379',
+  // The raw payload archive. Used in development only, like the trace
+  // endpoint below: tests and production archive nowhere unless told to.
+  MONGODB_URL: 'mongodb://localhost:27017/veracand',
   CORS_ORIGINS: 'http://localhost:3000',
   JWT_SECRET: 'dev-secret-at-least-32-bytes-long!',
   // The same literal is the web's local default (apps/web/lib/env.ts).

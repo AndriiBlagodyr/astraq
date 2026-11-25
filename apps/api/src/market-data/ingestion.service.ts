@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { RawArchive } from './archive/raw-archive';
 import { MarketDataCache } from './cache/market-data-cache';
 import { MarketDataRepository } from './market-data.repository';
 import type { DateRange, SymbolSeed } from './market-data.types';
@@ -21,6 +22,10 @@ type Counts = { bars: number; splits: number; dividends: number };
  * aggregate would otherwise hide them for up to an hour) and drops the
  * Redis closes for those symbols. A search can't be deleted by key, so a
  * write that changes what a search finds bumps the search generation.
+ *
+ * Each call on the provider runs as a capture (`RawArchive`): the answers
+ * it was given are archived as they came, with the tickers and range they
+ * answered, whether or not the rows read from them reach the database.
  */
 @Injectable()
 export class IngestionService {
@@ -29,6 +34,7 @@ export class IngestionService {
   constructor(
     private readonly repository: MarketDataRepository,
     private readonly cache: MarketDataCache,
+    private readonly archive: RawArchive,
     /** Null when no provider is configured (see ProviderModule). */
     @Inject(PROVIDER) private readonly provider: MarketDataProvider | null,
   ) {}
@@ -108,7 +114,11 @@ export class IngestionService {
   ): Promise<Map<string, Omit<Counts, 'bars'>>> {
     const counts = new Map<string, Omit<Counts, 'bars'>>();
     if (ids.size === 0) return counts;
-    const actions = await provider.corporateActions([...ids.keys()], range);
+    const tickers = [...ids.keys()];
+    const actions = await this.archive.capture(
+      { operation: 'corporateActions', tickers, range },
+      () => provider.corporateActions(tickers, range),
+    );
     for (const ticker of actions.keys()) requested(provider, ids, ticker);
     // Every requested ticker, not just those with actions: a symbol whose
     // only action was withdrawn upstream still needs the stale row removed.
@@ -131,13 +141,21 @@ export class IngestionService {
   ): Promise<Map<string, number>> {
     const counts = new Map<string, number>();
     if (ids.size === 0) return counts;
-    for await (const page of provider.dailyBars([...ids.keys()], range)) {
-      for (const [ticker, bars] of page) {
-        const id = requested(provider, ids, ticker);
-        const changed = await this.repository.upsertCandles(id, bars);
-        counts.set(ticker, (counts.get(ticker) ?? 0) + changed);
-      }
-    }
+    const tickers = [...ids.keys()];
+    // The loop is inside the capture, not just the call: an async iterator
+    // makes its requests when it is asked for the next page.
+    await this.archive.capture(
+      { operation: 'dailyBars', tickers, range },
+      async () => {
+        for await (const page of provider.dailyBars(tickers, range)) {
+          for (const [ticker, bars] of page) {
+            const id = requested(provider, ids, ticker);
+            const changed = await this.repository.upsertCandles(id, bars);
+            counts.set(ticker, (counts.get(ticker) ?? 0) + changed);
+          }
+        }
+      },
+    );
     // Materialized weeks older than the last hourly refresh stay wrong until
     // we ask for them; a backfill would otherwise show empty weeks for an hour.
     await this.repository.refreshWeeklyBars(range);

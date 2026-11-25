@@ -146,6 +146,33 @@ describe('MarketDataWorker (Redis)', () => {
     expect(await queue.counts()).toMatchObject({ failed: 1, dead: 1 });
   });
 
+  it('shows what runs next and when, and what was given up on', async () => {
+    const run = vi
+      .fn<Process>()
+      .mockRejectedValue(new ProviderError('alpaca', 'rejected', 'bad key'));
+    const before = Date.now();
+    await queue.addOnce('session-close', { session: '2026-11-20' }, 'later', 60_000);
+    start(run);
+    await queue.add('eod-refresh', [payload]);
+    await until(async () => (await queue.counts()).dead === 1);
+
+    const status = await queue.inspect();
+    expect(status.counts).toMatchObject({ delayed: 1, failed: 1, dead: 1 });
+    expect(status.delayed).toMatchObject([
+      { id: 'later', name: 'session-close', attempts: 0, error: null },
+    ]);
+    const due = new Date(status.delayed[0]!.at!).getTime();
+    expect(due).toBeGreaterThanOrEqual(before + 60_000);
+    expect(due).toBeLessThan(Date.now() + 60_000);
+    expect(status.failed).toMatchObject([
+      { name: 'eod-refresh', data: payload, error: 'bad key' },
+    ]);
+    expect(status.dead).toMatchObject([
+      { name: 'eod-refresh', data: payload, error: 'bad key', attempts: 1 },
+    ]);
+    expect(status.dead[0]!.id).toBe(status.failed[0]!.id);
+  });
+
   it('runs the last job of a flow at once when it has no steps', async () => {
     const run = vi.fn<Process>().mockResolvedValue({});
     start(run);

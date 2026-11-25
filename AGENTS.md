@@ -18,7 +18,7 @@ Goals the codebase must serve:
 
 ## Data stores
 - Postgres (+ TimescaleDB) — users, portfolios, orders, OHLCV hypertables.
-- MongoDB (Phase 4) — raw provider payload archive, later news and research notes. Strategy definitions live in Postgres.
+- MongoDB (Phase 4) — raw provider payload archive (optional, expires by TTL; ADR 0011), later news and research notes. Strategy definitions live in Postgres.
 - Redis — cache, rate limits, BullMQ queues (Node and Python workers), streams.
 
 ## Non-negotiables

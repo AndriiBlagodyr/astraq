@@ -53,7 +53,7 @@ jobs:
       - run: pnpm turbo run lint typecheck test:unit
 
   api-integration:
-    name: API — integration tests (TimescaleDB, Redis)
+    name: API — integration tests (TimescaleDB, Redis, MongoDB)
     runs-on: ubuntu-latest
     services:
       # Same image as infra/docker/compose.yml.
@@ -80,9 +80,20 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      # The raw payload archive's test (TTL index, dotted keys) needs a real one.
+      mongo:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping').ok\""
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
       DATABASE_URL: postgres://veracand:veracand@localhost:5432/veracand
       REDIS_URL: redis://localhost:6379
+      MONGODB_TEST_URL: mongodb://localhost:27017/veracand_test
     steps:
       - uses: actions/checkout@v5
 

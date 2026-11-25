@@ -30,6 +30,25 @@ const envSchema = z
       .default('info'),
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }).optional(),
     REDIS_URL: z.url({ protocol: /^rediss?$/ }).optional(),
+    // The raw provider payload archive (ADR 0011), with the database name
+    // as the path. Optional everywhere: without it nothing is archived and
+    // ingestion works the same. Development defaults to the local MongoDB.
+    MONGODB_URL: z.url({ protocol: /^mongodb(\+srv)?$/ }).optional(),
+    // How many days an archived provider answer is kept before MongoDB's
+    // TTL index deletes it.
+    RAW_ARCHIVE_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+    // Comma-separated emails of the users who may see the job queue
+    // (`/api/admin/*`). Empty or unset: nobody. Roles come in Phase 7.
+    ADMIN_EMAILS: z
+      .string()
+      .transform((v) =>
+        v
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.email()))
+      .optional(),
     // Comma-separated, e.g. "https://veracand.app,https://preview.veracand.app".
     CORS_ORIGINS: z
       .string()
@@ -95,6 +114,10 @@ const envSchema = z
       value.BFF_SHARED_SECRET ??
       (value.NODE_ENV === 'production' ? null : LOCAL_DEFAULTS.BFF_SHARED_SECRET),
     INVITE_EMAILS: value.INVITE_EMAILS ?? [],
+    ADMIN_EMAILS: value.ADMIN_EMAILS ?? [],
+    MONGODB_URL:
+      value.MONGODB_URL ??
+      (value.NODE_ENV === 'development' ? LOCAL_DEFAULTS.MONGODB_URL : null),
     OTEL_EXPORTER_OTLP_ENDPOINT:
       value.OTEL_EXPORTER_OTLP_ENDPOINT ??
       (value.NODE_ENV === 'development'
