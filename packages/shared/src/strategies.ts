@@ -13,6 +13,8 @@ import { z } from "zod";
 // - no `.refine`, `.transform`, or `.default`: none of them reaches Python;
 // - "above zero" is part of a string's pattern, without lookahead (Pydantic
 //   checks patterns with a regex engine that has none);
+// - a digit in a pattern is `[0-9]`, never `\d`: Pydantic's engine reads `\d`
+//   as any Unicode digit, and Python's `Decimal` reads those as numbers;
 // - every object is strict and every key is required. An absent rule is
 //   `null`, not a missing key.
 //
@@ -25,31 +27,31 @@ export const STRATEGY_VERSION = 1;
 /** A decimal that is zero or more, without a leading zero: "30", "0.5". */
 const levelString = z
   .string()
-  .regex(/^(?:0|[1-9]\d{0,9})(?:\.\d{1,6})?$/)
+  .regex(/^(?:0|[1-9][0-9]{0,9})(?:\.[0-9]{1,6})?$/)
   .describe("A decimal that is zero or more, up to 6 decimal places");
 
 /** A percentage above zero, up to 100, with at most 2 decimal places. */
 const percentString = z
   .string()
-  .regex(/^(?:100(?:\.0{1,2})?|[1-9]\d?(?:\.\d{1,2})?|0\.(?:[1-9]\d?|0[1-9]))$/)
+  .regex(/^(?:100(?:\.0{1,2})?|[1-9][0-9]?(?:\.[0-9]{1,2})?|0\.(?:[1-9][0-9]?|0[1-9]))$/)
   .describe("A percentage above 0, up to 100, with at most 2 decimal places");
 
 /** A gain in percent: above zero, with no upper bound that matters. */
 const gainPercentString = z
   .string()
-  .regex(/^(?:[1-9]\d{0,3}(?:\.\d{1,2})?|0\.(?:[1-9]\d?|0[1-9]))$/)
+  .regex(/^(?:[1-9][0-9]{0,3}(?:\.[0-9]{1,2})?|0\.(?:[1-9][0-9]?|0[1-9]))$/)
   .describe("A percentage above 0 with at most 2 decimal places");
 
 /** Dollars above zero, in cents. */
 const notionalString = z
   .string()
-  .regex(/^(?:[1-9]\d{0,12}(?:\.\d{1,2})?|0\.(?:[1-9]\d?|0[1-9]))$/)
+  .regex(/^(?:[1-9][0-9]{0,12}(?:\.[0-9]{1,2})?|0\.(?:[1-9][0-9]?|0[1-9]))$/)
   .describe("A cash amount above zero with at most 2 decimal places");
 
 /** A number of standard deviations: above zero, below 10. */
 const deviationsString = z
   .string()
-  .regex(/^(?:[1-9](?:\.\d{1,2})?|0\.(?:[1-9]\d?|0[1-9]))$/)
+  .regex(/^(?:[1-9](?:\.[0-9]{1,2})?|0\.(?:[1-9][0-9]?|0[1-9]))$/)
   .describe("Standard deviations: above 0, below 10, at most 2 decimal places");
 
 /** How many bars an indicator looks back over. */
