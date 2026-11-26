@@ -25,7 +25,7 @@ class ConstantSeries(BaseModel):
         str,
         Field(
             description="A decimal that is zero or more, up to 6 decimal places",
-            pattern="^(?:0|[1-9]\\d{0,9})(?:\\.\\d{1,6})?$",
+            pattern="^(?:0|[1-9][0-9]{0,9})(?:\\.[0-9]{1,6})?$",
         ),
     ]
 
@@ -69,7 +69,7 @@ class BollingerSeries(BaseModel):
         str,
         Field(
             description="Standard deviations: above 0, below 10, at most 2 decimal places",
-            pattern="^(?:[1-9](?:\\.\\d{1,2})?|0\\.(?:[1-9]\\d?|0[1-9]))$",
+            pattern="^(?:[1-9](?:\\.[0-9]{1,2})?|0\\.(?:[1-9][0-9]?|0[1-9]))$",
         ),
     ]
     band: Literal["upper", "middle", "lower"]
@@ -83,7 +83,7 @@ class StopLoss(BaseModel):
         str,
         Field(
             description="A percentage above 0, up to 100, with at most 2 decimal places",
-            pattern="^(?:100(?:\\.0{1,2})?|[1-9]\\d?(?:\\.\\d{1,2})?|0\\.(?:[1-9]\\d?|0[1-9]))$",
+            pattern="^(?:100(?:\\.0{1,2})?|[1-9][0-9]?(?:\\.[0-9]{1,2})?|0\\.(?:[1-9][0-9]?|0[1-9]))$",
         ),
     ]
 
@@ -96,7 +96,7 @@ class TakeProfit(BaseModel):
         str,
         Field(
             description="A percentage above 0 with at most 2 decimal places",
-            pattern="^(?:[1-9]\\d{0,3}(?:\\.\\d{1,2})?|0\\.(?:[1-9]\\d?|0[1-9]))$",
+            pattern="^(?:[1-9][0-9]{0,3}(?:\\.[0-9]{1,2})?|0\\.(?:[1-9][0-9]?|0[1-9]))$",
         ),
     ]
 
@@ -110,7 +110,7 @@ class FixedNotionalSizing(BaseModel):
         str,
         Field(
             description="A cash amount above zero with at most 2 decimal places",
-            pattern="^(?:[1-9]\\d{0,12}(?:\\.\\d{1,2})?|0\\.(?:[1-9]\\d?|0[1-9]))$",
+            pattern="^(?:[1-9][0-9]{0,12}(?:\\.[0-9]{1,2})?|0\\.(?:[1-9][0-9]?|0[1-9]))$",
         ),
     ]
 
@@ -124,7 +124,7 @@ class PercentOfEquitySizing(BaseModel):
         str,
         Field(
             description="A percentage above 0, up to 100, with at most 2 decimal places",
-            pattern="^(?:100(?:\\.0{1,2})?|[1-9]\\d?(?:\\.\\d{1,2})?|0\\.(?:[1-9]\\d?|0[1-9]))$",
+            pattern="^(?:100(?:\\.0{1,2})?|[1-9][0-9]?(?:\\.[0-9]{1,2})?|0\\.(?:[1-9][0-9]?|0[1-9]))$",
         ),
     ]
 

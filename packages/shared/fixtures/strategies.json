@@ -193,6 +193,30 @@
       "value": "95\n"
     },
     {
+      "name": "a version of true",
+      "base": "sma crossover",
+      "path": ["version"],
+      "value": true
+    },
+    {
+      "name": "a percentage in digits that aren't 0 to 9",
+      "base": "sma crossover",
+      "path": ["sizing", "percent"],
+      "value": "9\u0665"
+    },
+    {
+      "name": "a constant in digits that aren't 0 to 9",
+      "base": "rsi threshold",
+      "path": ["entry", "right", "value"],
+      "value": "3\u0660"
+    },
+    {
+      "name": "a notional in digits that aren't 0 to 9",
+      "base": "rsi threshold",
+      "path": ["sizing", "amount"],
+      "value": "2\uff1500"
+    },
+    {
       "name": "a constant below zero",
       "base": "rsi threshold",
       "path": ["entry", "right", "value"],

@@ -13,7 +13,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Protocol
+from typing import Annotated, Protocol
+
+from pydantic import BeforeValidator, TypeAdapter
 
 from app.backtest.events import Bar, SignalEvent
 from app.backtest.indicators import Atr, Bollinger, Ema, Rsi, Sma
@@ -147,6 +149,29 @@ def _condition(node: StrategyCondition) -> Condition:
             return _Group(spec)
 
 
+def _without_booleans(value: object) -> object:
+    """Refuses a document with true or false anywhere in it.
+
+    The DSL has no boolean, and Python's `True == 1`: strict mode still
+    takes `true` for the `version` 1, which the Zod schema refuses.
+    """
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, bool):
+            raise ValueError("A strategy document has no true or false in it")
+        if isinstance(item, dict):
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+    return value
+
+
+_DOCUMENT = TypeAdapter[StrategyDefinition](
+    Annotated[StrategyDefinition, BeforeValidator(_without_booleans)]
+)
+
+
 def parse_strategy(document: object) -> StrategyDefinition:
     """A strategy document as it came off the wire, validated.
 
@@ -154,7 +179,7 @@ def parse_strategy(document: object) -> StrategyDefinition:
     which the Zod schema refuses, and the two must agree on what a valid
     document is (`packages/shared/fixtures/strategies.json`).
     """
-    return StrategyDefinition.model_validate(document, strict=True)
+    return _DOCUMENT.validate_python(document, strict=True)
 
 
 @dataclass(frozen=True, slots=True)

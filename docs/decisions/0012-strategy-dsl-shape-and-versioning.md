@@ -91,11 +91,11 @@ CI runs both steps and fails on a diff, the way it already does for `openapi.jso
 JSON Schema is narrower than Zod, and a rule that doesn't fit through it would hold in the api and vanish in Python. So the DSL is written inside what JSON Schema can say:
 
 - **No `.refine`, `.transform`, or `.default`.** "Above zero" is part of a string's pattern, not a check after it.
-- **Patterns without lookahead.** Pydantic checks patterns with Rust's regex engine, which has none. `^(?=.*[1-9])…` would be the short way to say "not zero" and can't be used.
+- **Patterns without lookahead.** Pydantic checks patterns with Rust's regex engine, which has none. `^(?=.*[1-9])…` would be the short way to say "not zero" and can't be used. A digit is written `[0-9]`, never `\d`: that engine reads `\d` as any Unicode digit where JavaScript reads it as 0 to 9, and Python's `Decimal` takes those digits as numbers, so `"9٥"` was a percentage in Python and a refusal in Zod.
 - **Strict objects, every key required.** An unknown key is an error on both sides, and "no stop-loss" is `"stopLoss": null`, not an absent key. A stored document then always has the same keys, and a typo (`"stoploss"`) is refused rather than ignored.
 - **Decimals are strings**, as everywhere else in the contracts: a threshold of `"0.1"` must be the same number in both languages. Periods are integers.
 
-The Python side validates in Pydantic's strict mode (`parse_strategy`). In its default mode Pydantic reads the text `"20"` as the number 20; Zod doesn't, and the two must agree on what a valid document is.
+The Python side validates in Pydantic's strict mode (`parse_strategy`). In its default mode Pydantic reads the text `"20"` as the number 20; Zod doesn't, and the two must agree on what a valid document is. Strict mode has one gap of its own: Python's `True == 1`, so `"version": true` passed for version 1. The DSL has no boolean, and `parse_strategy` refuses a document with one anywhere in it before the models see it.
 
 `packages/shared/fixtures/strategies.json` is the proof: three documents both sides must accept and return unchanged, and some thirty alterations both must refuse. `apps/api/src/strategies/strategy-dsl.spec.ts` and `services/ml/tests/test_strategy_contract.py` run it. A new constraint arrives with a case.
 
