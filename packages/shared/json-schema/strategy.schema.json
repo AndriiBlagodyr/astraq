@@ -43,7 +43,14 @@
       "$ref": "#/$defs/PositionSizing"
     }
   },
-  "required": ["version", "entry", "exit", "stopLoss", "takeProfit", "sizing"],
+  "required": [
+    "version",
+    "entry",
+    "exit",
+    "stopLoss",
+    "takeProfit",
+    "sizing"
+  ],
   "additionalProperties": false,
   "id": "StrategyDefinition",
   "$defs": {
@@ -76,13 +83,23 @@
         },
         "operator": {
           "type": "string",
-          "enum": ["gt", "gte", "lt", "lte"]
+          "enum": [
+            "gt",
+            "gte",
+            "lt",
+            "lte"
+          ]
         },
         "right": {
           "$ref": "#/$defs/StrategySeries"
         }
       },
-      "required": ["type", "left", "operator", "right"],
+      "required": [
+        "type",
+        "left",
+        "operator",
+        "right"
+      ],
       "additionalProperties": false,
       "id": "CompareCondition"
     },
@@ -121,10 +138,19 @@
         },
         "field": {
           "type": "string",
-          "enum": ["open", "high", "low", "close", "volume"]
+          "enum": [
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume"
+          ]
         }
       },
-      "required": ["type", "field"],
+      "required": [
+        "type",
+        "field"
+      ],
       "additionalProperties": false,
       "id": "BarSeries"
     },
@@ -141,7 +167,10 @@
           "description": "A decimal that is zero or more, up to 6 decimal places"
         }
       },
-      "required": ["type", "value"],
+      "required": [
+        "type",
+        "value"
+      ],
       "additionalProperties": false,
       "id": "ConstantSeries"
     },
@@ -161,13 +190,22 @@
           "$ref": "#/$defs/PriceField"
         }
       },
-      "required": ["type", "period", "source"],
+      "required": [
+        "type",
+        "period",
+        "source"
+      ],
       "additionalProperties": false,
       "id": "SmaSeries"
     },
     "PriceField": {
       "type": "string",
-      "enum": ["open", "high", "low", "close"],
+      "enum": [
+        "open",
+        "high",
+        "low",
+        "close"
+      ],
       "id": "PriceField"
     },
     "EmaSeries": {
@@ -186,7 +224,11 @@
           "$ref": "#/$defs/PriceField"
         }
       },
-      "required": ["type", "period", "source"],
+      "required": [
+        "type",
+        "period",
+        "source"
+      ],
       "additionalProperties": false,
       "id": "EmaSeries"
     },
@@ -203,7 +245,10 @@
           "maximum": 400
         }
       },
-      "required": ["type", "period"],
+      "required": [
+        "type",
+        "period"
+      ],
       "additionalProperties": false,
       "id": "RsiSeries"
     },
@@ -220,7 +265,10 @@
           "maximum": 400
         }
       },
-      "required": ["type", "period"],
+      "required": [
+        "type",
+        "period"
+      ],
       "additionalProperties": false,
       "id": "AtrSeries"
     },
@@ -243,10 +291,19 @@
         },
         "band": {
           "type": "string",
-          "enum": ["upper", "middle", "lower"]
+          "enum": [
+            "upper",
+            "middle",
+            "lower"
+          ]
         }
       },
-      "required": ["type", "period", "deviations", "band"],
+      "required": [
+        "type",
+        "period",
+        "deviations",
+        "band"
+      ],
       "additionalProperties": false,
       "id": "BollingerSeries"
     },
@@ -262,13 +319,21 @@
         },
         "direction": {
           "type": "string",
-          "enum": ["above", "below"]
+          "enum": [
+            "above",
+            "below"
+          ]
         },
         "right": {
           "$ref": "#/$defs/StrategySeries"
         }
       },
-      "required": ["type", "left", "direction", "right"],
+      "required": [
+        "type",
+        "left",
+        "direction",
+        "right"
+      ],
       "additionalProperties": false,
       "id": "CrossCondition"
     },
@@ -288,7 +353,10 @@
           }
         }
       },
-      "required": ["type", "conditions"],
+      "required": [
+        "type",
+        "conditions"
+      ],
       "additionalProperties": false,
       "id": "AllCondition"
     },
@@ -308,7 +376,10 @@
           }
         }
       },
-      "required": ["type", "conditions"],
+      "required": [
+        "type",
+        "conditions"
+      ],
       "additionalProperties": false,
       "id": "AnyCondition"
     },
@@ -321,7 +392,9 @@
           "description": "A percentage above 0, up to 100, with at most 2 decimal places"
         }
       },
-      "required": ["percent"],
+      "required": [
+        "percent"
+      ],
       "additionalProperties": false,
       "id": "StopLoss"
     },
@@ -334,7 +407,9 @@
           "description": "A percentage above 0 with at most 2 decimal places"
         }
       },
-      "required": ["percent"],
+      "required": [
+        "percent"
+      ],
       "additionalProperties": false,
       "id": "TakeProfit"
     },
@@ -362,7 +437,10 @@
           "description": "A cash amount above zero with at most 2 decimal places"
         }
       },
-      "required": ["type", "amount"],
+      "required": [
+        "type",
+        "amount"
+      ],
       "additionalProperties": false,
       "id": "FixedNotionalSizing"
     },
@@ -379,7 +457,10 @@
           "description": "A percentage above 0, up to 100, with at most 2 decimal places"
         }
       },
-      "required": ["type", "percent"],
+      "required": [
+        "type",
+        "percent"
+      ],
       "additionalProperties": false,
       "id": "PercentOfEquitySizing"
     }
