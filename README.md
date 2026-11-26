@@ -205,6 +205,19 @@ uv run uvicorn app.main:app --reload --port 8000
 
 `pnpm dev` at the root runs the same command.
 
+#### Changing a shape Python reads
+
+The strategy DSL is defined once, in Zod (`packages/shared/src/strategies.ts`), and Python's models are generated from it ([ADR 0012](./docs/decisions/0012-strategy-dsl-shape-and-versioning.md)). After changing it, run at the root:
+
+```bash
+pnpm contract      # also writes packages/shared/json-schema/*.json
+pnpm contract:ml   # regenerates services/ml/app/contracts/ from that (needs uv)
+```
+
+and commit what they rewrote. CI runs both and fails on a diff. Add a case to `packages/shared/fixtures/strategies.json` for a new rule: both languages run that file.
+
+The backtest engine lives in `services/ml/app/backtest/`. Its golden-file test compares one run byte for byte; after a change that is meant to move the numbers, rewrite the file with `UPDATE_GOLDEN=1 uv run pytest` (PowerShell: `$env:UPDATE_GOLDEN=1; uv run pytest`) and read its diff.
+
 ## Testing
 
 Recommended libraries:

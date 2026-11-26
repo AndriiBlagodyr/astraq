@@ -6,6 +6,7 @@ import {
   type CapturedExchange,
   capturing,
 } from '../provider/capture';
+import { errorMessage } from '../../common/error-message';
 
 // The raw payload archive (ROADMAP Phase 4 item 7, ADR 0011): every answer
 // a provider gave to ingestion, as it came, kept for a while.
@@ -225,7 +226,7 @@ export class MongoRawArchive extends RawArchive implements OnModuleDestroy {
         (error: unknown) => {
           this.logger.warn(
             `Not archived: ${exchange.url}: ` +
-              (error instanceof Error ? error.message : String(error)),
+              errorMessage(error),
           );
         },
       )

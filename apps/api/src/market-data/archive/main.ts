@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { parseArgs } from 'node:util';
-import { Logger, Module } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { Module } from '@nestjs/common';
+import { runCli } from '../../common/cli';
 import { DatabaseModule } from '../../database/database.module';
 import { MarketDataRepository } from '../market-data.repository';
 import { RawArchive } from './raw-archive';
@@ -38,86 +38,74 @@ function describe(what: string, diff: RowDiff | null): string {
   );
 }
 
-async function main() {
+runCli({ name: 'Archive', module: ArchiveCliModule }, async (app, logger) => {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: { ticker: { type: 'string' }, limit: { type: 'string' } },
   });
   const [command, captureId] = positionals;
-  const logger = new Logger('Archive');
-  const app = await NestFactory.createApplicationContext(ArchiveCliModule, {
-    logger: ['log', 'warn', 'error', 'fatal'],
-  });
-  try {
-    const archive = app.get(RawArchive);
-    if (!archive.enabled) {
-      throw new Error('No archive is configured: set MONGODB_URL');
-    }
-    switch (command) {
-      case 'list': {
-        const limit = Number(values.limit ?? 20);
-        if (!Number.isInteger(limit) || limit < 1) throw new Error(USAGE);
-        const captures = await archive.captures({
-          ticker: values.ticker?.toUpperCase(),
-          limit,
-        });
-        logger.log(`${captures.length} captures, newest first`);
-        for (const capture of captures) {
-          const tickers =
-            capture.tickers.length > 4
-              ? `${capture.tickers.slice(0, 4).join(',')} +${capture.tickers.length - 4}`
-              : capture.tickers.join(',');
-          logger.log(
-            `${capture.id}  ${capture.fetchedAt.toISOString()}  ` +
-              `${capture.provider} ${capture.operation} ${tickers} ` +
-              `${capture.from}..${capture.to}  ${capture.exchanges} answers ` +
-              `(${capture.statuses.join(',')}), ${kb(capture.bytes)}`,
-          );
-        }
-        break;
-      }
-      case 'replay': {
-        if (captureId === undefined) throw new Error(USAGE);
-        const report = await app.get(ReplayService).compare(captureId);
-        if (report === null) throw new Error(`No capture ${captureId}`);
-        const { call } = report;
+
+  const archive = app.get(RawArchive);
+  if (!archive.enabled) {
+    throw new Error('No archive is configured: set MONGODB_URL');
+  }
+  switch (command) {
+    case 'list': {
+      const limit = Number(values.limit ?? 20);
+      if (!Number.isInteger(limit) || limit < 1) throw new Error(USAGE);
+      const captures = await archive.captures({
+        ticker: values.ticker?.toUpperCase(),
+        limit,
+      });
+      logger.log(`${captures.length} captures, newest first`);
+      for (const capture of captures) {
+        const tickers =
+          capture.tickers.length > 4
+            ? `${capture.tickers.slice(0, 4).join(',')} +${capture.tickers.length - 4}`
+            : capture.tickers.join(',');
         logger.log(
-          `${report.provider} ${call.operation}, ${call.range.from} to ` +
-            `${call.range.to}, ${report.exchanges} answers`,
+          `${capture.id}  ${capture.fetchedAt.toISOString()}  ` +
+            `${capture.provider} ${capture.operation} ${tickers} ` +
+            `${capture.from}..${capture.to}  ${capture.exchanges} answers ` +
+            `(${capture.statuses.join(',')}), ${kb(capture.bytes)}`,
         );
-        let differs = false;
-        for (const ticker of report.tickers) {
-          logger.log(
-            `${ticker.ticker.padEnd(6)} ` +
-              (ticker.stored ? '' : '(not a stored symbol) ') +
-              `${describe('bars', ticker.bars)}; ` +
-              describe('actions', ticker.actions),
-          );
-          for (const diff of [ticker.bars, ticker.actions]) {
-            if (diff === null) continue;
-            differs ||= diff.different.length + diff.missing.length > 0;
-            for (const row of diff.different.slice(0, 10)) {
-              logger.warn(
-                `  ${row.key} ${row.field}: replayed ${row.replayed}, stored ${row.stored}`,
-              );
-            }
-            if (diff.missing.length > 0) {
-              logger.warn(`  not stored: ${diff.missing.slice(0, 10).join(', ')}`);
-            }
+      }
+      break;
+    }
+    case 'replay': {
+      if (captureId === undefined) throw new Error(USAGE);
+      const report = await app.get(ReplayService).compare(captureId);
+      if (report === null) throw new Error(`No capture ${captureId}`);
+      const { call } = report;
+      logger.log(
+        `${report.provider} ${call.operation}, ${call.range.from} to ` +
+          `${call.range.to}, ${report.exchanges} answers`,
+      );
+      let differs = false;
+      for (const ticker of report.tickers) {
+        logger.log(
+          `${ticker.ticker.padEnd(6)} ` +
+            (ticker.stored ? '' : '(not a stored symbol) ') +
+            `${describe('bars', ticker.bars)}; ` +
+            describe('actions', ticker.actions),
+        );
+        for (const diff of [ticker.bars, ticker.actions]) {
+          if (diff === null) continue;
+          differs ||= diff.different.length + diff.missing.length > 0;
+          for (const row of diff.different.slice(0, 10)) {
+            logger.warn(
+              `  ${row.key} ${row.field}: replayed ${row.replayed}, stored ${row.stored}`,
+            );
+          }
+          if (diff.missing.length > 0) {
+            logger.warn(`  not stored: ${diff.missing.slice(0, 10).join(', ')}`);
           }
         }
-        if (differs) process.exitCode = 1;
-        break;
       }
-      default:
-        throw new Error(USAGE);
+      if (differs) process.exitCode = 1;
+      break;
     }
-  } finally {
-    await app.close();
+    default:
+      throw new Error(USAGE);
   }
-}
-
-main().catch((error: unknown) => {
-  new Logger('Archive').error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
 });

@@ -5,4 +5,5 @@ export * from "./health";
 export * from "./market-data";
 export * from "./portfolios";
 export * from "./problem";
+export * from "./strategies";
 export * from "./watchlists";

@@ -1,0 +1,387 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "const": 1
+    },
+    "entry": {
+      "$ref": "#/$defs/StrategyCondition"
+    },
+    "exit": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StrategyCondition"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stopLoss": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StopLoss"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "takeProfit": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TakeProfit"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sizing": {
+      "$ref": "#/$defs/PositionSizing"
+    }
+  },
+  "required": ["version", "entry", "exit", "stopLoss", "takeProfit", "sizing"],
+  "additionalProperties": false,
+  "id": "StrategyDefinition",
+  "$defs": {
+    "StrategyCondition": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CompareCondition"
+        },
+        {
+          "$ref": "#/$defs/CrossCondition"
+        },
+        {
+          "$ref": "#/$defs/AllCondition"
+        },
+        {
+          "$ref": "#/$defs/AnyCondition"
+        }
+      ],
+      "id": "StrategyCondition"
+    },
+    "CompareCondition": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "compare"
+        },
+        "left": {
+          "$ref": "#/$defs/StrategySeries"
+        },
+        "operator": {
+          "type": "string",
+          "enum": ["gt", "gte", "lt", "lte"]
+        },
+        "right": {
+          "$ref": "#/$defs/StrategySeries"
+        }
+      },
+      "required": ["type", "left", "operator", "right"],
+      "additionalProperties": false,
+      "id": "CompareCondition"
+    },
+    "StrategySeries": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/BarSeries"
+        },
+        {
+          "$ref": "#/$defs/ConstantSeries"
+        },
+        {
+          "$ref": "#/$defs/SmaSeries"
+        },
+        {
+          "$ref": "#/$defs/EmaSeries"
+        },
+        {
+          "$ref": "#/$defs/RsiSeries"
+        },
+        {
+          "$ref": "#/$defs/AtrSeries"
+        },
+        {
+          "$ref": "#/$defs/BollingerSeries"
+        }
+      ],
+      "id": "StrategySeries"
+    },
+    "BarSeries": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "bar"
+        },
+        "field": {
+          "type": "string",
+          "enum": ["open", "high", "low", "close", "volume"]
+        }
+      },
+      "required": ["type", "field"],
+      "additionalProperties": false,
+      "id": "BarSeries"
+    },
+    "ConstantSeries": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "constant"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9]\\d{0,9})(?:\\.\\d{1,6})?$",
+          "description": "A decimal that is zero or more, up to 6 decimal places"
+        }
+      },
+      "required": ["type", "value"],
+      "additionalProperties": false,
+      "id": "ConstantSeries"
+    },
+    "SmaSeries": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "sma"
+        },
+        "period": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 400
+        },
+        "source": {
+          "$ref": "#/$defs/PriceField"
+        }
+      },
+      "required": ["type", "period", "source"],
+      "additionalProperties": false,
+      "id": "SmaSeries"
+    },
+    "PriceField": {
+      "type": "string",
+      "enum": ["open", "high", "low", "close"],
+      "id": "PriceField"
+    },
+    "EmaSeries": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "ema"
+        },
+        "period": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 400
+        },
+        "source": {
+          "$ref": "#/$defs/PriceField"
+        }
+      },
+      "required": ["type", "period", "source"],
+      "additionalProperties": false,
+      "id": "EmaSeries"
+    },
+    "RsiSeries": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "rsi"
+        },
+        "period": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 400
+        }
+      },
+      "required": ["type", "period"],
+      "additionalProperties": false,
+      "id": "RsiSeries"
+    },
+    "AtrSeries": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "atr"
+        },
+        "period": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 400
+        }
+      },
+      "required": ["type", "period"],
+      "additionalProperties": false,
+      "id": "AtrSeries"
+    },
+    "BollingerSeries": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "bollinger"
+        },
+        "period": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 400
+        },
+        "deviations": {
+          "type": "string",
+          "pattern": "^(?:[1-9](?:\\.\\d{1,2})?|0\\.(?:[1-9]\\d?|0[1-9]))$",
+          "description": "Standard deviations: above 0, below 10, at most 2 decimal places"
+        },
+        "band": {
+          "type": "string",
+          "enum": ["upper", "middle", "lower"]
+        }
+      },
+      "required": ["type", "period", "deviations", "band"],
+      "additionalProperties": false,
+      "id": "BollingerSeries"
+    },
+    "CrossCondition": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "cross"
+        },
+        "left": {
+          "$ref": "#/$defs/StrategySeries"
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["above", "below"]
+        },
+        "right": {
+          "$ref": "#/$defs/StrategySeries"
+        }
+      },
+      "required": ["type", "left", "direction", "right"],
+      "additionalProperties": false,
+      "id": "CrossCondition"
+    },
+    "AllCondition": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "all"
+        },
+        "conditions": {
+          "minItems": 2,
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StrategyCondition"
+          }
+        }
+      },
+      "required": ["type", "conditions"],
+      "additionalProperties": false,
+      "id": "AllCondition"
+    },
+    "AnyCondition": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "any"
+        },
+        "conditions": {
+          "minItems": 2,
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StrategyCondition"
+          }
+        }
+      },
+      "required": ["type", "conditions"],
+      "additionalProperties": false,
+      "id": "AnyCondition"
+    },
+    "StopLoss": {
+      "type": "object",
+      "properties": {
+        "percent": {
+          "type": "string",
+          "pattern": "^(?:100(?:\\.0{1,2})?|[1-9]\\d?(?:\\.\\d{1,2})?|0\\.(?:[1-9]\\d?|0[1-9]))$",
+          "description": "A percentage above 0, up to 100, with at most 2 decimal places"
+        }
+      },
+      "required": ["percent"],
+      "additionalProperties": false,
+      "id": "StopLoss"
+    },
+    "TakeProfit": {
+      "type": "object",
+      "properties": {
+        "percent": {
+          "type": "string",
+          "pattern": "^(?:[1-9]\\d{0,3}(?:\\.\\d{1,2})?|0\\.(?:[1-9]\\d?|0[1-9]))$",
+          "description": "A percentage above 0 with at most 2 decimal places"
+        }
+      },
+      "required": ["percent"],
+      "additionalProperties": false,
+      "id": "TakeProfit"
+    },
+    "PositionSizing": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/FixedNotionalSizing"
+        },
+        {
+          "$ref": "#/$defs/PercentOfEquitySizing"
+        }
+      ],
+      "id": "PositionSizing"
+    },
+    "FixedNotionalSizing": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "fixed_notional"
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^(?:[1-9]\\d{0,12}(?:\\.\\d{1,2})?|0\\.(?:[1-9]\\d?|0[1-9]))$",
+          "description": "A cash amount above zero with at most 2 decimal places"
+        }
+      },
+      "required": ["type", "amount"],
+      "additionalProperties": false,
+      "id": "FixedNotionalSizing"
+    },
+    "PercentOfEquitySizing": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "percent_of_equity"
+        },
+        "percent": {
+          "type": "string",
+          "pattern": "^(?:100(?:\\.0{1,2})?|[1-9]\\d?(?:\\.\\d{1,2})?|0\\.(?:[1-9]\\d?|0[1-9]))$",
+          "description": "A percentage above 0, up to 100, with at most 2 decimal places"
+        }
+      },
+      "required": ["type", "percent"],
+      "additionalProperties": false,
+      "id": "PercentOfEquitySizing"
+    }
+  }
+}

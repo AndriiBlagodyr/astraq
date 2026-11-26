@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { type Job, UnrecoverableError, Worker } from 'bullmq';
 import type Redis from 'ioredis';
+import { errorMessage } from '../../common/error-message';
 import { ProviderError } from '../provider/market-data-provider';
 import { retryDelayMs } from './market-data.jobs';
 import { isFatal, type JobResult } from './market-data.processor';
@@ -92,7 +93,7 @@ export class MarketDataWorker
       // BullMQ stops retrying on an UnrecoverableError and nothing else.
       if (fatal && !(error instanceof UnrecoverableError)) {
         throw new UnrecoverableError(
-          error instanceof Error ? error.message : String(error),
+          errorMessage(error),
         );
       }
       throw error;

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { yesterdayUtc } from '../common/dates';
-import { BOOTSTRAP_FROM } from './bootstrap/bootstrap-symbols';
+import { errorMessage } from '../common/error-message';
+import { fullHistory } from './history';
 import { IngestionService } from './ingestion.service';
 import { MarketDataRepository } from './market-data.repository';
 
@@ -47,14 +47,11 @@ export class OnDemandCandlesService {
     try {
       const seed = await this.repository.findSeed(symbolId);
       if (seed === null) return;
-      await this.ingestion.backfill([seed], {
-        from: BOOTSTRAP_FROM,
-        to: yesterdayUtc(),
-      });
+      await this.ingestion.backfill([seed], fullHistory());
     } catch (error) {
       this.logger.warn(
         `Loading candles for symbol ${symbolId} failed: ` +
-          (error instanceof Error ? error.message : String(error)),
+          errorMessage(error),
       );
     }
   }
