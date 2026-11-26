@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { shiftDays as shift } from '../common/dates';
+import { errorMessage } from '../common/error-message';
 import type { MarketStatus } from '@astraq/shared';
 import {
   marketStatus,
@@ -19,6 +20,11 @@ const MIN_DAYS_AHEAD = 7;
 /** What a reload asks for: last week, for the record, and a year ahead. */
 const RELOAD_DAYS_BACK = 7;
 const RELOAD_DAYS_AHEAD = 365;
+/**
+ * How far back `around` is asked to read by a caller looking for the last
+ * session that closed: past a long weekend with a holiday on either side.
+ */
+export const LAST_CLOSE_DAYS_BACK = 10;
 /** After a failed reload, how long to leave Alpaca alone. */
 const RETRY_AFTER_MS = 10 * 60_000;
 
@@ -134,7 +140,7 @@ export class MarketCalendarService {
       this.retryAfter = Date.now() + RETRY_AFTER_MS;
       this.logger.warn(
         'Loading the exchange calendar failed: ' +
-          (error instanceof Error ? error.message : String(error)),
+          errorMessage(error),
       );
       return false;
     }

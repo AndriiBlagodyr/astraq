@@ -3,6 +3,7 @@ import type { OnModuleDestroy } from '@nestjs/common';
 import { FlowProducer, type Job, Queue } from 'bullmq';
 import Redis from 'ioredis';
 import { env } from '../../common/env';
+import { errorMessage } from '../../common/error-message';
 import {
   JOB_OPTIONS,
   type JobData,
@@ -128,7 +129,7 @@ export class MarketDataQueue implements OnModuleDestroy {
       {
         jobId: String(job.id),
         data: job.data,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
         attempts: job.attemptsMade + 1,
         failedAt: new Date().toISOString(),
       },
@@ -138,7 +139,7 @@ export class MarketDataQueue implements OnModuleDestroy {
 
   /** The dead letters, oldest first, each with the name of its job. */
   async listDead(): Promise<Array<DeadLetter & { name: string }>> {
-    const jobs = await this.dead.getJobs(['waiting'], 0, -1, true);
+    const jobs = await this.deadLetters();
     return jobs.map((job) => ({ name: job.name, ...job.data }));
   }
 
@@ -147,12 +148,18 @@ export class MarketDataQueue implements OnModuleDestroy {
    * attempts, and removes it from the dead-letter queue. Returns how many.
    */
   async retryDead(): Promise<number> {
-    const jobs = await this.dead.getJobs(['waiting'], 0, -1, true);
+    const jobs = await this.deadLetters();
     for (const job of jobs) {
       await this.jobs.add(job.name, job.data.data, JOB_OPTIONS);
       await job.remove();
     }
     return jobs.length;
+  }
+
+  /** The dead letters, oldest first: all of them, or the first `limit`. */
+  private deadLetters(limit?: number): Promise<Job<DeadLetter>[]> {
+    const last = limit === undefined ? -1 : limit - 1;
+    return this.dead.getJobs(['waiting'], 0, last, true);
   }
 
   /** How many jobs are in each state, for the CLI. */
@@ -191,7 +198,7 @@ export class MarketDataQueue implements OnModuleDestroy {
       this.connection.zrange(this.jobs.toKey('delayed'), 0, last, 'WITHSCORES'),
       // The failed set is ordered by when a job finished: newest first.
       this.jobs.getJobs(['failed'], 0, last, false),
-      this.dead.getJobs(['waiting'], 0, last, true),
+      this.deadLetters(limit),
     ]);
 
     const delayed: QueueJob[] = [];

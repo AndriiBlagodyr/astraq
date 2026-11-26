@@ -29,6 +29,3 @@ export const BOOTSTRAP_SYMBOLS: SymbolSeed[] = [
   { ticker: 'WMT', name: 'Walmart Inc.', exchange: 'XNAS' },
   { ticker: 'XOM', name: 'Exxon Mobil Corporation', exchange: 'XNYS' },
 ];
-
-/** First session requested. Alpaca's historical SIP data starts in 2016. */
-export const BOOTSTRAP_FROM = '2016-01-01';

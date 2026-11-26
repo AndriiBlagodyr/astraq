@@ -5,7 +5,10 @@ import type {
   DataQualityReport,
 } from '@astraq/shared';
 import { lastClosedSession } from '../../trading/market-hours';
-import { MarketCalendarService } from '../market-calendar.service';
+import {
+  LAST_CLOSE_DAYS_BACK,
+  MarketCalendarService,
+} from '../market-calendar.service';
 import { MarketDataRepository } from '../market-data.repository';
 import {
   type CheckFindings,
@@ -23,9 +26,6 @@ export const ISSUE_SAMPLE = 25;
  * Past that, a check that hasn't covered the session is late.
  */
 const GRACE_MS = 3 * 60 * 60_000;
-
-/** The calendar days read back to find the session a check is due for. */
-const CALENDAR_DAYS_BACK = 10;
 
 const CHECKS = [
   'missing_sessions',
@@ -126,7 +126,7 @@ export class DataQualityService {
     const due = new Date(now.getTime() - GRACE_MS);
     const expectedSession = lastClosedSession(
       due,
-      await this.calendar.around(due, CALENDAR_DAYS_BACK),
+      await this.calendar.around(due, LAST_CLOSE_DAYS_BACK),
     ).date;
     const run = await this.repository.findLatestRun();
     return {

@@ -1,27 +1,23 @@
 import 'reflect-metadata';
 import { parseArgs } from 'node:util';
-import { Logger } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
-import { yesterdayUtc } from '../../common/dates';
+import { parseTickers, runCli } from '../../common/cli';
+import { fullHistory } from '../history';
+import { IngestionService } from '../ingestion.service';
+import { MarketDataCoreModule } from '../market-data-core.module';
 import { MarketDataRepository } from '../market-data.repository';
 import type { SymbolSeed } from '../market-data.types';
-import { BOOTSTRAP_FROM, BOOTSTRAP_SYMBOLS } from './bootstrap-symbols';
-import { BootstrapModule } from './bootstrap.module';
-import { IngestionService } from '../ingestion.service';
+import { BOOTSTRAP_SYMBOLS } from './bootstrap-symbols';
 
 // `pnpm --filter @astraq/api bootstrap [--tickers NVDA,AAPL]`
-// Loads daily bars from BOOTSTRAP_FROM through yesterday (UTC) for the
+// Loads daily bars from HISTORY_FROM through yesterday (UTC) for the
 // fixed list, or for any tickers the symbol universe knows (`symbols:sync`).
 
 async function selectSymbols(
   tickersArg: string | undefined,
   repository: MarketDataRepository,
 ): Promise<SymbolSeed[]> {
-  if (!tickersArg) return BOOTSTRAP_SYMBOLS;
-  const wanted = tickersArg
-    .split(',')
-    .map((ticker) => ticker.trim().toUpperCase())
-    .filter(Boolean);
+  const wanted = parseTickers(tickersArg);
+  if (wanted.length === 0) return BOOTSTRAP_SYMBOLS;
   // The fixed list wins for a ticker in both: same data, hand-checked name.
   const seeds = [
     ...BOOTSTRAP_SYMBOLS.filter((symbol) => wanted.includes(symbol.ticker)),
@@ -39,26 +35,14 @@ async function selectSymbols(
   return wanted.map((ticker) => seeds.find((seed) => seed.ticker === ticker)!);
 }
 
-async function main() {
-  const { values } = parseArgs({ options: { tickers: { type: 'string' } } });
-
-  const app = await NestFactory.createApplicationContext(BootstrapModule, {
-    logger: ['log', 'warn', 'error', 'fatal'],
-  });
-  try {
+runCli(
+  { name: 'Bootstrap', module: MarketDataCoreModule, trace: true },
+  async (app) => {
+    const { values } = parseArgs({ options: { tickers: { type: 'string' } } });
     const symbols = await selectSymbols(
       values.tickers,
       app.get(MarketDataRepository),
     );
-    await app
-      .get(IngestionService)
-      .backfill(symbols, { from: BOOTSTRAP_FROM, to: yesterdayUtc() });
-  } finally {
-    await app.close();
-  }
-}
-
-main().catch((error: unknown) => {
-  new Logger('Bootstrap').error(error instanceof Error ? error.stack : error);
-  process.exitCode = 1;
-});
+    await app.get(IngestionService).backfill(symbols, fullHistory());
+  },
+);

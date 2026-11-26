@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { errorMessage } from '../../common/error-message';
 import { parseJsonExact } from './exact-json';
 import { ProviderError, type ProviderName } from './market-data-provider';
 
@@ -49,7 +50,7 @@ export async function providerGet<Schema extends z.ZodType>(
     throw new ProviderError(
       provider,
       'unavailable',
-      `${what} got no answer: ${error instanceof Error ? error.message : String(error)}`,
+      `${what} got no answer: ${errorMessage(error)}`,
       null,
       { cause: error },
     );

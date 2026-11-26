@@ -1,4 +1,4 @@
-import { BOOTSTRAP_FROM } from './bootstrap/bootstrap-symbols';
+import { HISTORY_FROM } from './history';
 import { IngestionService } from './ingestion.service';
 import { MarketDataRepository } from './market-data.repository';
 import { OnDemandCandlesService } from './on-demand-candles.service';
@@ -32,7 +32,7 @@ describe('OnDemandCandlesService', () => {
 
     expect(ingestion.backfill).toHaveBeenCalledTimes(1);
     expect(ingestion.backfill).toHaveBeenCalledWith([seed], {
-      from: BOOTSTRAP_FROM,
+      from: HISTORY_FROM,
       to: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     });
   });

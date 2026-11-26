@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { IngestionService } from '../ingestion.service';
 import { WorkerModule } from './jobs.module';
-import { SessionScheduler } from './session-scheduler';
+import { describeClose, SessionScheduler } from './session-scheduler';
 
 // `pnpm --filter @astraq/api worker`
 // Works the market data queue until stopped, and keeps the refresh after
@@ -22,10 +22,7 @@ async function main() {
   // Starts the chain of `session-close` jobs, or repairs it: a close this
   // worker was down for runs now.
   for (const close of await app.get(SessionScheduler).ensure()) {
-    logger.log(
-      `Session ${close.session}: refresh ` +
-        (close.added ? `scheduled for ${close.runsAt}` : 'already scheduled or done'),
-    );
+    logger.log(describeClose(close));
   }
   // SIGTERM and Ctrl+C close the worker first: a job in flight finishes.
   app.enableShutdownHooks();

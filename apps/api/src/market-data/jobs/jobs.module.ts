@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BootstrapModule } from '../bootstrap/bootstrap.module';
+import { MarketDataCoreModule } from '../market-data-core.module';
 import { MarketDataProcessor } from './market-data.processor';
 import { MarketDataQueue } from './market-data.queue';
 import { MarketDataWorker } from './market-data.worker';
@@ -11,13 +11,18 @@ import { SessionScheduler } from './session-scheduler';
  * `jobs` CLI) and after each close (`SessionScheduler`).
  */
 @Module({
-  imports: [BootstrapModule],
+  imports: [MarketDataCoreModule],
   providers: [
     { provide: MarketDataQueue, useFactory: () => new MarketDataQueue() },
     RefreshService,
     SessionScheduler,
   ],
-  exports: [MarketDataQueue, RefreshService, SessionScheduler, BootstrapModule],
+  exports: [
+    MarketDataQueue,
+    RefreshService,
+    SessionScheduler,
+    MarketDataCoreModule,
+  ],
 })
 export class JobsModule {}
 

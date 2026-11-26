@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { UnrecoverableError } from 'bullmq';
-import { yesterdayUtc } from '../../common/dates';
-import { BOOTSTRAP_FROM } from '../bootstrap/bootstrap-symbols';
+import { fullHistory } from '../history';
 import { IngestionService } from '../ingestion.service';
 import { MarketDataRepository } from '../market-data.repository';
 import { ProviderError } from '../provider/market-data-provider';
@@ -43,7 +42,7 @@ export class MarketDataProcessor {
         if (seed === undefined) {
           throw new UnrecoverableError(`Unknown symbol ${ticker}`);
         }
-        const range = { from: BOOTSTRAP_FROM, to: yesterdayUtc() };
+        const range = fullHistory();
         await this.ingestion.backfill([seed], range);
         return { ticker, ...range };
       }

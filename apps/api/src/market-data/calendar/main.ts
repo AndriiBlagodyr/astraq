@@ -1,10 +1,9 @@
 import 'reflect-metadata';
-import { Logger } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { runCli } from '../../common/cli';
 import { toIsoDate } from '../../common/dates';
-import { BOOTSTRAP_FROM } from '../bootstrap/bootstrap-symbols';
-import { BootstrapModule } from '../bootstrap/bootstrap.module';
+import { HISTORY_FROM } from '../history';
 import { MarketCalendarService } from '../market-calendar.service';
+import { MarketDataCoreModule } from '../market-data-core.module';
 
 // `pnpm --filter @astraq/api calendar:sync`
 // Loads the exchange calendar from the first bootstrapped session to the
@@ -13,22 +12,13 @@ import { MarketCalendarService } from '../market-calendar.service';
 // its own when the table runs short, so this is for the history and for a
 // first load without waiting for an order.
 
-async function main() {
-  const app = await NestFactory.createApplicationContext(BootstrapModule, {
-    logger: ['log', 'warn', 'error', 'fatal'],
-  });
-  try {
+runCli(
+  { name: 'CalendarSync', module: MarketDataCoreModule, trace: true },
+  async (app) => {
     const nextYear = new Date().getUTCFullYear() + 1;
     await app.get(MarketCalendarService).sync({
-      from: BOOTSTRAP_FROM,
+      from: HISTORY_FROM,
       to: toIsoDate(new Date(Date.UTC(nextYear, 11, 31))),
     });
-  } finally {
-    await app.close();
-  }
-}
-
-main().catch((error: unknown) => {
-  new Logger('CalendarSync').error(error instanceof Error ? error.stack : error);
-  process.exitCode = 1;
-});
+  },
+);

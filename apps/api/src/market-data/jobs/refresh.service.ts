@@ -1,13 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { yesterdayUtc } from '../../common/dates';
 import { IngestionService } from '../ingestion.service';
-import { MarketDataRepository } from '../market-data.repository';
+import {
+  MarketDataRepository,
+  type TrackedSymbol,
+} from '../market-data.repository';
 import {
   ACTION_LOOKBACK_DAYS,
   BAR_OVERLAP_DAYS,
   planRefresh,
 } from './market-data.jobs';
 import { MarketDataQueue } from './market-data.queue';
+
+type RefreshJob = 'eod-refresh' | 'corporate-actions-refresh';
+
+/** How far before a batch's stalest bar each kind of refresh starts. */
+const LOOKBACK_DAYS: Record<RefreshJob, number> = {
+  'eod-refresh': BAR_OVERLAP_DAYS,
+  'corporate-actions-refresh': ACTION_LOOKBACK_DAYS,
+};
 
 /**
  * Turns "refresh everything" into jobs: reads the tracked symbols, cuts
@@ -49,16 +60,10 @@ export class RefreshService {
    */
   async enqueueSessionRefresh(session: string): Promise<number> {
     const tracked = await this.repository.findTrackedSymbols();
-    const batchSize = this.ingestion.source.batchSize;
+    const batches = (name: RefreshJob) =>
+      this.plan(name, session, tracked).map((data) => ({ name, data }));
     return this.queue.addThen(
-      [
-        ...planRefresh(tracked, session, batchSize, BAR_OVERLAP_DAYS).map(
-          (data) => ({ name: 'eod-refresh' as const, data }),
-        ),
-        ...planRefresh(tracked, session, batchSize, ACTION_LOOKBACK_DAYS).map(
-          (data) => ({ name: 'corporate-actions-refresh' as const, data }),
-        ),
-      ],
+      [...batches('eod-refresh'), ...batches('corporate-actions-refresh')],
       { name: 'data-quality-check', data: { session } },
     );
   }
@@ -71,12 +76,7 @@ export class RefreshService {
   async enqueueEodRefresh(to: string = yesterdayUtc()): Promise<number> {
     return this.queue.add(
       'eod-refresh',
-      planRefresh(
-        await this.repository.findTrackedSymbols(),
-        to,
-        this.ingestion.source.batchSize,
-        BAR_OVERLAP_DAYS,
-      ),
+      this.plan('eod-refresh', to, await this.repository.findTrackedSymbols()),
     );
   }
 
@@ -85,12 +85,25 @@ export class RefreshService {
   ): Promise<number> {
     return this.queue.add(
       'corporate-actions-refresh',
-      planRefresh(
-        await this.repository.findTrackedSymbols(),
+      this.plan(
+        'corporate-actions-refresh',
         to,
-        this.ingestion.source.batchSize,
-        ACTION_LOOKBACK_DAYS,
+        await this.repository.findTrackedSymbols(),
       ),
+    );
+  }
+
+  /**
+   * The payloads of one kind of refresh up to `to`: `tracked` in batches
+   * the provider takes in one call, each reaching back as far as that kind
+   * needs.
+   */
+  private plan(name: RefreshJob, to: string, tracked: TrackedSymbol[]) {
+    return planRefresh(
+      tracked,
+      to,
+      this.ingestion.source.batchSize,
+      LOOKBACK_DAYS[name],
     );
   }
 }

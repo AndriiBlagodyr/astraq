@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from './redis.service';
+import { errorMessage } from './error-message';
 
 /**
  * Where cached values are kept: strings by key, each with a time to live,
@@ -93,7 +94,7 @@ export class RedisCacheStore extends CacheStore {
       return await work();
     } catch (error) {
       this.logger.warn(
-        `Cache unavailable: ${error instanceof Error ? error.message : String(error)}`,
+        `Cache unavailable: ${errorMessage(error)}`,
       );
       return fallback;
     }

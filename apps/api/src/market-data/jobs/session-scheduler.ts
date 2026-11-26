@@ -3,17 +3,25 @@ import {
   lastClosedSession,
   nextSessionToClose,
 } from '../../trading/market-hours';
-import { MarketCalendarService } from '../market-calendar.service';
+import {
+  LAST_CLOSE_DAYS_BACK,
+  MarketCalendarService,
+} from '../market-calendar.service';
 import { closeDelayMs, sessionCloseJobId } from './market-data.jobs';
 import type { JobResult } from './market-data.processor';
 import { MarketDataQueue } from './market-data.queue';
 import { RefreshService } from './refresh.service';
 
-/** How far back the calendar is read to find the last session that closed. */
-const CALENDAR_DAYS_BACK = 10;
-
 /** A session's `session-close` job: when it runs, and whether this call added it. */
 export type ScheduledClose = { session: string; runsAt: string; added: boolean };
+
+/** A scheduled close as a line of the worker's or the CLI's log. */
+export function describeClose(close: ScheduledClose): string {
+  return (
+    `Session ${close.session}: refresh ` +
+    (close.added ? `scheduled for ${close.runsAt}` : 'already scheduled or done')
+  );
+}
 
 /**
  * Runs the refresh after every close, from the exchange calendar (ROADMAP
@@ -51,7 +59,7 @@ export class SessionScheduler {
    * their job. Returns both, the earlier first.
    */
   async ensure(now: Date = new Date()): Promise<ScheduledClose[]> {
-    const calendar = await this.calendar.around(now, CALENDAR_DAYS_BACK);
+    const calendar = await this.calendar.around(now, LAST_CLOSE_DAYS_BACK);
     const sessions = [
       lastClosedSession(now, calendar),
       nextSessionToClose(now, calendar),

@@ -1,0 +1,287 @@
+{
+  "description": "The strategy DSL's contract (ADR 0012). StrategyDefinitionSchema in packages/shared and the generated Pydantic model in services/ml must both accept every document under `valid` and refuse every one under `invalid`. An invalid case is `base` (a name under `valid`) with the value at `path` replaced by `value`, or removed when `remove` is true.",
+  "valid": {
+    "sma crossover": {
+      "version": 1,
+      "entry": {
+        "type": "cross",
+        "left": { "type": "sma", "period": 20, "source": "close" },
+        "direction": "above",
+        "right": { "type": "sma", "period": 50, "source": "close" }
+      },
+      "exit": {
+        "type": "cross",
+        "left": { "type": "sma", "period": 20, "source": "close" },
+        "direction": "below",
+        "right": { "type": "sma", "period": 50, "source": "close" }
+      },
+      "stopLoss": null,
+      "takeProfit": null,
+      "sizing": { "type": "percent_of_equity", "percent": "95" }
+    },
+    "rsi threshold": {
+      "version": 1,
+      "entry": {
+        "type": "compare",
+        "left": { "type": "rsi", "period": 14 },
+        "operator": "lt",
+        "right": { "type": "constant", "value": "30" }
+      },
+      "exit": {
+        "type": "compare",
+        "left": { "type": "rsi", "period": 14 },
+        "operator": "gt",
+        "right": { "type": "constant", "value": "70" }
+      },
+      "stopLoss": { "percent": "8" },
+      "takeProfit": { "percent": "25.5" },
+      "sizing": { "type": "fixed_notional", "amount": "2500.00" }
+    },
+    "breakout": {
+      "version": 1,
+      "entry": {
+        "type": "all",
+        "conditions": [
+          {
+            "type": "compare",
+            "left": { "type": "bar", "field": "close" },
+            "operator": "gt",
+            "right": {
+              "type": "bollinger",
+              "period": 20,
+              "deviations": "2",
+              "band": "upper"
+            }
+          },
+          {
+            "type": "any",
+            "conditions": [
+              {
+                "type": "compare",
+                "left": { "type": "atr", "period": 14 },
+                "operator": "gte",
+                "right": { "type": "constant", "value": "0.5" }
+              },
+              {
+                "type": "compare",
+                "left": { "type": "bar", "field": "volume" },
+                "operator": "gt",
+                "right": { "type": "constant", "value": "1000000" }
+              }
+            ]
+          }
+        ]
+      },
+      "exit": {
+        "type": "cross",
+        "left": { "type": "bar", "field": "close" },
+        "direction": "below",
+        "right": { "type": "ema", "period": 10, "source": "close" }
+      },
+      "stopLoss": { "percent": "100" },
+      "takeProfit": null,
+      "sizing": { "type": "percent_of_equity", "percent": "0.5" }
+    }
+  },
+  "invalid": [
+    {
+      "name": "a version this code doesn't know",
+      "base": "sma crossover",
+      "path": ["version"],
+      "value": 2
+    },
+    {
+      "name": "no version",
+      "base": "sma crossover",
+      "path": ["version"],
+      "remove": true
+    },
+    {
+      "name": "a version written as text",
+      "base": "sma crossover",
+      "path": ["version"],
+      "value": "1"
+    },
+    {
+      "name": "no entry rule",
+      "base": "sma crossover",
+      "path": ["entry"],
+      "value": null
+    },
+    {
+      "name": "a missing key where null was meant",
+      "base": "sma crossover",
+      "path": ["stopLoss"],
+      "remove": true
+    },
+    {
+      "name": "a key the document doesn't have",
+      "base": "sma crossover",
+      "path": ["shortSelling"],
+      "value": true
+    },
+    {
+      "name": "an unknown key inside a series",
+      "base": "sma crossover",
+      "path": ["entry", "left", "offset"],
+      "value": 1
+    },
+    {
+      "name": "an indicator that doesn't exist",
+      "base": "sma crossover",
+      "path": ["entry", "left", "type"],
+      "value": "macd"
+    },
+    {
+      "name": "a period of one bar",
+      "base": "sma crossover",
+      "path": ["entry", "left", "period"],
+      "value": 1
+    },
+    {
+      "name": "a period beyond the limit",
+      "base": "sma crossover",
+      "path": ["entry", "left", "period"],
+      "value": 401
+    },
+    {
+      "name": "a period that isn't whole",
+      "base": "sma crossover",
+      "path": ["entry", "left", "period"],
+      "value": 20.5
+    },
+    {
+      "name": "a period written as text",
+      "base": "sma crossover",
+      "path": ["entry", "left", "period"],
+      "value": "20"
+    },
+    {
+      "name": "an average of the volume",
+      "base": "sma crossover",
+      "path": ["entry", "left", "source"],
+      "value": "volume"
+    },
+    {
+      "name": "a cross with no direction",
+      "base": "sma crossover",
+      "path": ["entry", "direction"],
+      "value": "through"
+    },
+    {
+      "name": "sizing of zero percent",
+      "base": "sma crossover",
+      "path": ["sizing", "percent"],
+      "value": "0"
+    },
+    {
+      "name": "sizing over the whole portfolio",
+      "base": "sma crossover",
+      "path": ["sizing", "percent"],
+      "value": "100.01"
+    },
+    {
+      "name": "a percentage as a number",
+      "base": "sma crossover",
+      "path": ["sizing", "percent"],
+      "value": 95
+    },
+    {
+      "name": "a percentage with a line break after it",
+      "base": "sma crossover",
+      "path": ["sizing", "percent"],
+      "value": "95\n"
+    },
+    {
+      "name": "a constant below zero",
+      "base": "rsi threshold",
+      "path": ["entry", "right", "value"],
+      "value": "-30"
+    },
+    {
+      "name": "a constant in scientific notation",
+      "base": "rsi threshold",
+      "path": ["entry", "right", "value"],
+      "value": "3e1"
+    },
+    {
+      "name": "an operator that doesn't exist",
+      "base": "rsi threshold",
+      "path": ["entry", "operator"],
+      "value": "eq"
+    },
+    {
+      "name": "a stop loss of nothing",
+      "base": "rsi threshold",
+      "path": ["stopLoss", "percent"],
+      "value": "0.00"
+    },
+    {
+      "name": "a stop loss beyond the whole price",
+      "base": "rsi threshold",
+      "path": ["stopLoss", "percent"],
+      "value": "150"
+    },
+    {
+      "name": "a take profit with three decimal places",
+      "base": "rsi threshold",
+      "path": ["takeProfit", "percent"],
+      "value": "25.555"
+    },
+    {
+      "name": "a notional of zero",
+      "base": "rsi threshold",
+      "path": ["sizing", "amount"],
+      "value": "0"
+    },
+    {
+      "name": "a notional in fractions of a cent",
+      "base": "rsi threshold",
+      "path": ["sizing", "amount"],
+      "value": "2500.001"
+    },
+    {
+      "name": "sizing that mixes the two kinds",
+      "base": "rsi threshold",
+      "path": ["sizing", "percent"],
+      "value": "50"
+    },
+    {
+      "name": "a group of one condition",
+      "base": "breakout",
+      "path": ["entry", "conditions"],
+      "value": [
+        {
+          "type": "compare",
+          "left": { "type": "bar", "field": "close" },
+          "operator": "gt",
+          "right": { "type": "constant", "value": "1" }
+        }
+      ]
+    },
+    {
+      "name": "a group of nothing",
+      "base": "breakout",
+      "path": ["entry", "conditions", 1, "conditions"],
+      "value": []
+    },
+    {
+      "name": "bands ten deviations wide",
+      "base": "breakout",
+      "path": ["entry", "conditions", 0, "right", "deviations"],
+      "value": "10"
+    },
+    {
+      "name": "a band that doesn't exist",
+      "base": "breakout",
+      "path": ["entry", "conditions", 0, "right", "band"],
+      "value": "outer"
+    },
+    {
+      "name": "a series where a condition belongs",
+      "base": "breakout",
+      "path": ["exit"],
+      "value": { "type": "constant", "value": "1" }
+    }
+  ]
+}

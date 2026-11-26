@@ -1,3 +1,7 @@
 # Generated contract files must match Linux CI (`pnpm contract` + git diff).
 apps/api/openapi.json text eol=lf
 packages/sdk/src/schema.ts text eol=lf
+packages/shared/json-schema/*.json text eol=lf
+services/ml/app/contracts/*.py text eol=lf
+# Compared byte for byte by the backtester's golden-file test.
+services/ml/tests/golden/*.json text eol=lf

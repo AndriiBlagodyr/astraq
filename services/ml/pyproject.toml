@@ -5,12 +5,14 @@ description = "FastAPI ML prediction service for Veracand"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115.0",
+  "pydantic>=2.9",
   "pydantic-settings>=2.6.0",
-  "uvicorn[standard]>=0.30.0"
+  "uvicorn[standard]>=0.30.0",
 ]
 
 [dependency-groups]
 dev = [
+  "datamodel-code-generator>=0.26",
   "httpx>=0.28.0",
   "mypy>=2.4.0",
   "pytest>=8.3.0",
@@ -23,6 +25,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# So a test can import the helpers in tests/ (`from tests.fixtures import ...`).
+pythonpath = ["."]
 
 [tool.ruff]
 target-version = "py312"
@@ -44,6 +48,23 @@ explicit_package_bases = true
 [[tool.mypy.overrides]]
 module = ["app.*"]
 strict = true
+
+# The contract models (ADR 0012): `uv run datamodel-codegen`, or `pnpm
+# contract:ml` at the root, rewrites app/contracts/ from the JSON Schema that
+# `pnpm contract` emits from packages/shared. CI fails when it leaves a diff.
+[tool.datamodel-codegen]
+input = "../../packages/shared/json-schema/strategy.schema.json"
+input-file-type = "jsonschema"
+output = "app/contracts/strategy.py"
+output-model-type = "pydantic_v2.BaseModel"
+target-python-version = "3.12"
+class-name = "StrategyDefinition"
+use-annotated = true
+use-standard-collections = true
+use-union-operator = true
+enum-field-as-literal = "all"
+disable-timestamp = true
+formatters = ["ruff-check", "ruff-format"]
 
 [tool.uv]
 package = true
