@@ -107,6 +107,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace the password; every session ends and a new one is returned */
+        post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/logout": {
         parameters: {
             query?: never;
@@ -169,6 +186,75 @@ export interface paths {
         put?: never;
         /** Put every dead-lettered job back on the queue */
         post: operations["retryDeadJobs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every review account, newest first */
+        get: operations["listReviewAccess"];
+        put?: never;
+        /** Make a review account; its password is in this answer only */
+        post: operations["createReviewAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/access/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Set a new end date, reopening the account if it was closed */
+        patch: operations["updateReviewAccess"];
+        trace?: never;
+    };
+    "/api/admin/access/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close the account and end its sessions */
+        post: operations["revokeReviewAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/access/{id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Give the account a new password; it is in this answer only */
+        post: operations["resetReviewAccessPassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -594,6 +680,10 @@ export interface components {
         RefreshBody: {
             refreshToken: string;
         };
+        ChangePasswordBody: {
+            currentPassword: string;
+            newPassword: string;
+        };
         QueueCounts_Output: {
             waiting: number;
             active: number;
@@ -626,6 +716,46 @@ export interface components {
         };
         RetryDeadResult_Output: {
             retried: number;
+        };
+        ReviewAccess_Output: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            company: string;
+            note: string | null;
+            state: components["schemas"]["ReviewAccessState_Output"];
+            /** Format: date-time */
+            expiresAt: string;
+            revokedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            sharedCredentials: boolean;
+            mustChangePassword: boolean;
+            passwordChangedAt: string | null;
+            lastSignInAt: string | null;
+        };
+        /** @enum {string} */
+        ReviewAccessState_Output: "active" | "expired" | "revoked";
+        ReviewAccessList_Output: {
+            accounts: components["schemas"]["ReviewAccess_Output"][];
+        };
+        CreateReviewAccessBody: {
+            /** Format: email */
+            email: string;
+            company: string;
+            note: string;
+            /** Format: date-time */
+            expiresAt: string;
+            sharedCredentials: boolean;
+        };
+        ReviewAccessCredentials_Output: {
+            account: components["schemas"]["ReviewAccess_Output"];
+            password: string;
+        };
+        UpdateReviewAccessBody: {
+            /** Format: date-time */
+            expiresAt: string;
         };
         HealthStatus_Output: {
             /** @constant */
@@ -1196,6 +1326,38 @@ export interface operations {
             };
         };
     };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordBody"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthTokens_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
     logout: {
         parameters: {
             query?: never;
@@ -1291,6 +1453,160 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RetryDeadResult_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    listReviewAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewAccessList_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    createReviewAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateReviewAccessBody"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewAccessCredentials_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    updateReviewAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateReviewAccessBody"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewAccess_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    revokeReviewAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewAccess_Output"];
+                };
+            };
+            /** @description Any error, as an RFC 9457 problem detail */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem_Output"];
+                };
+            };
+        };
+    };
+    resetReviewAccessPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewAccessCredentials_Output"];
                 };
             };
             /** @description Any error, as an RFC 9457 problem detail */

@@ -52,6 +52,7 @@ Phase 2 onward, for visitors who aren't signed in: the logo, Sign in, and the th
 | `/` | Today (signed in) / Landing (signed out) | 0 → 1 → 2 | public until 2, then split |
 | `/login` | Sign in | 2 | public |
 | `/register` | Create account (invite-only) | 2 | public |
+| `/change-password` | Change password; the only page a review account sees until its handed-out password is replaced | side track | signed in |
 | `/forgot-password`, `/reset-password` | Password reset | 7 | public |
 | `/verify-email` | Email verification | 7 | public |
 | `/stocks` | Stock search and browse | 1 | public until 2, then signed in |
@@ -75,6 +76,7 @@ Phase 2 onward, for visitors who aren't signed in: the logo, Sign in, and the th
 | `/settings/*` | Settings | 2, 7 | signed in |
 | `/status` | System and data status | 0, 4 | public until 7, then admin |
 | `/admin/queue` | Job queue | 4 | admin (the api's `ADMIN_EMAILS`); not found for everyone else |
+| `/admin/access` | Review accounts: make a sign-in for a company, extend, revoke, reset its password (ADR 0015) | side track | admin; not found for everyone else |
 | `/admin/users` | User admin | 7 | admin |
 
 ## Pages

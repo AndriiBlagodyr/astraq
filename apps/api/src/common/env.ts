@@ -1,3 +1,4 @@
+import './load-env-file';
 import { z } from 'zod';
 import { LOCAL_DEFAULTS } from './local-defaults';
 

@@ -5,7 +5,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button, Feedback, FormField, Input, buttonVariants } from "@astraq/ui";
+import {
+  Button,
+  Feedback,
+  FormField,
+  Input,
+  PasswordInput,
+  buttonVariants,
+} from "@astraq/ui";
 import { RegisterBodySchema, type RegisterBody } from "@astraq/shared";
 import { postAuth } from "@/lib/auth-client";
 
@@ -34,7 +41,14 @@ export function RegisterForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-4">
+    // method="post": a submit before the page hydrates is a native one, and
+    // the default GET would put the email and password in the URL.
+    <form
+      method="post"
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      className="grid gap-4"
+    >
       <FormField label="Email" error={errors.email?.message}>
         <Input
           type="email"
@@ -49,8 +63,7 @@ export function RegisterForm() {
         description="At least 12 characters."
         error={errors.password?.message}
       >
-        <Input
-          type="password"
+        <PasswordInput
           autoComplete="new-password"
           {...register("password")}
         />

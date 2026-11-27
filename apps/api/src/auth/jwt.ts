@@ -16,7 +16,22 @@ export interface JwtPayload {
   sid: string;
   iat: number;
   exp: number;
+  /**
+   * Present (and true) while the account's password must be replaced:
+   * `JwtAuthGuard` lets such a token reach only the routes that say so.
+   */
+  pwd?: true;
 }
+
+/** What a token says beyond who and which session. */
+export interface JwtClaims {
+  mustChangePassword?: boolean;
+  /** The token must not outlive this time (a review account's end date). */
+  notAfter?: Date;
+}
+
+/** Access token lifetime. The web's cookie mirrors it (lib/auth-cookies.ts). */
+const LIFETIME_SEC = 10 * 60;
 
 const HEADER = b64url(JSON.stringify({ alg: ALG, typ: 'JWT' }));
 
@@ -25,8 +40,19 @@ export function signJwt(
   sid: string,
   secret: string,
   nowSec: number,
+  claims: JwtClaims = {},
 ): string {
-  const payload: JwtPayload = { sub, sid, iat: nowSec, exp: nowSec + 10 * 60 };
+  const natural = nowSec + LIFETIME_SEC;
+  const cap = claims.notAfter
+    ? Math.floor(claims.notAfter.getTime() / 1000)
+    : natural;
+  const payload: JwtPayload = {
+    sub,
+    sid,
+    iat: nowSec,
+    exp: Math.min(natural, cap),
+    ...(claims.mustChangePassword && { pwd: true as const }),
+  };
   const body = b64url(JSON.stringify(payload));
   const message = `${HEADER}.${body}`;
   const sig = createHmac('sha256', secret).update(message).digest();

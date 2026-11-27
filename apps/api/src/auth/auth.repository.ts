@@ -6,6 +6,24 @@ import { PrismaService } from '../database/prisma.service';
 
 const GRACE_WINDOW_MS = 10_000;
 
+/**
+ * Ends every live session of a user, inside the caller's transaction.
+ * Shared by the password change here and the admin's revoke and reset
+ * (admin/review-access.repository.ts). It writes no audit row: each caller
+ * records what it did under its own action.
+ */
+export async function revokeLiveSessions(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  reason: SessionRevokedReason,
+  now: Date,
+): Promise<void> {
+  await tx.session.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: now, revokedReason: reason },
+  });
+}
+
 interface RefreshTokenRow {
   id: string;
   session_id: string;
@@ -23,8 +41,68 @@ interface RefreshTokenRow {
 export class AuthRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** With its review access, which login checks before letting anyone in. */
   async findUserByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email } });
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: { reviewAccess: true },
+    });
+  }
+
+  async findUserById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: { reviewAccess: true },
+    });
+  }
+
+  /** Null for an ordinary account. */
+  async findReviewAccess(userId: string) {
+    return this.prisma.reviewAccess.findUnique({ where: { userId } });
+  }
+
+  /**
+   * Stores a password its owner chose and ends every session of the
+   * account, the caller's included: whoever else held the old password is
+   * signed out, and the caller is given a new session afterwards. On a
+   * review account this also settles "must change password".
+   */
+  async changePassword(userId: string, passwordHash: string, now: Date) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+      await tx.reviewAccess.updateMany({
+        where: { userId },
+        data: { mustChangePassword: false, passwordChangedAt: now },
+      });
+      await revokeLiveSessions(
+        tx,
+        userId,
+        SessionRevokedReason.PASSWORD_CHANGED,
+        now,
+      );
+      await tx.auditLog.create({
+        data: { userId, action: AuditAction.PASSWORD_CHANGED, metadata: {} },
+      });
+    });
+  }
+
+  /** A closed review account presented a live refresh token: end it there. */
+  async closeSessions(userId: string, state: string, now: Date) {
+    await this.prisma.$transaction(async (tx) => {
+      await revokeLiveSessions(
+        tx,
+        userId,
+        SessionRevokedReason.ACCESS_CLOSED,
+        now,
+      );
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: AuditAction.REVIEW_ACCESS_REFUSED,
+          metadata: { state, at: 'refresh' },
+        },
+      });
+    });
   }
 
   /** The new user, or null when the email was registered in the meantime. */
@@ -179,15 +257,12 @@ export class AuthRepository {
 
   async revokeAllUserSessions(userId: string) {
     const now = new Date();
-    await this.prisma.$transaction([
-      this.prisma.session.updateMany({
-        where: { userId, revokedAt: null },
-        data: { revokedAt: now, revokedReason: SessionRevokedReason.LOGOUT_ALL },
-      }),
-      this.prisma.auditLog.create({
+    await this.prisma.$transaction(async (tx) => {
+      await revokeLiveSessions(tx, userId, SessionRevokedReason.LOGOUT_ALL, now);
+      await tx.auditLog.create({
         data: { userId, action: AuditAction.LOGOUT_ALL, metadata: {} },
-      }),
-    ]);
+      });
+    });
   }
 
   async appendAuditLog(data: {

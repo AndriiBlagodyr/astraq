@@ -145,8 +145,38 @@ model User {
   auditLogs  AuditLog[]
   watchlists Watchlist[]
   portfolios Portfolio[]
+  /// Present when an admin made this account for a company to review the app.
+  reviewAccess        ReviewAccess?  @relation("ReviewAccessUser")
+  reviewAccessCreated ReviewAccess[] @relation("ReviewAccessCreator")
 
   @@map("users")
+}
+
+/// A sign-in an admin made for a company (ROADMAP "Review access" side
+/// track). A user with a row here is a review account: login and refresh
+/// stop at `expires_at` or once `revoked_at` is set. The allowlist
+/// (`INVITE_EMAILS`) plays no part: it only gates self-registration.
+model ReviewAccess {
+  userId             String    @id @map("user_id") @db.Uuid
+  company            String    @db.VarChar(120)
+  note               String?   @db.VarChar(500)
+  expiresAt          DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt          DateTime? @map("revoked_at") @db.Timestamptz(6)
+  /// Several people use the one sign-in: its password can't be changed.
+  sharedCredentials  Boolean   @map("shared_credentials")
+  /// The password an admin handed out must be replaced at the next sign-in.
+  /// Never true together with `shared_credentials` (a CHECK constraint).
+  mustChangePassword Boolean   @map("must_change_password")
+  /// When that happened; null until then, and again after a reset.
+  passwordChangedAt  DateTime? @map("password_changed_at") @db.Timestamptz(6)
+  /// The admin who made it; kept (set null) if that user is ever deleted.
+  createdBy          String?   @map("created_by") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    User  @relation("ReviewAccessUser", fields: [userId], references: [id], onDelete: Cascade)
+  creator User? @relation("ReviewAccessCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@map("review_access")
 }
 
 enum SessionRevokedReason {
@@ -156,6 +186,10 @@ enum SessionRevokedReason {
   LOGOUT_ALL     @map("logout_all")
   /// A rotated refresh token came back: the family is assumed stolen.
   REUSE_DETECTED @map("reuse_detected")
+  /// An admin closed a review account, or it was used past its end date.
+  ACCESS_CLOSED    @map("access_closed")
+  /// The password was changed or reset: every session starts over.
+  PASSWORD_CHANGED @map("password_changed")
 
   @@map("session_revoked_reason")
 }
@@ -217,6 +251,15 @@ enum AuditAction {
   REFRESH_REUSED  @map("refresh_reused")
   LOGOUT          @map("logout")
   LOGOUT_ALL      @map("logout_all")
+  PASSWORD_CHANGED @map("password_changed")
+  /// By an admin, for a review account; `metadata.by` is the admin.
+  PASSWORD_RESET   @map("password_reset")
+  REVIEW_ACCESS_CREATED @map("review_access_created")
+  /// A new end date, which also reopens a closed account.
+  REVIEW_ACCESS_UPDATED @map("review_access_updated")
+  REVIEW_ACCESS_REVOKED @map("review_access_revoked")
+  /// A correct password (or a live refresh token) on a closed account.
+  REVIEW_ACCESS_REFUSED @map("review_access_refused")
 
   @@map("audit_action")
 }

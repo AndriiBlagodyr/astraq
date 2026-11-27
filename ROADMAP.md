@@ -1,6 +1,6 @@
 # Veracand Roadmap
 
-## Status (2026-11-25)
+## Status (2026-11-27)
 
 > **Rule for this block:** it describes what runs, not what is planned. Update it in the same PR that changes reality.
 
@@ -15,6 +15,7 @@
 | 3 — Paper trading | items 1 to 7 done: the api, the portfolio pages with the equity curve, the order ticket, tracing, the portfolio on Today and the stock page, and the ticket in the command palette with orders sized in shares or dollars | item 8 (backups, which needs the deployed database), the trace of an order seen on the deployed app, and the product check |
 | 4 — Market data pipeline | code-complete, items 1 to 8: the provider contract with Alpaca and Yahoo adapters and its contract tests, the BullMQ jobs with retries, backoff, and a dead-letter queue, the refresh scheduled after each close from the exchange calendar, the data quality checks on `/status`, compression of the daily bars with weekly bars as a continuous aggregate, a Redis cache in front of the latest closes and the symbol search, the raw payload archive in MongoDB with a replay that compares against the stored bars (ADR 0011), and the job queue at `/admin/queue` for admins | two weeks of the deployed worker keeping symbols fresh, the replay of an archived payload on Alpaca data (it reproduced the stored bars on Yahoo data), and the product check |
 | 5 — Strategy DSL and backtesting | items 1 and 2 of 7: the strategy DSL in Zod with its JSON Schema and generated Pydantic models (ADR 0012), and the event-driven backtester in `services/ml` on the fill model paper trading uses, run from tests only | items 3 to 7: the bias guards that need adjusted prices and corporate actions, the job flow from the api, metrics, the pages, and paper-trading a strategy |
+| Side track — Review access | items 1 and 2 of 4: review accounts in the api (an end date, revoke, a forced password change, an admin reset; ADR 0015) and the admin page at `/admin/access` with `/change-password` | items 3 and 4 (recording what a review account does, and the page that shows it), the admin page clicked through in a browser, and the product check, which needs the deployed app |
 
 **Next, in order**
 
@@ -525,6 +526,71 @@ Not reviewed in that pass: `packages/ui`, `services/ml`, the CI workflow, and th
 
 ---
 
+## Side track — Review access for an invited company · ~1 week
+
+**Goal:** hand a company a sign-in to the app, close it when I choose, and see whether they opened the app and what they tried.
+
+Planned 2026-11-27; items 1 and 2 built the same day, items 3 and 4 (tracking) not. It doesn't depend on Phase 5 and can be done between its items; it takes over part of Phase 7 (items 5 and 6). It is only useful on the deployed app, so sending anyone a link comes after the first deploy.
+
+**What it is.** A *review account*: an ordinary user I create for a company from an admin page, with an email, a generated password, a company name, and an end date. I send them the address and the credentials. They can do what any user can (their own watchlists and paper portfolio), nothing of mine, and nothing under `/admin`.
+
+**Decisions made**
+
+- **Shared credentials, knowingly.** The company gets an email and a password, not a one-time token link. The password is in whatever message carried it, so it is treated as leaked from the start: the account holds nothing private, has an end date, and can be closed at once. The password is generated (never one I use elsewhere) and shown once. By default it must be changed at the first sign-in, which ends the exposure there; that is switched off for an account several people will share.
+- **The link carries the email, never the password.** `/login?email=…` fills the email field; the password is typed. A password in a URL would also sit in browser history, proxy logs, and chat previews, for no gain over pasting it.
+- **Closing access is a switch on the account, not the allowlist.** `INVITE_EMAILS` only decides who may *register*: taking an email off it doesn't sign anyone out or stop a login. A review account doesn't go through it at all. Access ends at the end date or when I press Revoke, and both end the account's sessions.
+- **Tracking is the app's own, not Google Analytics.** GA reports aggregates, forbids identifying data, and needs a consent banner; the question here is about one named account. Events go to Postgres and are read on an admin page. PostHog is the fallback if session replay is ever wanted.
+- **Only review accounts are tracked, and they are told.** One line on their first page: activity in this review account is recorded. My own account and any later real user are not tracked by this.
+
+**Items**
+
+1. **Review accounts in the api.**
+   - Table `review_access`: `user_id`, `company`, `note`, `expires_at`, `revoked_at`, `created_by`, `created_at`. A user with a row is a review account.
+   - Admin endpoints (behind `JwtAuthGuard` then `AdminGuard`): create (makes the user, answers with the generated password once), list, extend, revoke.
+   - Login and refresh refuse an account that is expired or revoked, with the same message as a wrong password. Revoke ends every session through the existing "log out everywhere" revocation.
+   - **Password change at first sign-in, chosen per account** (`must_change_password`, on by default). On: the first sign-in lands on a change-password page and the api refuses everything else until it is done, so the password I sent stops working and only that person knows the new one. Off: for a company where several people share the one sign-in; the password then can't be changed at all, so one of them can't lock the others out.
+   - Admin "reset password": generates a new one, ends the sessions, and sets `must_change_password` again. It is the only recovery until Phase 7 adds password reset by email.
+   - A review account can't change its email.
+   - Audit log gains `review_access_created`, `review_access_revoked`, `review_access_expired_login`.
+   - Also: `INVITE_EMAILS` joins `passThroughEnv` in `turbo.json` and the README says how to set it for `pnpm dev` (found 2026-11-27: locally nobody can register).
+
+   Done ([ADR 0015](docs/decisions/0015-review-access-and-activity-tracking.md), `apps/api/src/admin/review-access.*`, `apps/api/src/auth/`, migration `20261127120000_review_access`):
+   - **Endpoints:** `GET` and `POST /api/admin/access`, `PATCH /api/admin/access/{id}` (a new end date, which also reopens a closed account), `POST …/{id}/revoke`, `POST …/{id}/reset-password`, and `POST /api/auth/password` for anyone signed in.
+   - **The gate before the password change** is a `pwd` claim in the access token, refused by `JwtAuthGuard` everywhere but the routes marked `@AllowBeforePasswordChange()`. The guard still only checks a signature.
+   - **How fast closing is:** an account that expires stops at that moment (its tokens are signed to end no later). A revoked one is refused at sign-in at once, and a page it has open stops when its access token does, within ten minutes. Checking every request was the alternative; the ADR says why not.
+   - **Different from the plan above:** the flag for a shared sign-in is its own column (`shared_credentials`) beside `must_change_password`; the audit actions are `review_access_created`, `_updated`, `_revoked`, `_refused` (expired or revoked, at login or refresh), `password_changed`, and `password_reset`; an email in `ADMIN_EMAILS` can't be a review account; the dev server reads `apps/api/.env.local` itself (`common/load-env-file.ts`), and `ADMIN_EMAILS` joined `passThroughEnv` too.
+   - Tests: `auth/review-access.spec.ts` (the three states, the token's claim and its capped lifetime). The flows were run against the local api with a throwaway admin: create, duplicate email, forced change, refresh keeping the claim, revoke, reopen, reset, a shared account, and expiry.
+2. **Admin page `/admin/access`.** Create a review account (company, email, end date, whether the password must be changed at first sign-in), copy the credentials and the link, list accounts with state (active, expired, revoked) and whether the first password was changed, extend, revoke, reset password. The web gains the change-password page a forced change lands on.
+
+   Done (`apps/web/app/(app)/admin/access/`, `app/components/ReviewAccessManager.tsx`, `app/(auth)/change-password/`):
+   - The page is not found for anyone the api doesn't call an admin, like `/admin/queue`; `/status` links to it for admins.
+   - A new or reset password is shown once, with buttons that copy the link, the password, or all three lines; it lives in the page's state and a reload loses it.
+   - `/login?email=…` fills in the email. `proxy.ts` reads the token's `pwd` claim and keeps such a session on `/change-password`.
+   - The password field with a show and hide button is `PasswordInput` in `@astraq/ui`, used by sign-in, registration, and the change form.
+   - Checked in the served pages: the admin's list, the redirect of a pending session, the change page's copy, the prefilled email, and not-found for a review account. Not checked: the form, the copy buttons, and the row actions in a browser.
+3. **Activity recording.**
+   - Table `activity_events`: `user_id`, `session_id`, `kind` (`page_view` or `action`), `name` (route pattern such as `/stocks/[ticker]`, or an action such as `order.placed`), `detail` (JSON: the ticker, the tab; never form contents), `occurred_at`.
+   - Page views: a small client component in the app layout reports each route change to the BFF, which posts to `POST /api/activity`. Route patterns, not raw URLs with query strings.
+   - Actions: an interceptor in the api records each successful write by its operation id (`placeOrder`, `createWatchlist`, a backtest run), so a feature counts as used only when the api did the work.
+   - Recorded only when the caller has a `review_access` row. Fail-open: a failed write never fails the request.
+   - Events are deleted 90 days after the account's access ends.
+4. **Activity page `/admin/access/[id]`.** Per company: first sign-in, last seen, number of visits and devices (from sessions), time spent per visit, a checklist of the app's areas (Today, stock page, watchlists, portfolio, order ticket, backtests) marked visited or used, and the full timeline.
+
+**Learning focus:** authorization beyond "signed in", event collection and its privacy limits, interceptors, an admin CRUD page.
+
+**Exit criteria:**
+
+- a review account signs in, is revoked, can't sign in again, and its open tab is signed out within ten minutes — the api half checked locally (login and refresh both 401); to be watched in a browser
+- an expired account can't sign in or refresh, and the response doesn't say why — checked locally
+- the activity page shows a test visit: the pages opened and an order placed, in order
+- my own account produces no activity rows
+- ADR 0015: "Review access and activity tracking" — [written](docs/decisions/0015-review-access-and-activity-tracking.md) for access; its tracking section is still a proposal
+- **product check:** a company used the link, and I could tell what they looked at without asking them
+
+**Kill/pivot trigger:** if the activity page grows past two days, ship items 1 to 3 and read the events with SQL.
+
+---
+
 ## Phase 6 — Analysis dashboard and research journal · ~3 weeks
 
 **Goal:** make Veracand the tab you open every morning.
@@ -557,8 +623,8 @@ Not reviewed in that pass: `packages/ui`, `services/ml`, the CI workflow, and th
 2. TOTP 2FA with recovery codes.
 3. Personal API keys (hashed, scoped, revocable) for scripts and bots.
 4. Roles: `user`, `admin` (add `pro` only if billing ever happens).
-5. Admin-only operational pages (queues, data quality, users).
-6. Replace the invite allowlist with verified open registration, or keep invites — decide in the ADR.
+5. Admin-only operational pages (queues, data quality, users). The users page starts in the [review access side track](#side-track--review-access-for-an-invited-company--1-week) (`/admin/access`).
+6. Replace the invite allowlist with verified open registration, or keep invites — decide in the ADR. Review accounts (the side track) already bypass the allowlist; this item is about people registering themselves.
 
 **Learning focus:** email flows, OTP, key management, authorization models.
 
@@ -691,6 +757,10 @@ Only after the core loop has been in weekly use for a month.
 ---
 
 ## Revision log
+
+**2026-11-27 — Review accounts built (side track items 1 and 2).** The api and the admin page, on the day they were planned; tracking (items 3 and 4) is not started. Decisions the plan left open, recorded in ADR 0015. **A row, not a role:** a review account is a user with a `review_access` row. **Checked at login and refresh, not per request:** expiry is exact because tokens are signed to end with the account, and a revoke leaves an open page up to ten minutes; the plan's exit line said "on the next request" and now says what is true. **The forced change is a token claim** that the guard refuses outside three routes, so no request pays for a lookup. **A general change-password endpoint** came with it, since the forced change needed one; Settings doesn't link to it yet. **Reopening is extending:** a new end date clears a revoke. Found on the way: `nest start --watch --exec "node --env-file-if-exists…"` crashed the dev server at its first restart on Windows, so the api loads `.env.local` in code instead. Also in this branch, from the same session: `PasswordInput` in `@astraq/ui` (a show and hide button on password fields). Checked by the unit suites, typecheck, lint, the contract regeneration, and a script against the local api and web; the admin page's buttons were not clicked in a browser.
+
+**2026-11-27 — Review access planned (side track).** A plan, nothing built: a way to give a company a sign-in, close it later, and see what they did. It is written as a side track between Phases 5 and 6 rather than as part of Phase 7, because it is wanted before account hardening and needs none of it. Decisions. **Shared email and password** rather than a one-time token link: the owner's choice, with the risk stated, and bounded by a generated password, an end date, and a revoke switch; the link fills the email only. **The allowlist doesn't close access:** `INVITE_EMAILS` gates registration alone, so removing an email leaves a registered account working. Review accounts are made by an admin and ended by a row's dates. **First-party tracking** in Postgres for review accounts only, disclosed to them, instead of Google Analytics, which can't answer a question about one account. Found on the way: `pnpm dev` can't pass `INVITE_EMAILS` to the api (it isn't in `passThroughEnv`, and the dev server reads no `.env.local`), so nobody can register locally; the fix is in item 1.
 
 **2026-11-25 — Phase 4 tidied after it was finished.** A pass over the market data code for duplication, with no change in behaviour. The api server's module and the CLIs' module listed the same providers twice; they are one now (`MarketDataCoreModule`, which replaces `BootstrapModule`), with the server adding its controller on top. The five command-line entry points shared their start-up, shutdown, and error handling by copy; that is `runCli`. Smaller ones: the history range every backfill uses (`fullHistory`, in place of `BOOTSTRAP_FROM` imported from the bootstrap folder), the calendar look-back the scheduler and the quality check each defined, the refresh planning repeated three times, an error-to-text expression repeated seven, and a second copy of `exact-json.ts` that nothing imported. Checked by the unit and integration suites and by running the CLIs.
 

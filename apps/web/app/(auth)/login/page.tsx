@@ -5,7 +5,15 @@ export const metadata = {
   title: "Sign in",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // An invitation's link carries the email (`/login?email=…`) so only the
+  // password is left to type. Never the password: see lib/review-access.ts.
+  const { email } = await searchParams;
+
   return (
     <Card className="grid w-[min(27.5rem,100%)] gap-6 p-7">
       <header className="grid gap-2">
@@ -17,7 +25,7 @@ export default function LoginPage() {
         </p>
       </header>
 
-      <LoginForm />
+      <LoginForm defaultEmail={typeof email === "string" ? email : undefined} />
     </Card>
   );
 }

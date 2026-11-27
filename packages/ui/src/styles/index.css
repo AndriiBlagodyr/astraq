@@ -104,13 +104,26 @@
   }
 
   body {
-    background: var(--ds-gradient-page);
-    background-attachment: fixed;
+    background-color: var(--ds-bg-canvas);
     color: var(--ds-fg-default);
     font-family: var(--ds-font-sans);
     transition:
       background var(--ds-motion-base) ease,
       color var(--ds-motion-fast) ease;
+  }
+
+  /*
+   * The page gradient stays put while the content scrolls. It is a fixed
+   * layer of its own rather than `background-attachment: fixed`, which
+   * repaints the whole page on every scrolled frame.
+   */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--ds-gradient-page);
+    pointer-events: none;
   }
 
   a {

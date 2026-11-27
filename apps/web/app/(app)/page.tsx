@@ -110,7 +110,7 @@ export default async function TodayPage() {
               </h2>
               <form
                 action="/stocks"
-                className="flex flex-wrap items-end gap-2"
+                className="flex items-center gap-2"
                 role="search"
               >
                 <label className="sr-only" htmlFor="today-search">
@@ -121,6 +121,9 @@ export default async function TodayPage() {
                   name="q"
                   type="search"
                   placeholder="NVDA, Apple…"
+                  // The control is full width by default, which pushed the
+                  // button onto a line of its own.
+                  className="w-56 min-w-0 shrink"
                 />
                 <Button type="submit" size="sm">
                   Search
