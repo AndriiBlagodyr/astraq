@@ -13,9 +13,19 @@ import type { Request } from 'express';
 import { env } from '../common/env';
 import { ApiProblemResponses } from '../common/problem';
 import { clientAddress } from '../common/rate-limit-key';
-import { AuthTokensDto, LoginBodyDto, RefreshBodyDto, RegisterBodyDto } from './auth.dto';
+import {
+  AuthTokensDto,
+  ChangePasswordBodyDto,
+  LoginBodyDto,
+  RefreshBodyDto,
+  RegisterBodyDto,
+} from './auth.dto';
 import { AuthService } from './auth.service';
-import { type AuthenticatedRequest, JwtAuthGuard } from './jwt-auth.guard';
+import {
+  AllowBeforePasswordChange,
+  type AuthenticatedRequest,
+  JwtAuthGuard,
+} from './jwt-auth.guard';
 
 /** Who is asking, for the session row and the audit log. */
 const requestContext = (req: Request) => ({
@@ -56,10 +66,33 @@ export class AuthController {
     return this.authService.refresh(body);
   }
 
+  @Post('password')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: minutes(15) } })
+  @UseGuards(JwtAuthGuard)
+  @AllowBeforePasswordChange()
+  @ApiBearerAuth()
+  @ApiOperation({
+    operationId: 'changePassword',
+    summary: 'Replace the password; every session ends and a new one is returned',
+  })
+  @ZodResponse({ status: 200, type: AuthTokensDto })
+  changePassword(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: ChangePasswordBodyDto,
+  ) {
+    return this.authService.changePassword(
+      req.user.sub,
+      body,
+      requestContext(req),
+    );
+  }
+
   @Post('logout')
   @HttpCode(204)
   @SkipThrottle()
   @UseGuards(JwtAuthGuard)
+  @AllowBeforePasswordChange()
   @ApiBearerAuth()
   @ApiOperation({ operationId: 'logout', summary: 'Revoke the current session' })
   logout(@Req() req: AuthenticatedRequest) {
@@ -70,6 +103,7 @@ export class AuthController {
   @HttpCode(204)
   @SkipThrottle()
   @UseGuards(JwtAuthGuard)
+  @AllowBeforePasswordChange()
   @ApiBearerAuth()
   @ApiOperation({ operationId: 'logoutAll', summary: 'Revoke every session for this user' })
   logoutAll(@Req() req: AuthenticatedRequest) {

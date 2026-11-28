@@ -86,6 +86,16 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 }
 
 /**
+ * True when the token says its account's password must be replaced before
+ * anything else (the api's `pwd` claim, set for a review account's first
+ * sign-in). Only decides where the browser is sent: the api refuses such a
+ * token everywhere else itself.
+ */
+export function mustChangePassword(token: string): boolean {
+  return decodeJwtPayload(token)?.pwd === true;
+}
+
+/**
  * True when the access token's `exp` claim is more than `leeway` seconds
  * from now. No signature verification: the API verifies on every request.
  */

@@ -24,6 +24,8 @@
         "DATABASE_URL",
         "REDIS_URL",
         "CORS_ORIGINS",
+        "INVITE_EMAILS",
+        "ADMIN_EMAILS",
         "ENVIRONMENT",
         "API_URL",
         "ML_URL"

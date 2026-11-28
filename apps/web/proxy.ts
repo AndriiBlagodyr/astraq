@@ -5,6 +5,7 @@ import {
   accessCookieOpts,
   clearCookieOpts,
   isAccessTokenFresh,
+  mustChangePassword,
   refreshCookieOpts,
 } from "./lib/auth-cookies";
 import { refreshSession } from "./lib/auth-refresh";
@@ -24,6 +25,27 @@ import { refreshSession } from "./lib/auth-refresh";
 
 // Routes the browser may reach without a session.
 const PUBLIC_PATHS = new Set(["/login", "/register"]);
+
+// Where a session whose password must be replaced is kept until it is (a
+// review account's first sign-in). The api refuses such a token on every
+// other route, so any other page would only render errors.
+const CHANGE_PASSWORD = "/change-password";
+
+/** Where a signed-in request goes instead, or null to let it through. */
+function redirectFor(
+  request: NextRequest,
+  accessToken: string,
+  isPublic: boolean
+): URL | null {
+  const { pathname } = request.nextUrl;
+  if (mustChangePassword(accessToken)) {
+    return pathname === CHANGE_PASSWORD
+      ? null
+      : new URL(CHANGE_PASSWORD, request.url);
+  }
+  // Signed-in users skip the auth pages.
+  return isPublic ? new URL("/", request.url) : null;
+}
 
 // CSP for every response. 'unsafe-inline' is required by the Next.js App
 // Router for its hydration scripts; tighten with nonces in a future phase.
@@ -61,14 +83,12 @@ export async function proxy(request: NextRequest) {
   const accessToken = request.cookies.get(COOKIE_ACCESS)?.value;
   const refreshToken = request.cookies.get(COOKIE_REFRESH)?.value;
 
-  // Happy path: a fresh access token. Signed-in users skip the auth pages.
+  // Happy path: a fresh access token.
   if (accessToken && isAccessTokenFresh(accessToken)) {
-    if (isPublic) {
-      return addSecurityHeaders(
-        NextResponse.redirect(new URL("/", request.url))
-      );
-    }
-    return addSecurityHeaders(NextResponse.next());
+    const target = redirectFor(request, accessToken, isPublic);
+    return addSecurityHeaders(
+      target ? NextResponse.redirect(target) : NextResponse.next()
+    );
   }
 
   // Access token expired or missing: try a silent refresh.
@@ -79,8 +99,13 @@ export async function proxy(request: NextRequest) {
     );
 
     if (refreshed.kind === "ok") {
-      const response = isPublic
-        ? NextResponse.redirect(new URL("/", request.url))
+      const target = redirectFor(
+        request,
+        refreshed.tokens.accessToken,
+        isPublic
+      );
+      const response = target
+        ? NextResponse.redirect(target)
         : NextResponse.next();
       response.cookies.set(
         COOKIE_ACCESS,

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StateGrid, pseudoStates } from "../../stories/state-grid";
 import { FormField } from "../field";
 import { Input } from "./input";
+import { PasswordInput } from "./password-input";
 
 const meta = {
   title: "Components/Input",
@@ -49,6 +50,22 @@ export const Sizes: Story = {
       <Input aria-label="Small" size="sm" placeholder="Small" />
       <Input aria-label="Medium" size="md" placeholder="Medium" />
       <Input aria-label="Large" size="lg" placeholder="Large" />
+    </div>
+  ),
+};
+
+export const Password: Story = {
+  render: () => (
+    <div className="grid max-w-md gap-6">
+      <FormField label="Password" description="At least 12 characters.">
+        <PasswordInput autoComplete="new-password" defaultValue="correct horse" />
+      </FormField>
+      <FormField label="Password" error="Enter your password.">
+        <PasswordInput autoComplete="current-password" />
+      </FormField>
+      <FormField label="Password">
+        <PasswordInput defaultValue="correct horse" disabled />
+      </FormField>
     </div>
   ),
 };

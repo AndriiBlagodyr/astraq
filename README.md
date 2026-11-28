@@ -112,13 +112,28 @@ Every service validates its env at boot and exits with a readable error on a bad
 | api, ml | `REDIS_URL` | `redis://localhost:6379` |
 | api | `MONGODB_URL` | `mongodb://localhost:27017/veracand` in development; unset anywhere else, which turns the raw payload archive off |
 | api | `RAW_ARCHIVE_DAYS` | `90`: how long an archived provider answer is kept |
-| api | `ADMIN_EMAILS` | none: comma-separated emails of the users who may open `/admin/queue` |
+| api | `INVITE_EMAILS` | none: comma-separated emails that may register. Empty means nobody can, and the form answers "Registration is currently invite-only" |
+| api | `ADMIN_EMAILS` | none: comma-separated emails of the users who may open `/admin/queue` and `/admin/access` |
 | api | `CORS_ORIGINS` | `http://localhost:3000` (comma-separated origins, no paths) |
 | ml | `LOG_LEVEL` | `info` |
 | web | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` |
 | web | `API_URL` | `http://localhost:4000` |
 | web | `ML_URL` | `http://localhost:8000`; no default in production, where unset means the ML service isn't part of the deploy and `/status` lists it as not deployed |
 | api, web | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` in development (the Jaeger that `pnpm infra:up` starts); unset anywhere else, which turns tracing off |
+
+The api reads `apps/api/.env.local` (gitignored) when it starts under `pnpm dev`, so that is the place for the two lists above. To register the first account locally:
+
+```bash
+# apps/api/.env.local
+INVITE_EMAILS=you@example.com
+ADMIN_EMAILS=you@example.com
+```
+
+A variable set in the shell reaches the services only if `turbo.json` names it under `passThroughEnv`.
+
+### Review accounts
+
+An admin can give a company a sign-in at `/admin/access`: an email, a generated password shown once, a company name, and an end date. The account stops working at the end date or when it is revoked, and both end its sessions. Unless the account is marked as shared by several people, its first sign-in must set a new password before anything else. `INVITE_EMAILS` plays no part: it only decides who may register themselves.
 
 ### Traces
 

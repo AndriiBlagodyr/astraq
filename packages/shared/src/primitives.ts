@@ -23,3 +23,12 @@ export const oneLineName = (max: number) =>
     .min(1, "Name is required")
     .max(max, `At most ${max} characters`)
     .regex(/^[^\u0000-\u001f\u007f]+$/, "One line, no control characters");
+
+/** An email address, stored trimmed and lower-cased like `users.email`. */
+export const emailAddress = z
+  .email()
+  .max(254)
+  .transform((v) => v.trim().toLowerCase());
+
+/** A password someone chose: 12 to 128 characters. */
+export const passwordString = z.string().min(12).max(128);

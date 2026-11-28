@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ZodResponse } from 'nestjs-zod';
 import {
+  AllowBeforePasswordChange,
   type AuthenticatedRequest,
   JwtAuthGuard,
 } from '../auth/jwt-auth.guard';
@@ -36,6 +37,7 @@ export class AccountController {
   constructor(private readonly account: AccountService) {}
 
   @Get()
+  @AllowBeforePasswordChange()
   @ApiOperation({ operationId: 'getAccount', summary: 'The signed-in user’s profile' })
   @ZodResponse({ status: 200, type: AccountDto })
   get(@Req() req: AuthenticatedRequest) {

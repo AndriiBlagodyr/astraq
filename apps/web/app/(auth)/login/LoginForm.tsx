@@ -5,11 +5,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button, Feedback, FormField, Input, buttonVariants } from "@astraq/ui";
+import {
+  Button,
+  Feedback,
+  FormField,
+  Input,
+  PasswordInput,
+  buttonVariants,
+} from "@astraq/ui";
 import { LoginBodySchema, type LoginBody } from "@astraq/shared";
 import { postAuth } from "@/lib/auth-client";
 
-export function LoginForm() {
+export function LoginForm({ defaultEmail }: { defaultEmail?: string }) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -19,6 +26,7 @@ export function LoginForm() {
     formState: { errors, isSubmitting },
   } = useForm<LoginBody>({
     resolver: zodResolver(LoginBodySchema),
+    defaultValues: { email: defaultEmail ?? "" },
   });
 
   const onSubmit = async (data: LoginBody) => {
@@ -34,19 +42,27 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-4">
+    // method="post": a submit before the page hydrates is a native one, and
+    // the default GET would put the email and password in the URL.
+    <form
+      method="post"
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      className="grid gap-4"
+    >
       <FormField label="Email" error={errors.email?.message}>
         <Input
           type="email"
           autoComplete="email"
           inputMode="email"
+          // Also in the server's HTML, so the field is filled before hydration.
+          defaultValue={defaultEmail}
           {...register("email")}
         />
       </FormField>
 
       <FormField label="Password" error={errors.password?.message}>
-        <Input
-          type="password"
+        <PasswordInput
           autoComplete="current-password"
           {...register("password")}
         />

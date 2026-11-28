@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import {
   Badge,
@@ -121,6 +122,15 @@ export default async function StatusPage() {
       {/* Only an admin is told there is a queue (the api's ADMIN_EMAILS).
           When the api is down nobody can be told apart, so nobody sees it. */}
       {queue.kind === "ok" ? <QueuePanel status={queue.status} /> : null}
+      {queue.kind === "ok" ? (
+        <p className="m-0 px-1 text-sm text-secondary">
+          Also for admins:{" "}
+          <Link href="/admin/access" className="underline underline-offset-4">
+            review accounts
+          </Link>
+          , the sign-ins made for a company.
+        </p>
+      ) : null}
     </main>
   );
 }

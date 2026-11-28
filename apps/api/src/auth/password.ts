@@ -1,4 +1,13 @@
+import { randomBytes } from 'node:crypto';
 import { Algorithm, hash, verify } from '@node-rs/argon2';
+
+/**
+ * A password to hand to someone else: 120 random bits as 20 base64url
+ * characters. Shown once by the admin endpoints and stored only as a hash.
+ */
+export function generatePassword(): string {
+  return randomBytes(15).toString('base64url');
+}
 
 const PARAMS = {
   memoryCost: 19456,

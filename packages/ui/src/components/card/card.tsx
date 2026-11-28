@@ -9,7 +9,11 @@ export function Card({
     <section
       data-slot="card"
       className={cn(
-        "rounded-xl border border-border bg-[image:var(--ds-gradient-surface)] p-6 shadow-soft backdrop-blur-surface",
+        // No backdrop blur: a card sits on the page's smooth gradient, where
+        // a blur changes nothing you can see, and re-blurring every card on
+        // every scrolled frame took the page from 60 to 15 frames a second
+        // without a GPU. Surfaces that content moves under keep theirs.
+        "rounded-xl border border-border bg-[image:var(--ds-gradient-surface)] p-6 shadow-soft",
         className,
       )}
       {...props}
